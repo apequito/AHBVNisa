@@ -31,6 +31,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 # Inicializar a extensão com a aplicação
 db.init_app(app)
 
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
