@@ -10,18 +10,25 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
 
-
 from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'uma-chave-secreta-muito-segura'
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+# Chave secreta (obrigatória para sessões e formulários)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-local-insegura')
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'bombeiros.db')
+# Desativar o rastreio de modificações (poupa memória)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Base de dados: usa PostgreSQL se a variável DATABASE_URL existir (Render),
+# senão mantém o SQLite local para desenvolvimento.
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'sqlite:///' + os.path.join(basedir, 'bombeiros.db')
+)
+
+# Inicializar a extensão com a aplicação
 db.init_app(app)
 
 login_manager = LoginManager()
