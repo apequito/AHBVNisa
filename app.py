@@ -24,9 +24,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # senão mantém o SQLite local para desenvolvimento.
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'bombeiros.db'))
-# Se for uma URL do PostgreSQL, converte para o formato aceite pelo pg8000
-if db_url and 'postgres://' in db_url:
-    db_url = db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+if db_url and db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql+psycopg://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
 # Inicializar a extensão com a aplicação
