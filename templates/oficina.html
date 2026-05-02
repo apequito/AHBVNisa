@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-tools me-2"></i>Oficina</h2>
+
+<ul class="nav nav-tabs mb-4" id="oficinaTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="registo-oficina-tab" data-bs-toggle="tab" data-bs-target="#registo-oficina" type="button" role="tab">
+            <i class="bi bi-tools me-1"></i> Registo
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="historico-oficina-tab" data-bs-toggle="tab" data-bs-target="#historico-oficina" type="button" role="tab">
+            <i class="bi bi-clock-history me-1"></i> Histórico
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="oficinaTabContent">
+    <!-- Aba Registo -->
+    <div class="tab-pane fade show active" id="registo-oficina" role="tabpanel">
+        <div class="mb-3">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaOficina">+ Novo Registo</button>
+            <a href="{{ url_for('exportar_oficina') }}" class="btn btn-outline-success ms-2">📥 Exportar</a>
+            <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarOficina">📤 Importar</button>
+        </div>
+        <table class="table table-bordered table-sm">
+            <!-- cabeçalho e corpo idênticos ao anterior -->
+        </table>
+    </div>
+
+    <!-- Aba Histórico -->
+    <div class="tab-pane fade" id="historico-oficina" role="tabpanel">
+        <form method="GET" action="{{ url_for('oficina') }}" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="tab" value="historico">
+            <div class="col-auto">
+                <label class="form-label">Viatura</label>
+                <select name="viatura_id" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for v in todas_viaturas %}
+                    <option value="{{ v.id }}" {% if filtro_viatura_id == v.id %}selected{% endif %}>{{ v.matricula }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Oficina</label>
+                <select name="nome_oficina" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for nome in nomes_oficina %}
+                    <option value="{{ nome }}" {% if filtro_nome_oficina == nome %}selected{% endif %}>{{ nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Mês Receção</label>
+                <select name="mes" class="form-select form-select-sm">
+                    <option value="">--</option>
+                    {% for i in range(1,13) %}
+                    <option value="{{ i }}" {% if filtro_mes == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Ano</label>
+                <input type="number" name="ano" class="form-control form-control-sm" value="{{ filtro_ano or '' }}" placeholder="Ano" style="width:80px;">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="Oficina" {% if filtro_estado == 'Oficina' %}selected{% endif %}>Oficina</option>
+                    <option value="Resolvido" {% if filtro_estado == 'Resolvido' %}selected{% endif %}>Resolvido</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                <a href="{{ url_for('oficina', tab='historico') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+        </form>
+
+        <table class="table table-bordered table-sm">
+            <!-- listagem do histórico (sem botões de ação) -->
+        </table>
+    </div>
+</div>
+{% endblock %}

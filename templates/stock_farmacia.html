@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock Farmácia</h2>
+
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoProduto">+ Novo Produto</button>
+    <a href="{{ url_for('categorias_farmacia') }}" class="btn btn-outline-secondary btn-sm ms-2">Gerir Categorias</a>
+    <a href="{{ url_for('exportar_stock_farmacia') }}" class="btn btn-success btn-sm ms-2">📥 Exportar</a>
+    <button class="btn btn-outline-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImportar">📤 Importar</button>
+    <a href="{{ url_for('imprimir_stock_farmacia') }}" target="_blank" class="btn btn-secondary btn-sm ms-2">🖨️ Imprimir</a>
+</div>
+
+<table class="table table-bordered table-sm">
+    <thead class="table-light">
+        <tr><th>ID</th><th>Categoria</th><th>Nome</th><th>Tamanho</th><th>Stock</th><th>Atualização</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+        {% for i in itens %}
+        <tr>
+            <td>{{ i.id }}</td>
+            <td>{{ i.categoria }}</td>
+            <td>{{ i.nome }}</td>
+            <td>{{ i.tamanho or '-' }}</td>
+            <td>{{ i.stock }}</td>
+            <td>{{ i.data_atualizacao.strftime('%d/%m/%Y %H:%M') if i.data_atualizacao else '-' }}</td>
+            <td>
+                <button class="btn btn-sm btn-warning btn-editar-farmacia"
+                        data-id="{{ i.id }}" data-categoria="{{ i.categoria }}" data-nome="{{ i.nome }}"
+                        data-tamanho="{{ i.tamanho or '' }}" data-stock="{{ i.stock }}"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarProduto">✏️</button>
+                <a href="{{ url_for('apagar_stock_farmacia', id=i.id) }}" class="btn btn-sm btn-danger"
+                   onclick="return confirm('Apagar este produto?')">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Novo Produto -->
+<div class="modal fade" id="modalNovoProduto" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Novo Produto</h5></div>
+                <div class="modal-body">
+                    <label>Categoria</label>
+                    <select name="categoria" class="form-select mb-2" required>
+                        <option value="">-- Selecione --</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.nome }}">{{ cat.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do produto" required>
+                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
+                    <input type="number" name="stock" class="form-control mb-2" placeholder="Stock inicial" value="0" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Adicionar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Produto -->
+<div class="modal fade" id="modalEditarProduto" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formEditarFarmacia" method="POST" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Editar Produto</h5></div>
+                <div class="modal-body">
+                    <label>Categoria</label>
+                    <select name="categoria" id="edit_categoria" class="form-select mb-2" required>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.nome }}">{{ cat.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="nome" id="edit_nome" class="form-control mb-2" required>
+                    <input type="text" name="tamanho" id="edit_tamanho" class="form-control mb-2">
+                    <input type="number" name="stock" id="edit_stock" class="form-control mb-2" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar Excel -->
+<div class="modal fade" id="modalImportar" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_stock_farmacia') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Stock Farmácia</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const modalEditar = document.getElementById('modalEditarProduto');
+modalEditar.addEventListener('show.bs.modal', function (event) {
+    const b = event.relatedTarget;
+    document.getElementById('formEditarFarmacia').action = '/stock-farmacia/editar/' + b.getAttribute('data-id');
+    document.getElementById('edit_categoria').value = b.getAttribute('data-categoria');
+    document.getElementById('edit_nome').value = b.getAttribute('data-nome');
+    document.getElementById('edit_tamanho').value = b.getAttribute('data-tamanho') || '';
+    document.getElementById('edit_stock').value = b.getAttribute('data-stock');
+});
+</script>
+{% endblock %}

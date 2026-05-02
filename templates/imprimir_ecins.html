@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Escala ECINS - {{ meses[mes-1] }} {{ ano }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h2 {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+        td {
+            min-width: 150px;
+        }
+        .bombeiro-linha {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+        .checkboxes {
+            display: flex;
+            gap: 6px;
+        }
+        .checkbox-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border: 1.5px solid #000;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: #fff;
+        }
+        .legenda {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .legenda-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        @media print {
+            body { margin: 10px; }
+            .checkbox-item { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <h2>Escala ECINS - {{ meses[mes-1] }} {{ ano }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Dia</th>
+                <th>07h/19h</th>
+                <th>19h/07h</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dia in dias %}
+            <tr>
+                <td style="text-align:center; font-weight:bold;">{{ dia }}</td>
+                <td>
+                    {% set nomes_manha = escala[dia].get('07h/19h', []) %}
+                    {% if nomes_manha %}
+                        {% for nome in nomes_manha %}
+                            <div class="bombeiro-linha">
+                                <span>{{ nome }}</span>
+                                <div class="checkboxes">
+                                    <span class="checkbox-item">M</span>
+                                    <span class="checkbox-item">C</span>
+                                    <span class="checkbox-item">G</span>
+                                    <span class="checkbox-item">N</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% set nomes_noite = escala[dia].get('19h/07h', []) %}
+                    {% if nomes_noite %}
+                        {% for nome in nomes_noite %}
+                            <div class="bombeiro-linha">
+                                <span>{{ nome }}</span>
+                                <div class="checkboxes">
+                                    <span class="checkbox-item">M</span>
+                                    <span class="checkbox-item">C</span>
+                                    <span class="checkbox-item">G</span>
+                                    <span class="checkbox-item">N</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="legenda">
+        <strong>Legenda:</strong><br>
+        <span class="legenda-item"><strong>M</strong> - Motorista</span>
+        <span class="legenda-item"><strong>C</strong> - Chefe Equipa</span>
+        <span class="legenda-item"><strong>G</strong> - Guarnição</span>
+        <span class="legenda-item"><strong>N</strong> - Não Escalado</span>
+    </div>
+
+    <script>window.print();</script>
+</body>
+</html>

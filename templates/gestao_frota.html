@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gestão de Frota</h2>
+
+<div class="mb-3">
+    <a href="{{ url_for('exportar_gestao_frota') }}" class="btn btn-success">📥 Exportar Excel</a>
+    <button class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarFrota">📤 Importar Excel</button>
+    <button class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#modalImprimirFrota">🖨️ Imprimir</button>
+</div>
+
+<table class="table table-bordered table-sm">
+    <thead class="table-light">
+    <tr>
+        <th>ID</th><th>Nomenclatura</th><th>Matrícula</th><th>Marca/Modelo</th><th>Ano</th>
+        <th>Inspeção Periódica</th><th>Kms Últ. Revisão</th><th>Kms Próx. Revisão</th>
+        <th>Kms Pneus Diant.</th><th>Kms Pneus Tras.</th><th>Kms Correia</th>
+        <th>Outros Apontamentos</th><th>Ações</th>
+    </tr>
+</thead>
+<tbody>
+    {% for viatura, gestao in registos %}
+    <tr>
+        <td>{{ viatura.id }}</td>
+        <td>{{ viatura.nomenclatura }}</td>
+        <td>{{ viatura.matricula }}</td>
+        <td>{{ viatura.marca }} {{ viatura.modelo }}</td>
+        <td>{{ viatura.ano }}</td>
+        <td>{{ gestao.inspecao_periodica.strftime('%d/%m/%Y') if gestao and gestao.inspecao_periodica else '' }}</td>
+        <td>{{ gestao.kms_ultima_revisao if gestao else '' }}</td>
+        <td>{{ gestao.kms_proxima_revisao if gestao else '' }}</td>
+        <td>{{ gestao.kms_pneus_dianteiros if gestao else '' }}</td>
+        <td>{{ gestao.kms_pneus_trazeiros if gestao else '' }}</td>
+        <td>{{ gestao.kms_correia if gestao else '' }}</td>
+        <td>{{ gestao.outros_apontamentos if gestao else '' }}</td>
+        <td>
+            {% if gestao %}
+            <button class="btn btn-sm btn-warning btn-editar-frota"
+                    data-id="{{ gestao.id }}"
+                    data-inspecao="{{ gestao.inspecao_periodica.strftime('%Y-%m-%d') if gestao.inspecao_periodica else '' }}"
+                    data-kms_ultima="{{ gestao.kms_ultima_revisao or '' }}"
+                    data-kms_proxima="{{ gestao.kms_proxima_revisao or '' }}"
+                    data-kms_pneus_d="{{ gestao.kms_pneus_dianteiros or '' }}"
+                    data-kms_pneus_t="{{ gestao.kms_pneus_trazeiros or '' }}"
+                    data-kms_correia="{{ gestao.kms_correia or '' }}"
+                    data-apontamentos="{{ gestao.outros_apontamentos or '' }}"
+                    data-bs-toggle="modal" data-bs-target="#modalEditarFrota"
+                    title="Editar">✏️</button>
+            {% else %}
+                <span class="text-muted">—</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditarFrota" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formEditarFrota" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Editar Registo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <label>Inspeção Periódica</label>
+                    <input type="date" name="inspecao_periodica" id="edit_inspecao" class="form-control mb-2">
+                    <label>Kms Última Revisão</label>
+                    <input type="number" name="kms_ultima_revisao" id="edit_kms_ultima" class="form-control mb-2">
+                    <label>Kms Próxima Revisão</label>
+                    <input type="number" name="kms_proxima_revisao" id="edit_kms_proxima" class="form-control mb-2">
+                    <label>Kms Pneus Dianteiros</label>
+                    <input type="number" name="kms_pneus_dianteiros" id="edit_pneus_d" class="form-control mb-2">
+                    <label>Kms Pneus Trazeiros</label>
+                    <input type="number" name="kms_pneus_trazeiros" id="edit_pneus_t" class="form-control mb-2">
+                    <label>Kms Correia</label>
+                    <input type="number" name="kms_correia" id="edit_correia" class="form-control mb-2">
+                    <label>Outros Apontamentos</label>
+                    <textarea name="outros_apontamentos" id="edit_apontamentos" class="form-control mb-2" rows="3"></textarea>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar -->
+<div class="modal fade" id="modalImportarFrota" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_gestao_frota') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Gestão Frota (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Imprimir -->
+<div class="modal fade" id="modalImprimirFrota" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Imprimir Dados da Viatura</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label>Selecione a viatura</label>
+                <select id="viaturaImprimirSelect" class="form-select">
+                    <option value="">-- Escolha --</option>
+                    {% for v in viaturas %}
+                    <option value="{{ v.id }}">{{ v.matricula }} ({{ v.nomenclatura }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnImprimirViatura">Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Preencher modal de edição
+const modalEditar = document.getElementById('modalEditarFrota');
+modalEditar.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formEditarFrota').action = '/gestao-frota/editar/' + id;
+    document.getElementById('edit_inspecao').value = button.getAttribute('data-inspecao') || '';
+    document.getElementById('edit_kms_ultima').value = button.getAttribute('data-kms_ultima') || '';
+    document.getElementById('edit_kms_proxima').value = button.getAttribute('data-kms_proxima') || '';
+    document.getElementById('edit_pneus_d').value = button.getAttribute('data-kms_pneus_d') || '';
+    document.getElementById('edit_pneus_t').value = button.getAttribute('data-kms_pneus_t') || '';
+    document.getElementById('edit_correia').value = button.getAttribute('data-kms_correia') || '';
+    document.getElementById('edit_apontamentos').value = button.getAttribute('data-apontamentos') || '';
+});
+
+// Imprimir
+document.getElementById('btnImprimirViatura').addEventListener('click', function() {
+    const viaturaId = document.getElementById('viaturaImprimirSelect').value;
+    if (viaturaId) {
+        window.open('/gestao-frota/imprimir/' + viaturaId, '_blank');
+    }
+});
+</script>
+{% endblock %}

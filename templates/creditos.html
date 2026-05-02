@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gestão de Créditos (Dias Não Gozados)</h2>
+
+<!-- Formulário de filtro por bombeiro -->
+<form method="GET" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="bombeiro_id" class="form-select form-select-sm">
+            <option value="">Todos os Bombeiros</option>
+            {% for b in bombeiros %}
+            <option value="{{ b.id }}" {% if bombeiro_id == b.id %}selected{% endif %}>{{ b.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+        {% if bombeiro_id %}
+        <a href="{{ url_for('listar_creditos') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="mb-3">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoCredito">+ Novo Crédito</button>
+    <a href="{{ url_for('exportar_creditos') }}" class="btn btn-outline-success ms-2">📥 Exportar Excel</a>
+    <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarCreditos">📤 Importar Excel</button>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Bombeiro</th>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Horas</th>
+            <th>Estado</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in creditos %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.bombeiro.nome }}</td>
+            <td>{{ c.data.strftime('%d/%m/%Y') }}</td>
+            <td>{{ c.descricao }}</td>
+            <td>{{ c.horas }}h</td>
+            <td>
+                {% if c.observacao == 'Em Análise' %}
+                    <span class="badge bg-info text-dark">Em Análise</span>
+                {% elif c.observacao == 'Não Gozado' %}
+                    <span class="badge bg-warning text-dark">Não Gozado</span>
+                {% else %}
+                    <span class="badge bg-success">Gozado</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if c.observacao == 'Em Análise' %}
+                <a href="{{ url_for('aprovar_credito', id=c.id) }}" class="btn btn-sm btn-success">✅ Aprovar</a>
+                <a href="{{ url_for('apagar_credito', id=c.id) }}" class="btn btn-sm btn-danger"
+                   onclick="return confirm('Remover este crédito?')">🗑️</a>
+                {% elif c.observacao == 'Não Gozado' %}
+                <a href="{{ url_for('apagar_credito', id=c.id) }}" class="btn btn-sm btn-danger"
+                   onclick="return confirm('Remover este crédito?')">🗑️</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Novo Crédito (mantido como antes) -->
+<div class="modal fade" id="modalNovoCredito" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('adicionar_credito') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Novo Crédito de Dispensa</h5></div>
+                <div class="modal-body">
+                    <label>Bombeiro</label>
+                    <select name="bombeiro_id" class="form-select mb-2" required>
+                        <option value="">Selecione...</option>
+                        {% for b in bombeiros %}
+                        <option value="{{ b.id }}">{{ b.mecanografico }} - {{ b.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Data</label>
+                    <input type="date" name="data" class="form-control mb-2" required>
+                    <label>Descrição (motivo do crédito)</label>
+                    <textarea name="descricao" class="form-control mb-2" rows="2"></textarea>
+                    <label>Horas</label>
+                    <input type="number" name="horas" class="form-control mb-2" value="8" min="1" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Adicionar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar Créditos (mantido como antes) -->
+<div class="modal fade" id="modalImportarCreditos" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_creditos') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Créditos (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

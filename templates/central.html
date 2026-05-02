@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-calendar-heart me-2"></i>Central de Informações</h2>
+
+<!-- ====== LINHA DE CARTÕES DE CATEGORIA (7 indicadores) ====== -->
+<div class="row g-3 mb-4">
+    {% set categorias = ['Motorista', 'Socorrista', 'Centralista', 'EIP', 'ECIN', 'ELAC', 'Piquete'] %}
+    {% set cores = {'Motorista':'#fd7e14','Socorrista':'#20c997','Centralista':'#0d6efd','EIP':'#6f42c1','ECIN':'#dc3545','ELAC':'#fd7e14','Piquete':'#198754'} %}
+    <!-- Botão Todos -->
+<div class="col-6 col-md-3 col-lg">
+    <div class="card text-white bg-secondary shadow-sm categoria-cartao" data-categoria="" style="cursor:pointer;">
+        <div class="card-body text-center py-3">
+            <h4 class="mb-0" id="tot-todos">{{ totais.values()|sum }}</h4>
+            <small>Todos</small>
+        </div>
+    </div>
+</div>
+{% for cat in categorias %}
+<div class="col-6 col-md-3 col-lg">
+    <div class="card text-white shadow-sm categoria-cartao" data-categoria="{{ cat }}" style="background-color: {{ cores[cat] }}; cursor:pointer;">
+        <div class="card-body text-center py-3">
+            <h4 class="mb-0" id="tot-{{ cat }}">{{ totais.get(cat, 0) }}</h4>
+            <small>{{ cat }}</small>
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+<!-- ====== LINHA CALENDÁRIO + INFORMAÇÃO ====== -->
+<div class="row mb-4">
+    <!-- Calendário (esquerda) -->
+    <div class="col-md-4 mb-3 mb-md-0">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-light"><strong><i class="bi bi-calendar3 me-1"></i> Calendário</strong></div>
+            <div class="card-body p-2" id="miniCalendarioContainer">
+                <div id="miniCalendario"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informação do dia (direita) -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-info-circle me-1"></i> <span id="tituloDiaInfo">Escolha um dia</span></strong>
+                <button id="btnImprimirDia" class="btn btn-sm btn-outline-secondary d-none" onclick="imprimirDia()">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </button>
+            </div>
+            <div class="card-body" id="infoDia">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-arrow-left-circle" style="font-size: 3rem;"></i>
+                    <p class="mt-2">Selecione um dia ou uma categoria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== LINHA VIATURAS INOPERACIONAIS ====== -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white"><h5 class="mb-0"><i class="bi bi-truck-front me-2"></i>Viaturas Inoperacionais</h5></div>
+            <div class="card-body p-0">
+                {% if viaturas_inop %}
+                <table class="table table-sm table-bordered mb-0">
+                    <thead><tr><th>Matrícula</th><th>Nomenclatura</th><th>Marca / Modelo</th></tr></thead>
+                    <tbody>
+                        {% for v in viaturas_inop %}
+                        <tr>
+                            <td>{{ v.matricula }}</td>
+                            <td>{{ v.nomenclatura }}</td>
+                            <td>{{ v.marca }} {{ v.modelo }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="p-3 text-muted">Nenhuma viatura inoperacional.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== LINHA NOTAS / RECADOS (7 dias) ====== -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Notas/Recados (7 dias)</h5>
+                <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalNotaCentral" onclick="limparModalNotaCentral()">
+                    <i class="bi bi-plus-lg"></i> Nova Nota
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {% if notas_7dias %}
+                <ul class="list-group list-group-flush">
+                    {% for n in notas_7dias %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ n.descricao[:80] }}{% if n.descricao|length > 80 %}...{% endif %}</strong><br>
+                            <small class="text-muted">{{ n.data_evento.strftime('%d/%m/%Y') if n.data_evento else 'Sem data' }}</small>
+                        </div>
+                        <div>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Central' %}
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalNotaCentral"
+                                    data-id="{{ n.id }}" data-descricao="{{ n.descricao }}" data-data_evento="{{ n.data_evento.strftime('%Y-%m-%d') if n.data_evento else '' }}"
+                                    onclick="preencherModalNotaCentral(this)"><i class="bi bi-pencil"></i></button>
+                            <a href="{{ url_for('central_apagar_nota', id=n.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta nota?')"><i class="bi bi-x"></i></a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-3 text-muted">Nenhuma nota/recado nos próximos 7 dias.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== MODAL NOTA CENTRAL ====== -->
+<div class="modal fade" id="modalNotaCentral" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formNotaCentral" action="{{ url_for('central_notas') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5 id="tituloNotaCentral">Nova Nota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="notaId">
+                    <label>Descrição</label>
+                    <textarea name="descricao" id="notaDescricao" class="form-control mb-2" rows="4" required></textarea>
+                    <label>Data do Evento (opcional)</label>
+                    <input type="date" name="data_evento" id="notaDataEvento" class="form-control">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-info">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let mesAtual = new Date().getMonth() + 1;
+let anoAtual = new Date().getFullYear();
+const hojeStr = "{{ hoje }}";
+const hoje = new Date(hojeStr + 'T00:00:00');
+let atividadeMes = {};
+let diaSelecionado = hojeStr;
+let categoriaAtiva = '';
+
+// ---------- ATIVIDADE MENSAL ----------
+function carregarAtividadeMes() {
+    fetch(`/central/atividade_mes/${anoAtual}/${mesAtual}`)
+        .then(res => res.json())
+        .then(data => {
+            atividadeMes = data;
+            desenharCalendario();
+        })
+        .catch(err => {
+            console.error(err);
+            atividadeMes = {};
+            desenharCalendario();
+        });
+}
+
+function desenharCalendario() {
+    const container = document.getElementById('miniCalendario');
+    const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual, 0);
+    const totalDias = ultimoDia.getDate();
+    const diaSemanaInicio = primeiroDia.getDay();
+    const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    let html = `<div class="d-flex justify-content-between align-items-center mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(-1)">&lt;</button>
+        <strong>${meses[mesAtual-1]} ${anoAtual}</strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(1)">&gt;</button>
+    </div>
+    <table class="table table-bordered table-sm text-center" style="font-size:0.85rem;">
+        <thead><tr><th class="bg-light">Dom</th><th class="bg-light">Seg</th><th class="bg-light">Ter</th><th class="bg-light">Qua</th><th class="bg-light">Qui</th><th class="bg-light">Sex</th><th class="bg-light">Sáb</th></tr></thead>
+        <tbody>`;
+
+    let dia = 1;
+    for (let semana = 0; semana < 6; semana++) {
+        html += '<tr>';
+        for (let d = 0; d < 7; d++) {
+            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
+                html += '<td></td>';
+            } else {
+                const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+                let classes = '';
+                let estilo = '';
+                if (dataStr === hojeStr) {
+                    classes += ' fw-bold border-primary';
+                    estilo += 'background-color: #e7f1ff;';
+                }
+                if (dataStr === diaSelecionado && dataStr !== hojeStr) {
+                    classes += ' bg-warning text-dark';
+                }
+                if (d === 0 || d === 6) {
+                    estilo += 'background-color: #f8f9fa;';
+                }
+                let indicadores = '';
+                const atividade = atividadeMes[dataStr];
+                if (atividade) {
+                    if (atividade.escalas) indicadores += '<span class="d-inline-block" style="width:6px;height:6px;border-radius:50%;background:#198754;margin:1px;" title="Escalas"></span>';
+                    if (atividade.trocas) indicadores += '<span class="d-inline-block" style="width:6px;height:6px;border-radius:50%;background:#ffc107;margin:1px;" title="Trocas"></span>';
+                    if (atividade.dispensas) indicadores += '<span class="d-inline-block" style="width:6px;height:6px;border-radius:50%;background:#dc3545;margin:1px;" title="Dispensas"></span>';
+                }
+                let tooltip = dataStr.split('-').reverse().join('/');
+                if (atividade) {
+                    if (atividade.escalas) tooltip += ' - Escalas';
+                    if (atividade.trocas) tooltip += ' - Trocas';
+                    if (atividade.dispensas) tooltip += ' - Dispensas';
+                }
+                html += `<td class="${classes} position-relative" style="${estilo} cursor:pointer;" data-date="${dataStr}" title="${tooltip}">
+                    <div>${dia}</div>
+                    <div style="position:absolute; bottom:2px; left:50%; transform:translateX(-50%);">${indicadores}</div>
+                </td>`;
+                dia++;
+            }
+        }
+        html += '</tr>';
+        if (dia > totalDias) break;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    container.querySelectorAll('td[data-date]').forEach(td => {
+        td.addEventListener('click', function() {
+            diaSelecionado = this.getAttribute('data-date');
+            container.querySelectorAll('td[data-date]').forEach(t => t.classList.remove('bg-warning','text-dark'));
+            if (diaSelecionado !== hojeStr) this.classList.add('bg-warning','text-dark');
+            carregarInfoDia(diaSelecionado, categoriaAtiva);
+        });
+    });
+}
+
+function mudarMes(delta) {
+    mesAtual += delta;
+    if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
+    if (mesAtual > 12) { mesAtual = 1; anoAtual++; }
+    carregarAtividadeMes();
+}
+
+// ---------- CARREGAR INFORMAÇÃO DO DIA ----------
+function carregarInfoDia(dataStr, categoria = '') {
+    const infoDiv = document.getElementById('infoDia');
+    const titulo = document.getElementById('tituloDiaInfo');
+    const btnImprimir = document.getElementById('btnImprimirDia');
+    const partes = dataStr.split('-');
+    const dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+
+    // Mostrar spinner enquanto carrega
+    infoDiv.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-danger"></div></div>';
+    titulo.textContent = dataFormatada;
+    btnImprimir.classList.remove('d-none');
+    btnImprimir.setAttribute('data-date', dataStr);
+
+    // 1. Carregar a informação do dia (escalas, trocas, dispensas)
+    let url = `/central/dia/${dataStr}`;
+    if (categoria) {
+        url += `?categoria=${encodeURIComponent(categoria)}`;
+    }
+
+    fetch(url)
+        .then(res => res.json())
+        .then(json => {
+            if (json.erro) {
+                infoDiv.innerHTML = `<div class="alert alert-danger">${json.erro}</div>`;
+                return;
+            }
+            infoDiv.innerHTML = json.html;
+        })
+        .catch(err => {
+            infoDiv.innerHTML = '<div class="alert alert-danger">Erro ao carregar os dados.';
+        });
+
+    // 2. Atualizar os totais nos cartões de categoria
+    fetch(`/central/totais/${dataStr}`)
+        .then(res => res.json())
+        .then(totais => {
+            if (totais.erro) return;
+            let somaTodos = 0;
+            // Atualiza cada categoria
+            ['Motorista', 'Socorrista', 'Centralista', 'EIP', 'ECIN', 'ELAC', 'Piquete', 'Bombeiro'].forEach(cat => {
+                const elem = document.getElementById(`tot-${cat}`);
+                if (elem) {
+                    elem.textContent = totais[cat] || 0;
+                    somaTodos += (totais[cat] || 0);
+                }
+            });
+            // Atualiza o "Todos"
+            const elemTodos = document.getElementById('tot-todos');
+            if (elemTodos) elemTodos.textContent = somaTodos;
+        })
+        .catch(err => console.error('Erro ao atualizar totais:', err));
+}
+
+function imprimirDia() {
+    const data = document.getElementById('btnImprimirDia').getAttribute('data-date');
+    if (data) window.open(`/central/imprimir/${data}`, '_blank');
+}
+
+// ---------- CARTÕES DE CATEGORIA ----------
+document.querySelectorAll('.categoria-cartao').forEach(card => {
+    card.addEventListener('click', function() {
+        // Remove active de todos
+        document.querySelectorAll('.categoria-cartao').forEach(c => c.classList.remove('border','border-white'));
+        this.classList.add('border','border-white');
+        categoriaAtiva = this.getAttribute('data-categoria');
+        carregarInfoDia(diaSelecionado, categoriaAtiva);
+    });
+});
+
+// ---------- MODAL NOTA CENTRAL ----------
+function limparModalNotaCentral() {
+    document.getElementById('notaId').value = '';
+    document.getElementById('notaDescricao').value = '';
+    document.getElementById('notaDataEvento').value = '';
+    document.getElementById('formNotaCentral').action = '{{ url_for('central_notas') }}';
+    document.getElementById('tituloNotaCentral').textContent = 'Nova Nota';
+}
+function preencherModalNotaCentral(btn) {
+    const id = btn.getAttribute('data-id');
+    document.getElementById('notaId').value = id;
+    document.getElementById('notaDescricao').value = btn.getAttribute('data-descricao') || '';
+    document.getElementById('notaDataEvento').value = btn.getAttribute('data-data_evento') || '';
+    document.getElementById('formNotaCentral').action = '/central/notas/editar/' + id;
+    document.getElementById('tituloNotaCentral').textContent = 'Editar Nota';
+}
+
+// ========== INICIALIZAÇÃO ==========
+document.addEventListener('DOMContentLoaded', function() {
+    carregarAtividadeMes();
+    carregarInfoDia(hojeStr);
+});
+</script>
+{% endblock %}

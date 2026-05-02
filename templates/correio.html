@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-envelope me-2"></i>Correio Interno</h2>
+
+<ul class="nav nav-tabs mb-4" id="correioTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">
+            <i class="bi bi-inbox me-1"></i> Caixa de Entrada 
+            {% set naolidas = caixa_entrada|selectattr('lida', 'equalto', False)|list %}
+            {% if naolidas %}<span class="badge bg-danger ms-1">{{ naolidas|length }}</span>{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="enviar-tab" data-bs-toggle="tab" data-bs-target="#enviar" type="button" role="tab">
+            <i class="bi bi-send-check me-1"></i> Enviadas
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="correioTabContent">
+    <!-- Caixa de Entrada -->
+    <div class="tab-pane fade show active" id="entrada" role="tabpanel">
+        {% if caixa_entrada %}
+            <div class="list-group">
+                {% for msg in caixa_entrada %}
+                <div class="list-group-item p-0">
+                    <!-- Cabeçalho da mensagem (sempre visível) -->
+                    <div class="d-flex justify-content-between align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}"
+                         style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}" aria-expanded="false">
+                        <div>
+                            <strong>{{ msg.assunto }}</strong>
+                            <small class="text-muted ms-2">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <div class="small text-muted">De: {{ msg.remetente.nome }}</div>
+                            {% if not msg.lida %}<span class="badge bg-danger mt-1">Nova</span>{% endif %}
+                        </div>
+                        <div class="btn-group ms-3">
+                            {% if not msg.lida %}
+                            <a href="{{ url_for('correio_marcar_lida', id=msg.id) }}" class="btn btn-sm btn-outline-success" title="Marcar como lida"><i class="bi bi-check-lg"></i></a>
+                            {% endif %}
+                            <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')" title="Apagar"><i class="bi bi-trash"></i></a>
+                        </div>
+                    </div>
+                    <!-- Corpo expandido (inicialmente escondido) -->
+                    <div class="collapse" id="msg-collapse-{{ msg.id }}">
+                        <div class="p-3 border-top">
+                            <p>{{ msg.corpo }}</p>
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-sm btn-primary"
+                                        onclick="responderMensagem({{ msg.remetente_id }}, '{{ msg.remetente.nome|e }}', '{{ msg.assunto|e }}')">
+                                    <i class="bi bi-reply"></i> Responder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">A sua caixa de entrada está vazia.</p>
+        {% endif %}
+    </div>
+
+    <!-- Enviadas -->
+    <div class="tab-pane fade" id="enviar" role="tabpanel">
+        <div class="mb-3">
+            <button class="btn btn-success" onclick="novaMensagem()">
+                <i class="bi bi-pencil-square me-1"></i> Nova Mensagem
+            </button>
+        </div>
+        {% if enviadas %}
+            <div class="list-group">
+                {% for msg in enviadas %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ msg.assunto }}</strong>
+                        <small class="text-muted">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                    </div>
+                    <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
+                    <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
+                    <div class="mt-2 text-end">
+                        <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')"><i class="bi bi-trash"></i></a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">Nenhuma mensagem enviada.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Nova Mensagem / Resposta -->
+<div class="modal fade" id="modalNovaMensagem" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" action="{{ url_for('correio_enviar') }}">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-send me-1"></i> <span id="modalTitulo">Nova Mensagem</span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Enviar para</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="destinatario_tipo" value="bombeiro" id="modalTipoBombeiro" checked onchange="toggleDestinatario()">
+                            <label class="form-check-label" for="modalTipoBombeiro">Bombeiro</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="destinatario_tipo" value="departamento" id="modalTipoDepartamento" onchange="toggleDestinatario()">
+                            <label class="form-check-label" for="modalTipoDepartamento">Departamento</label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="modalDivBombeiro">
+                        <select name="destinatario_id" id="modalDestinatarioId" class="form-select">
+                            <option value="">Selecione um bombeiro...</option>
+                            {% for b in bombeiros %}
+                            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="modalDivDepartamento" style="display:none;">
+                        <select name="departamento" id="modalDepartamento" class="form-select">
+                            <option value="">Selecione um departamento...</option>
+                            {% for d in departamentos %}
+                            <option value="{{ d }}">{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assunto</label>
+                        <input type="text" name="assunto" id="modalAssunto" class="form-control" value="Sem assunto">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mensagem</label>
+                        <textarea name="corpo" id="modalCorpo" class="form-control" rows="6" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-send"></i> Enviar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Função para abrir modal em modo "Nova Mensagem"
+    function novaMensagem() {
+        document.getElementById('modalTitulo').textContent = 'Nova Mensagem';
+        document.getElementById('modalAssunto').value = 'Sem assunto';
+        document.getElementById('modalCorpo').value = '';
+        document.getElementById('modalTipoBombeiro').checked = true;
+        document.getElementById('modalDestinatarioId').value = '';
+        document.getElementById('modalDepartamento').value = '';
+        toggleDestinatario();
+        var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
+        modal.show();
+    }
+
+    // Função para responder a uma mensagem
+    function responderMensagem(remetenteId, remetenteNome, assuntoOriginal) {
+        document.getElementById('modalTitulo').textContent = 'Responder';
+        document.getElementById('modalAssunto').value = 'RE: ' + assuntoOriginal;
+        document.getElementById('modalCorpo').value = '';
+        // Selecionar o destinatário como o remetente original
+        document.getElementById('modalTipoBombeiro').checked = true;
+        document.getElementById('modalDestinatarioId').value = remetenteId;
+        toggleDestinatario();
+        var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
+        modal.show();
+    }
+
+    // Mostrar/ocultar campos de destinatário com base no radio
+    function toggleDestinatario() {
+        var tipo = document.querySelector('input[name="destinatario_tipo"]:checked').value;
+        document.getElementById('modalDivBombeiro').style.display = (tipo === 'bombeiro') ? 'block' : 'none';
+        document.getElementById('modalDivDepartamento').style.display = (tipo === 'departamento') ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

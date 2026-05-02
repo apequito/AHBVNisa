@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock de Fardamento</h2>
+
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoItem">+ Novo Item</button>
+    <a href="{{ url_for('exportar_stock_fardamento') }}" class="btn btn-success ms-2">📥 Exportar Excel</a>
+    <button class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarStock">📤 Importar Excel</button>
+    <a href="{{ url_for('imprimir_stock_fardamento') }}" target="_blank" class="btn btn-secondary ms-2">🖨️ Imprimir Stock</a>
+</div>
+
+<table class="table table-bordered table-sm">
+    <thead class="table-light">
+        <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Nome</th>
+            <th>Descrição</th>
+            <th>Tamanho</th>
+            <th>Stock</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.tipo }}</td>
+            <td>{{ item.nome }}</td>
+            <td>{{ item.descricao or '-' }}</td>
+            <td>{{ item.tamanho or '-' }}</td>
+            <td>{{ item.stock }}</td>
+            <td>
+                <button class="btn btn-sm btn-warning btn-editar-stock"
+                        data-id="{{ item.id }}"
+                        data-tipo="{{ item.tipo }}"
+                        data-nome="{{ item.nome }}"
+                        data-descricao="{{ item.descricao or '' }}"
+                        data-tamanho="{{ item.tamanho or '' }}"
+                        data-stock="{{ item.stock }}"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarStock"
+                        title="Editar">✏️</button>
+                <a href="{{ url_for('apagar_stock_fardamento', id=item.id) }}"
+                   class="btn btn-sm btn-danger"
+                   onclick="return confirm('Apagar este item?')"
+                   title="Apagar">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Novo -->
+<div class="modal fade" id="modalNovoItem" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Novo Item de Fardamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <select name="tipo" class="form-select mb-2">
+                        <option>Fato de Incêndio</option>
+                        <option>Uniforme de Cerimónia</option>
+                        <option>Fato de Treino</option>
+                        <option>Outro</option>
+                    </select>
+                    <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do item" required>
+                    <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
+                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
+                    <label>Tipo</label>
+                    <input type="number" name="stock" class="form-control mb-2" placeholder="Quantidade em stock" value="0" min="0" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Adicionar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditarStock" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formEditarStock" method="POST" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Editar Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <select name="tipo" id="edit_tipo" class="form-select mb-2">
+                        <option>Fato de Incêndio</option>
+                        <option>Uniforme de Cerimónia</option>
+                        <option>Fato de Treino</option>
+                        <option>Outro</option>
+                    </select>
+                    <input type="text" name="nome" id="edit_nome" class="form-control mb-2" required>
+                    <textarea name="descricao" id="edit_descricao" class="form-control mb-2"></textarea>
+                    <input type="text" name="tamanho" id="edit_tamanho" class="form-control mb-2">
+                    <label>Tipo</label>
+                    <input type="number" name="stock" id="edit_stock" class="form-control mb-2" min="0" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar -->
+<div class="modal fade" id="modalImportarStock" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_stock_fardamento') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Stock (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                    <small class="text-muted mt-2 d-block">Colunas: Tipo, Nome, Descrição, Tamanho, Stock</small>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const modalEditarStock = document.getElementById('modalEditarStock');
+modalEditarStock.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formEditarStock').action = '/stock-fardamento/editar/' + id;
+    document.getElementById('edit_tipo').value = button.getAttribute('data-tipo');
+    document.getElementById('edit_nome').value = button.getAttribute('data-nome');
+    document.getElementById('edit_descricao').value = button.getAttribute('data-descricao');
+    document.getElementById('edit_tamanho').value = button.getAttribute('data-tamanho');
+    document.getElementById('edit_stock').value = button.getAttribute('data-stock');
+});
+</script>
+{% endblock %}

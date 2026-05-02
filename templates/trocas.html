@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Trocas de Serviço</h2>
+
+<!-- Botão para abrir modal de nova troca -->
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovaTroca">Solicitar Troca</button>
+
+<!-- Tabela com pedidos de troca (exibida como antes) -->
+<table class="table table-striped align-middle">
+    <thead><tr>
+        <th>Origem</th><th>Destino</th><th>Data Origem</th><th>Turno O.</th>
+        <th>Data Destino</th><th>Turno D.</th><th>Estado</th><th>Ação</th>
+    </tr></thead>
+    <tbody>
+        {% for t in pedidos %}
+        <tr>
+            <td>{{ t.bombeiro_origem.nome }}</td>
+            <td>{{ t.bombeiro_destino.nome }}</td>
+            <td>{{ t.data_origem.strftime('%d/%m/%Y') }}</td>
+            <td>{{ t.turno_origem }}</td>
+            <td>{{ t.data_destino.strftime('%d/%m/%Y') }}</td>
+            <td>{{ t.turno_destino }}</td>
+            <td>
+                {% if t.estado == 'pendente_colega' %}
+                    <span class="badge bg-warning text-dark">Pendente (Colega)</span>
+                {% elif t.estado == 'aceite_colega' %}
+                    <span class="badge bg-info">Aceite (Aguarda Comando)</span>
+                {% elif t.estado == 'aprovada' %}
+                    <span class="badge bg-success">Aprovada</span>
+                {% elif t.estado == 'recusada' %}
+                    <span class="badge bg-danger">Recusada</span>
+                {% endif %}
+            </td>
+            <td>
+                <!-- Ações para o colega recetor (destino) -->
+                {% if not t.aprovada and t.estado == 'pendente_colega' and current_user.id == t.bombeiro_destino_id %}
+                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">✅</a>
+                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">❌</a>
+                {% endif %}
+
+                <!-- Ações para Comando/Admin -->
+                {% if t.estado == 'aceite_colega' and (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') %}
+                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar e efetuar troca">Aprovar</a>
+                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">Recusar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal para solicitar troca (com calendários) -->
+<div class="modal fade" id="modalNovaTroca" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="formNovaTroca">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova Troca de Serviço</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Coluna do Colega -->
+                        <div class="col-md-6">
+                            <label>Selecionar Colega</label>
+                            <select name="destino_id" id="destino_id" class="form-select mb-2" required>
+                                <option value="">-- Escolha --</option>
+                                {% for b in bombeiros %}
+                                <option value="{{ b.id }}">{{ b.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <div id="calendarioColega" class="border p-2" style="min-height:250px;">
+                                <p class="text-muted">Escolha um colega para ver o calendário.</p>
+                            </div>
+                            <label class="mt-2">Data Destino</label>
+                            <input type="date" name="data_destino" id="data_destino" class="form-control mb-2" readonly required>
+                            <label>Turno Destino</label>
+                            <select name="turno_destino" id="turno_destino" class="form-select mb-2" required>
+                                <!-- Será preenchido via JS -->
+                            </select>
+                        </div>
+
+                        <!-- Coluna do Próprio (origem) -->
+                        <div class="col-md-6">
+                            <p><strong>O meu calendário</strong></p>
+                            <div id="calendarioProprio" class="border p-2" style="min-height:250px;">
+                                <!-- Será carregado automaticamente -->
+                            </div>
+                            <label class="mt-2">Data Origem</label>
+                            <input type="date" name="data_origem" id="data_origem" class="form-control mb-2" readonly required>
+                            <label>Turno Origem</label>
+                            <select name="turno_origem" id="turno_origem" class="form-select mb-2" required>
+                                <!-- Preenchido via JS -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label>Motivo (opcional)</label>
+                        <textarea name="motivo" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Solicitar Troca</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ---------- Variáveis globais ----------
+let mesAtual = new Date().getMonth() + 1;
+let anoAtual = new Date().getFullYear();
+const userId = {{ current_user.id }};
+
+// ---------- Funções globais de clique (serão associadas via listener) ----------
+function selecionarDiaProprio(dia) {
+    var dataStr = anoAtual + '-' + String(mesAtual).padStart(2,'0') + '-' + String(dia).padStart(2,'0');
+    document.getElementById('data_origem').value = dataStr;
+
+    const container = document.getElementById('calendarioProprio');
+    const escalas = container._diasEscala[dia];
+    const selectTurno = document.getElementById('turno_origem');
+    selectTurno.innerHTML = '';
+    if (escalas && escalas.length) {
+        escalas.forEach(turno => {
+            const opt = document.createElement('option');
+            opt.value = turno;
+            opt.text = turno;
+            selectTurno.appendChild(opt);
+        });
+    }
+}
+
+function selecionarDiaColega(dia) {
+    var dataStr = anoAtual + '-' + String(mesAtual).padStart(2,'0') + '-' + String(dia).padStart(2,'0');
+    document.getElementById('data_destino').value = dataStr;
+
+    const container = document.getElementById('calendarioColega');
+    const escalas = container._diasEscala[dia];
+    const selectTurno = document.getElementById('turno_destino');
+    selectTurno.innerHTML = '';
+    if (escalas && escalas.length) {
+        escalas.forEach(turno => {
+            const opt = document.createElement('option');
+            opt.value = turno;
+            opt.text = turno;
+            selectTurno.appendChild(opt);
+        });
+    }
+}
+
+// ---------- Gerar calendário (sem onclick) ----------
+function criarCalendario(containerId, diasEscala, callback) {
+    const container = document.getElementById(containerId);
+    const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual, 0);
+    const totalDias = ultimoDia.getDate();
+    const diaSemanaInicio = primeiroDia.getDay(); // 0=Dom
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(-1, '${containerId}')">&lt;</button>
+            <strong>${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mesAtual-1]} ${anoAtual}</strong>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(1, '${containerId}')">&gt;</button>
+        </div>
+        <table class="table table-bordered table-sm text-center">
+            <thead><tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
+            <tbody>`;
+
+    let dia = 1;
+    for (let semana = 0; semana < 6; semana++) {
+        html += '<tr>';
+        for (let d = 0; d < 7; d++) {
+            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
+                html += '<td></td>';
+            } else {
+                const temEscala = diasEscala[dia] ? true : false;
+                const titulo = temEscala ? diasEscala[dia].join(', ') : '';
+                html += `<td class="${temEscala ? 'bg-warning' : ''}"
+                              style="cursor:pointer;"
+                              data-dia="${dia}"
+                              title="${titulo}">${dia}</td>`;
+                dia++;
+            }
+        }
+        html += '</tr>';
+        if (dia > totalDias) break;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    // Guardar dados para uso posterior
+    container._diasEscala = diasEscala;
+    container._callback = callback;
+
+    // Atribuir evento de clique a cada dia
+    Array.from(container.querySelectorAll('td[data-dia]')).forEach(td => {
+        td.addEventListener('click', function() {
+            const diaNum = parseInt(this.getAttribute('data-dia'));
+            if (typeof callback === 'function') {
+                callback(diaNum);
+            }
+        });
+    });
+}
+
+// ---------- Navegação de mês ----------
+function mudarMes(delta, containerId) {
+    mesAtual += delta;
+    if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
+    if (mesAtual > 12) { mesAtual = 1; anoAtual++; }
+    if (containerId === 'calendarioProprio') {
+        carregarCalendarioProprio();
+    } else if (containerId === 'calendarioColega') {
+        carregarCalendarioColega();
+    }
+}
+
+// ---------- Carregar dados e desenhar calendário do próprio ----------
+function carregarCalendarioProprio() {
+    fetch(`/api/escala_usuario/${userId}?ano=${anoAtual}&mes=${mesAtual}`)
+        .then(r => r.json())
+        .then(dados => {
+            const diasTrabalho = {};
+            for (const [dia, escalas] of Object.entries(dados)) {
+                diasTrabalho[dia] = escalas.map(e => e.turno);
+            }
+            criarCalendario('calendarioProprio', diasTrabalho, selecionarDiaProprio);
+        });
+}
+
+// ---------- Carregar calendário do colega ----------
+function carregarCalendarioColega() {
+    const select = document.getElementById('destino_id');
+    const colegaId = select.value;
+    if (!colegaId) {
+        document.getElementById('calendarioColega').innerHTML = '<p class="text-muted">Escolha um colega.</p>';
+        return;
+    }
+    fetch(`/api/escala_usuario/${colegaId}?ano=${anoAtual}&mes=${mesAtual}`)
+        .then(r => r.json())
+        .then(dados => {
+            const diasTrabalho = {};
+            for (const [dia, escalas] of Object.entries(dados)) {
+                diasTrabalho[dia] = escalas.map(e => e.turno);
+            }
+            criarCalendario('calendarioColega', diasTrabalho, selecionarDiaColega);
+        });
+}
+
+// ---------- Eventos ----------
+document.getElementById('destino_id').addEventListener('change', function() {
+    carregarCalendarioColega();
+});
+
+// Ao abrir o modal, carregar calendário do próprio
+const modal = document.getElementById('modalNovaTroca');
+modal.addEventListener('show.bs.modal', function () {
+    mesAtual = new Date().getMonth() + 1;
+    anoAtual = new Date().getFullYear();
+    carregarCalendarioProprio();
+    carregarCalendarioColega();
+});
+</script>
+{% endblock %}

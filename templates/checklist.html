@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Checklist de Viaturas</h2>
+<button class="btn btn-secondary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoChecklist">Novo Checklist</button>
+
+<table class="table">
+    <thead><tr><th>Viatura</th><th>Bombeiro</th><th>Data</th><th>Itens Verificados</th><th>Observações</th></tr></thead>
+    <tbody>
+        {% for c in checklists %}
+        <tr>
+            <td>{{ c.viatura.matricula }}</td>
+            <td>{{ c.bombeiro.nome }}</td>
+            <td>{{ c.data.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ c.itens_verificados }}</td>
+            <td>{{ c.observacoes }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="modal fade" id="modalNovoChecklist" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Preencher Checklist</h5></div>
+                <div class="modal-body">
+                    <select name="viatura_id" class="form-select mb-2" required>
+                        {% for v in viaturas %}
+                        <option value="{{ v.id }}">{{ v.matricula }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Itens verificados (separados por vírgulas)</label>
+                    <input name="itens" class="form-control mb-2" placeholder="Luzes, extintores, sirene..." required>
+                    <textarea name="observacoes" class="form-control" placeholder="Observações"></textarea>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

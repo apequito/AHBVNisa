@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Fardamento Atribuído</h2>
+
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAtribuir">Atribuir Fardamento</button>
+    <form method="GET" class="row g-2 mt-2">
+        <div class="col-auto">
+            <select name="bombeiro_id" class="form-select">
+                <option value="">Todos os bombeiros</option>
+                {% for b in bombeiros %}
+                <option value="{{ b.id }}" {% if bombeiro_id == b.id %}selected{% endif %}>{{ b.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto"><button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button></div>
+    </form>
+</div>
+
+<table class="table table-sm">
+    <thead>
+        <tr><th>Bombeiro</th><th>Tipo</th><th>Nome</th><th>Tamanho</th><th>Data Entrega</th><th>Estado</th><th>Ação</th></tr>
+    </thead>
+    <tbody>
+        {% for a in atribuicoes %}
+        <tr>
+            <td>{{ a.bombeiro.nome }}</td>
+            <td>{{ a.tipo }}</td>
+            <td>{{ a.nome }}</td>
+            <td>{{ a.tamanho }}</td>
+            <td>{{ a.data_entrega.strftime('%d/%m/%Y') }}</td>
+            <td>{{ a.estado }}</td>
+            <td>
+                {% if a.estado == 'Entregue' %}
+                <form method="POST" action="{{ url_for('devolver_fardamento_atribuido', id=a.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Registar devolução?')">Devolver</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="modal fade" id="modalAtribuir" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Atribuir Fardamento</h5></div>
+                <div class="modal-body">
+                    <label>Bombeiro</label>
+                    <select name="bombeiro_id" class="form-select mb-2" required>
+                        <option value="">Selecione...</option>
+                        {% for b in bombeiros %}
+                        <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
+                        {% endfor %}
+                    </select>
+                    <label>Tipo</label>
+                    <select name="tipo" class="form-select mb-2" required>
+                        <option>Fato de Incêndio</option>
+                        <option>Uniforme de Cerimónia</option>
+                        <option>Fato de Treino</option>
+                        <option>Outro</option>
+                    </select>
+                    <label>Nome / Descrição</label>
+                    <input type="text" name="nome" class="form-control mb-2" placeholder="Ex: Casaco Ignífugo" required>
+                    <label>Tamanho</label>
+                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="M, L, XL...">
+                    <label>Data de Entrega</label>
+                    <input type="date" name="data_entrega" class="form-control mb-2" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Atribuir</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

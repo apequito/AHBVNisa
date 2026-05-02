@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Disponibilidades para Serviço Extra</h2>
+
+<div class="mb-3">
+    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalNovaDisponibilidade">Indicar Disponibilidade</button>
+    <a href="{{ url_for('exportar_disponibilidades') }}" class="btn btn-outline-success btn-sm ms-2">📥 Exportar</a>
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    <button class="btn btn-outline-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImprimir">🖨️ Imprimir Disponibilidade</button>
+    {% endif %}
+</div>
+
+<!-- Filtros e ação de apagar (apenas Admin/Comando) -->
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+<div class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label">Bombeiro</label>
+        <select id="filtroBombeiro" class="form-select form-select-sm" onchange="aplicarFiltro()">
+            <option value="">Todos</option>
+            {% for b in bombeiros %}
+            <option value="{{ b.id }}" {% if bombeiro_id == b.id %}selected{% endif %}>{{ b.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Mês</label>
+        <select id="filtroMes" class="form-select form-select-sm" onchange="aplicarFiltro()">
+            <option value="">--</option>
+            {% for i in range(1,13) %}
+            <option value="{{ i }}" {% if mes == i %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Ano</label>
+        <input type="number" id="filtroAno" class="form-control form-control-sm" value="{{ ano or now.year }}" style="width:80px;" onchange="aplicarFiltro()">
+    </div>
+    <div class="col-auto">
+        <button type="button" class="btn btn-sm btn-danger" onclick="confirmarApagar()">🗑️ Apagar</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tabela de disponibilidades -->
+<table class="table table-sm">
+    <thead>
+        <tr>
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            <th><input type="checkbox" id="selectAll" onclick="toggleCheckboxes()"></th>
+            {% endif %}
+            <th>Bombeiro</th>
+            <th>Data</th>
+            <th>Categoria</th>
+            <th>Turno Extra</th>
+            <th>Confirmada</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in disponibilidades %}
+        <tr class="{% if d.confirmada %}table-secondary{% endif %}">
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            <td>
+                <input type="checkbox" class="check-disponibilidade" value="{{ d.id }}"
+                       {% if d.confirmada %}checked disabled{% endif %}>
+            </td>
+            {% endif %}
+            <td>{{ d.bombeiro.nome }}</td>
+            <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
+            <td>{{ d.categoria or '-' }}</td>
+            <td>{{ d.turno_extra or '-' }}</td>
+            <td>
+                {% if d.confirmada %}
+                    <span class="badge bg-success">Sim</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Não</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+<button class="btn btn-success btn-sm" onclick="aprovarSelecionadas()">Aprovar Selecionadas</button>
+{% endif %}
+
+<!-- Modal Nova Disponibilidade -->
+<div class="modal fade" id="modalNovaDisponibilidade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" action="{{ url_for('disponibilidades') }}" id="formDisponibilidade">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Nova Disponibilidade</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Selecione os dias (clique para marcar/desmarcar):</label>
+                            <div id="calendarioDisponibilidade" class="border p-2" style="min-height:250px;"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Categoria</label>
+                            <select name="categoria" id="categoriaDisponibilidade" class="form-select mb-2" onchange="ajustarTurnoExtra()">
+                                <option value="">Selecione...</option>
+                                <option>Motorista</option>
+                                <option>Socorrista</option>
+                                <option>Centralista</option>
+                                <option>EIP</option>
+                                <option>ECIN</option>
+                                <option>ELAC</option>
+                                <option>Piquete</option>
+                                <option>Bombeiro</option>
+                            </select>
+                            <div id="divTurnoExtra" style="display:none;">
+                                <label>Turno Extra</label>
+                                <select name="turno_extra" id="turnoExtraSelect" class="form-select mb-2"></select>
+                            </div>
+                            <input type="hidden" name="datas" id="datasSelecionadas">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Registar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Imprimir -->
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+<div class="modal fade" id="modalImprimir" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="GET" action="{{ url_for('imprimir_disponibilidades') }}" target="_blank">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Imprimir Disponibilidade</h5></div>
+                <div class="modal-body">
+                    <label>Bombeiro</label>
+                    <select name="bombeiro_id" class="form-select mb-2" required>
+                        <option value="">Selecione...</option>
+                        {% for b in bombeiros %}
+                        <option value="{{ b.id }}">{{ b.mecanografico }} - {{ b.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Mês</label>
+                    <select name="mes" class="form-select mb-2" required>
+                        <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+                        <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+                        <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+                        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                    </select>
+                    <label>Ano</label>
+                    <input type="number" name="ano" class="form-control mb-2" value="{{ now.year }}" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Gerar Impressão</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulário oculto para apagar -->
+<form id="formApagar" method="POST" action="{{ url_for('apagar_disponibilidades_mes') }}" style="display:none;">
+    <input type="hidden" name="mes" id="apagarMes">
+    <input type="hidden" name="ano" id="apagarAno">
+    <input type="hidden" name="bombeiro_id" id="apagarBombeiro">
+</form>
+
+<script>
+// ---------- Calendário multi‑seleção ----------
+let mesAtual = new Date().getMonth() + 1;
+let anoAtual = new Date().getFullYear();
+let selectedDates = new Set();
+
+function carregarCalendario() {
+    const container = document.getElementById('calendarioDisponibilidade');
+    const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual, 0);
+    const totalDias = ultimoDia.getDate();
+    const diaSemanaInicio = primeiroDia.getDay();
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(-1)">&lt;</button>
+            <strong>${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mesAtual-1]} ${anoAtual}</strong>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(1)">&gt;</button>
+        </div>
+        <table class="table table-bordered table-sm text-center">
+            <thead><tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
+            <tbody>`;
+
+    let dia = 1;
+    for (let semana = 0; semana < 6; semana++) {
+        html += '<tr>';
+        for (let d = 0; d < 7; d++) {
+            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
+                html += '<td></td>';
+            } else {
+                const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+                const selecionado = selectedDates.has(dataStr);
+                html += `<td class="${selecionado ? 'bg-info' : ''}" style="cursor:pointer;" data-date="${dataStr}">${dia}</td>`;
+                dia++;
+            }
+        }
+        html += '</tr>';
+        if (dia > totalDias) break;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    Array.from(container.querySelectorAll('td[data-date]')).forEach(td => {
+        td.addEventListener('click', function() {
+            const dataStr = this.getAttribute('data-date');
+            if (selectedDates.has(dataStr)) {
+                selectedDates.delete(dataStr);
+                this.classList.remove('bg-info');
+            } else {
+                selectedDates.add(dataStr);
+                this.classList.add('bg-info');
+            }
+        });
+    });
+}
+
+function mudarMes(delta) {
+    mesAtual += delta;
+    if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
+    if (mesAtual > 12) { mesAtual = 1; anoAtual++; }
+    carregarCalendario();
+}
+
+// ---------- Turno Extra dinâmico ----------
+function ajustarTurnoExtra() {
+    const cat = document.getElementById('categoriaDisponibilidade').value;
+    const div = document.getElementById('divTurnoExtra');
+    const select = document.getElementById('turnoExtraSelect');
+    select.innerHTML = '';
+
+    if (cat === 'Piquete') {
+        div.style.display = 'block';
+        ['08h/16h', '16h/24h', '08h/20h'].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.text = t; select.appendChild(opt);
+        });
+    } else if (cat === 'ECIN' || cat === 'ELAC') {
+        div.style.display = 'block';
+        ['07h/19h', '19h/07h'].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.text = t; select.appendChild(opt);
+        });
+    } else {
+        div.style.display = 'none';
+    }
+}
+
+// ---------- Submissão do formulário ----------
+document.getElementById('formDisponibilidade').addEventListener('submit', function(e) {
+    const datesArray = Array.from(selectedDates);
+    if (datesArray.length === 0) {
+        e.preventDefault();
+        alert('Selecione pelo menos um dia.');
+        return false;
+    }
+    document.getElementById('datasSelecionadas').value = datesArray.join(',');
+    return true;
+});
+
+// ---------- Filtros ----------
+function aplicarFiltro() {
+    const bombeiro = document.getElementById('filtroBombeiro').value;
+    const mes = document.getElementById('filtroMes').value;
+    const ano = document.getElementById('filtroAno').value;
+    let params = new URLSearchParams();
+    if (bombeiro) params.append('bombeiro_id', bombeiro);
+    if (mes) params.append('mes', mes);
+    if (ano) params.append('ano', ano);
+    window.location.href = '/disponibilidades?' + params.toString();
+}
+
+function confirmarApagar() {
+    const mes = document.getElementById('filtroMes').value;
+    const ano = document.getElementById('filtroAno').value;
+    if (!mes || !ano) {
+        alert('Selecione o mês e o ano para apagar.');
+        return;
+    }
+    if (!confirm(`Apagar TODOS os registos de ${mes}/${ano}?`)) return;
+    document.getElementById('apagarMes').value = mes;
+    document.getElementById('apagarAno').value = ano;
+    document.getElementById('apagarBombeiro').value = document.getElementById('filtroBombeiro').value;
+    document.getElementById('formApagar').submit();
+}
+
+// ---------- Seleção em massa ----------
+function toggleCheckboxes() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.check-disponibilidade:not([disabled])').forEach(cb => cb.checked = selectAll);
+}
+
+function aprovarSelecionadas() {
+    const ids = Array.from(document.querySelectorAll('.check-disponibilidade:checked:not([disabled])')).map(cb => cb.value);
+    if (ids.length === 0) {
+        alert('Selecione disponibilidades para aprovar.');
+        return;
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for('aprovar_disponibilidades') }}';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'ids';
+    input.value = ids.join(',');
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Inicializar calendário ao abrir o modal
+const modalNova = document.getElementById('modalNovaDisponibilidade');
+modalNova.addEventListener('show.bs.modal', function () {
+    mesAtual = new Date().getMonth() + 1;
+    anoAtual = new Date().getFullYear();
+    selectedDates.clear();
+    carregarCalendario();
+    ajustarTurnoExtra();
+});
+</script>
+{% endblock %}

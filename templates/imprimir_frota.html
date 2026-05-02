@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Ficha de Viatura</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h2 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        @media print { body { margin: 20px; } }
+    </style>
+</head>
+<body>
+    <h2>Ficha de Viatura</h2>
+    <table>
+        <tr><th>Matrícula</th><td>{{ viatura.matricula }}</td></tr>
+        <tr><th>Nomenclatura</th><td>{{ viatura.nomenclatura }}</td></tr>
+        <tr><th>Marca / Modelo</th><td>{{ viatura.marca }} {{ viatura.modelo }}</td></tr>
+        <tr><th>Ano</th><td>{{ viatura.ano }}</td></tr>
+        <tr><th>Inspeção Periódica</th><td>{{ gestao.inspecao_periodica.strftime('%d/%m/%Y') if gestao and gestao.inspecao_periodica else '' }}</td></tr>
+        <tr><th>Kms Última Revisão</th><td>{{ gestao.kms_ultima_revisao or '' if gestao }}</td></tr>
+        <tr><th>Kms Próxima Revisão</th><td>{{ gestao.kms_proxima_revisao or '' if gestao }}</td></tr>
+        <tr><th>Kms Pneus Dianteiros</th><td>{{ gestao.kms_pneus_dianteiros or '' if gestao }}</td></tr>
+        <tr><th>Kms Pneus Trazeiros</th><td>{{ gestao.kms_pneus_trazeiros or '' if gestao }}</td></tr>
+        <tr><th>Kms Correia</th><td>{{ gestao.kms_correia or '' if gestao }}</td></tr>
+        <tr><th>Outros Apontamentos</th><td>{{ gestao.outros_apontamentos or '' if gestao }}</td></tr>
+    </table>
+    <script>window.print();</script>
+</body>
+</html>

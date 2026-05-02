@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Checklist Ambulância</h2>
+
+<!-- Filtro por viatura -->
+<form method="GET" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="viaturaFiltro" class="form-label">Filtrar por Viatura</label>
+        <select name="viatura_id" id="viaturaFiltro" class="form-select">
+            <option value="">-- Todas --</option>
+            {% for v in viaturas %}
+            <option value="{{ v.id }}" {{ 'selected' if viatura_selecionada == v.id }}>{{ v.matricula }} ({{ v.nomenclatura }})</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+        {% if viatura_selecionada %}
+        <a href="{{ url_for('checklist_ambulancia') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+        {% endif %}
+    </div>
+    <div class="col-auto ms-auto">
+        <a href="{{ url_for('imprimir_lista_checklists', viatura_id=viatura_selecionada) }}" target="_blank" class="btn btn-secondary btn-sm">🖨️ Imprimir Lista</a>
+    </div>
+</form>
+
+<!-- Botão Novo Checklist -->
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoChecklist">+ Novo Checklist</button>
+
+<!-- Tabela de Checklists -->
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Data/Hora</th>
+            <th>Viatura</th>
+            <th>Efetuado por</th>
+            <th>Finalizado</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in checklists %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.data_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ c.viatura.matricula }}</td>
+            <td>{{ c.bombeiro.nome }}</td>
+            <td>{{ 'Sim' if c.finalizado else 'Não' }}</td>
+            <td>
+                {% if not c.finalizado %}
+                <a href="{{ url_for('preencher_quantidades', checklist_id=c.id) }}" class="btn btn-sm btn-warning">Preencher Quantidades</a>
+                {% endif %}
+                <a href="{{ url_for('imprimir_checklist', checklist_id=c.id) }}" target="_blank" class="btn btn-sm btn-secondary">🖨️ Imprimir</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Novo Checklist (mantido como antes) -->
+<div class="modal fade" id="modalNovoChecklist" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Novo Checklist</h5></div>
+                <div class="modal-body">
+                    <label>Viatura</label>
+                    <select name="viatura_id" class="form-select mb-3" required>
+                        <option value="">Selecione...</option>
+                        {% for v in viaturas %}
+                        <option value="{{ v.id }}">{{ v.matricula }} ({{ v.nomenclatura }})</option>
+                        {% endfor %}
+                    </select>
+
+                    <h6>Produtos para verificar (categorias assinaladas como Checklist)</h6>
+                    {% for cat, produtos in produtos_por_categoria %}
+                        <h6 class="mt-3">{{ cat.nome }}</h6>
+                        {% for p in produtos %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="prod_{{ p.id }}" id="prod_{{ p.id }}">
+                            <label class="form-check-label" for="prod_{{ p.id }}">{{ p.nome }} (Stock: {{ p.stock }})</label>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>Nenhuma categoria de checklist configurada ou sem produtos.</p>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Criar Checklist</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<h5>Histórico de {{ viatura.matricula }} ({{ viatura.nomenclatura }})</h5>
+{% if avarias %}
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Estado</th>
+            <th>Kms</th>
+            <th>Oficina</th>
+            <th>Comando</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in avarias %}
+        <tr>
+            <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ a.descricao }}</td>
+            <td>
+                <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">
+                    {{ a.estado }}
+                </span>
+            </td>
+            <td>{{ a.kms or '-' }}</td>
+            <td class="text-center">{{ '✔️' if a.responsavel_oficina else '❌' }}</td>
+            <td class="text-center">{{ '✔️' if a.comando_verificado else '❌' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">Nenhuma avaria registada para esta viatura.</p>
+{% endif %}

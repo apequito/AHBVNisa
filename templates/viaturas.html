@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-truck me-2"></i>Frota de Viaturas</h2>
+
+<!-- Cartões de resumo (agora clicáveis) -->
+<div class="row g-3 mb-4" id="cartoesFiltro">
+    <div class="col-md-3">
+        <div class="card text-white bg-info shadow-sm cartao-filtro" data-estado="" style="cursor:pointer;">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ total_geral }}</h1>
+                <p class="mb-0">Todos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow-sm cartao-filtro" data-estado="operacional" style="cursor:pointer;">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ total_operacionais }}</h1>
+                <p class="mb-0">Operacionais</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning shadow-sm cartao-filtro" data-estado="manutenção" style="cursor:pointer;">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ total_manutencao }}</h1>
+                <p class="mb-0">Em Manutenção</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger shadow-sm cartao-filtro" data-estado="inoperacional" style="cursor:pointer;">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ total_inoperacionais }}</h1>
+                <p class="mb-0">Inoperacionais</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botões de ação (horizontal) -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    {% if current_user.tipo_user == 'Admin' %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaViatura">
+            <i class="bi bi-plus-circle me-1"></i> Adicionar Viatura
+        </button>
+        <a href="{{ url_for('exportar_viaturas') }}" class="btn btn-outline-success">
+            <i class="bi bi-download me-1"></i> Exportar
+        </a>
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalImportarViaturas">
+            <i class="bi bi-upload me-1"></i> Importar
+        </button>
+    {% endif %}
+</div>
+
+<!-- Tabela de viaturas -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-bordered mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Matrícula</th>
+                    <th>Tipo</th>
+                    <th>Nomenclatura</th>
+                    <th>Marca / Modelo</th>
+                    <th>Ano</th>
+                    <th>Estado</th>
+                    {% if current_user.tipo_user == 'Admin' %}<th class="text-center">Ações</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in viaturas %}
+                <tr class="linha-viatura" data-estado="{{ v.estado|lower }}"
+                    {% if v.estado|lower == 'inoperacional' %} style="background-color: #f8d7da;"{% endif %}>
+                    <td class="fw-bold">{{ v.matricula }}</td>
+                    <td>{{ v.tipo }}</td>
+                    <td>{{ v.nomenclatura }}</td>
+                    <td>{{ v.marca }} {{ v.modelo }}</td>
+                    <td>{{ v.ano }}</td>
+                    <td>
+                        {% if v.estado|lower == 'operacional' %}
+                            <span class="badge bg-success">Operacional</span>
+                        {% elif v.estado|lower == 'inoperacional' %}
+                            <span class="badge bg-danger">Inoperacional</span>
+                        {% elif v.estado|lower == 'manutenção' %}
+                            <span class="badge bg-warning text-dark">Manutenção</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ v.estado }}</span>
+                        {% endif %}
+                    </td>
+                    {% if current_user.tipo_user == 'Admin' %}
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-sm btn-outline-warning btn-editar-vtr"
+                                    data-id="{{ v.id }}"
+                                    data-matricula="{{ v.matricula }}"
+                                    data-tipo="{{ v.tipo }}"
+                                    data-nomenclatura="{{ v.nomenclatura }}"
+                                    data-marca="{{ v.marca }}"
+                                    data-modelo="{{ v.modelo }}"
+                                    data-ano="{{ v.ano }}"
+                                    data-estado="{{ v.estado }}"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarViatura"
+                                    title="Editar"><i class="bi bi-pencil"></i></button>
+                            <a href="{{ url_for('apagar_viatura', id=v.id) }}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Apagar viatura {{ v.matricula }}?')" title="Apagar"><i class="bi bi-trash"></i></a>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Adicionar Viatura (apenas Admin) -->
+{% if current_user.tipo_user == 'Admin' %}
+<div class="modal fade" id="modalNovaViatura" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('adicionar_viatura') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Nova Viatura</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input name="matricula" placeholder="Matrícula" class="form-control mb-2" required>
+                    <select name="tipo" class="form-select mb-2">
+                        <option>VFCI</option><option>VLCI</option><option>VCOT</option>
+                        <option>VTTU</option><option>VTTP</option><option>VTGC</option>
+                        <option>VSAT</option><option>BRTS</option><option>ABSC</option>
+                        <option>ABTD</option><option>ABTM</option><option>VDTD</option>
+                        <option>VOPE</option><option>VRCI</option>
+                    </select>
+                    <input name="nomenclatura" placeholder="Nomenclatura" class="form-control mb-2" required>
+                    <input name="marca" placeholder="Marca" class="form-control mb-2" required>
+                    <input name="modelo" placeholder="Modelo" class="form-control mb-2" required>
+                    <input name="ano" type="number" placeholder="Ano" class="form-control mb-2" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Adicionar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Viatura -->
+<div class="modal fade" id="modalEditarViatura" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formEditarViatura" method="POST" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Editar Viatura</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input name="matricula" id="vtr_matricula" class="form-control mb-2" required>
+                    <select name="tipo" id="vtr_tipo" class="form-select mb-2">
+                        <option>VFCI</option><option>VLCI</option><option>VCOT</option>
+                        <option>VTTU</option><option>VTTP</option><option>VTGC</option>
+                        <option>VSAT</option><option>BRTS</option><option>ABSC</option>
+                        <option>ABTD</option><option>ABTM</option><option>VDTD</option>
+                        <option>VOPE</option><option>VRCI</option>
+                    </select>
+                    <input name="nomenclatura" id="vtr_nomenclatura" class="form-control mb-2" required>
+                    <input name="marca" id="vtr_marca" class="form-control mb-2" required>
+                    <input name="modelo" id="vtr_modelo" class="form-control mb-2" required>
+                    <input name="ano" id="vtr_ano" type="number" class="form-control mb-2" required>
+                    <label>Estado</label>
+                    <select name="estado" id="vtr_estado" class="form-select mb-2">
+                        <option value="operacional">Operacional</option>
+                        <option value="Inoperacional">Inoperacional</option>
+                        <option value="manutenção">Manutenção</option>
+                    </select>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar Viaturas -->
+<div class="modal fade" id="modalImportarViaturas" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_viaturas') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Viaturas (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// ========== FILTRO POR ESTADO (clique nos cartões) ==========
+const cartoes = document.querySelectorAll('.cartao-filtro');
+let estadoAtivo = '';  // vazio = todos
+
+cartoes.forEach(cartao => {
+    cartao.addEventListener('click', function() {
+        // Remove realce de todos
+        cartoes.forEach(c => c.classList.remove('border', 'border-white'));
+        this.classList.add('border', 'border-white');
+        estadoAtivo = this.getAttribute('data-estado');
+
+        const linhas = document.querySelectorAll('.linha-viatura');
+        linhas.forEach(linha => {
+            const estadoLinha = linha.getAttribute('data-estado');
+            if (estadoAtivo === '' || estadoLinha === estadoAtivo) {
+                linha.style.display = '';
+            } else {
+                linha.style.display = 'none';
+            }
+        });
+    });
+});
+
+// ========== MODAL EDITAR VIATURA ==========
+const modalEditarVtr = document.getElementById('modalEditarViatura');
+modalEditarVtr.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formEditarViatura').action = '/viaturas/editar/' + id;
+    document.getElementById('vtr_matricula').value = button.getAttribute('data-matricula');
+    document.getElementById('vtr_tipo').value = button.getAttribute('data-tipo');
+    document.getElementById('vtr_nomenclatura').value = button.getAttribute('data-nomenclatura');
+    document.getElementById('vtr_marca').value = button.getAttribute('data-marca');
+    document.getElementById('vtr_modelo').value = button.getAttribute('data-modelo');
+    document.getElementById('vtr_ano').value = button.getAttribute('data-ano');
+    document.getElementById('vtr_estado').value = button.getAttribute('data-estado');
+});
+</script>
+{% endblock %}

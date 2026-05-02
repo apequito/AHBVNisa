@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <h2 class="text-center mb-4">Login</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-3">
+                <label for="mecanografico" class="form-label">Mecanográfico</label>
+                <input type="text" class="form-control" id="mecanografico" name="mecanografico" required autofocus>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Palavra-passe</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-danger w-100">Entrar</button>
+        </form>
+        <p class="mt-3 text-muted text-center">Contacte o administrador para credenciais.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quartel de Bombeiros Voluntários de Nisa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --qbvn-red: #dc3545;
+            --qbvn-dark-red: #a52834;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        /* Navbar */
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            font-size: 1.1rem;
+        }
+
+        .navbar-brand i {
+            font-size: 1.4rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .navbar {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 0.6rem 1rem;
+        }
+
+        .navbar .nav-link,
+        .navbar .dropdown-item {
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .navbar .nav-link {
+            border-radius: 8px;
+            padding: 0.5rem 1rem !important;
+        }
+
+        .navbar .nav-link:hover {
+            background-color: rgba(255,255,255,0.15);
+        }
+
+        .dropdown-item i {
+            margin-right: 0.3rem;
+            width: 1.2rem;
+            text-align: center;
+        }
+
+        .navbar .btn-sair {
+            background-color: rgba(0,0,0,0.2);
+            margin-left: 0.5rem;
+        }
+
+        .navbar .btn-sair:hover {
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .nav-link span.badge {
+            font-size: 0.7rem;
+        }
+
+        /* Botão voltar */
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--qbvn-red);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin-bottom: 1rem;
+        }
+
+        .btn-voltar:hover {
+            background-color: #f8d7da;
+            color: #a52834;
+            text-decoration: none;
+        }
+
+        .btn-voltar i {
+            font-size: 1.1rem;
+        }
+
+        /* Flash messages */
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Responsivo */
+        @media (max-width: 991px) {
+            .navbar .navbar-nav {
+                margin-top: 0.5rem;
+            }
+            .navbar .nav-link,
+            .navbar .dropdown-item {
+                margin-bottom: 0.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== NAVBAR ========== -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+        <div class="container-fluid">
+            <!-- Logo e nome -->
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-fire me-2"></i>Quartel de Bombeiros Voluntários de Nisa
+            </a>
+
+            <!-- Botão hamburguer (mobile) -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Menus à direita -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
+
+                    {% if current_user.is_authenticated %}
+
+                    <!-- Dashboard (Home) -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}" title="Painel de Controlo">
+                            <i class="bi bi-house-door-fill"></i>
+                        </a>
+                    </li>
+
+                    <!-- ============ DROPDOWN BOMBEIRO ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-badge me-1"></i> Bombeiro
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('perfil') }}"><i class="bi bi-person-gear"></i> Meu Perfil</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('meus_creditos') }}"><i class="bi bi-clock-history"></i> Crédito Horas</a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('gerir_bombeiros') }}"><i class="bi bi-people-fill"></i> Gerir Bombeiros</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('listar_creditos') }}"><i class="bi bi-card-checklist"></i> Créditos (gestão)</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+
+                    <!-- ============ DROPDOWN VIATURAS ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-truck me-1"></i> Viaturas
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('listar_viaturas') }}"><i class="bi bi-truck-front"></i> Viaturas</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('avarias') }}"><i class="bi bi-exclamation-triangle"></i> Avarias</a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina'] %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('oficina') }}"><i class="bi bi-tools"></i> Oficina</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('gestao_frota') }}"><i class="bi bi-speedometer2"></i> Gestão de Frota</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+
+                    <!-- ============ DROPDOWN SERVIÇO ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-calendar3 me-1"></i> Serviço
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('escala') }}"><i class="bi bi-calendar-week"></i> Escala</a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('trocas') }}"><i class="bi bi-arrow-left-right"></i> Trocas</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('dispensas') }}"><i class="bi bi-calendar-x"></i> Dispensas</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- ============ DROPDOWN OPERAÇÕES ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-clipboard-data me-1"></i> Operações
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('checklist') }}"><i class="bi bi-list-check"></i> Checklist</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('fardamento') }}"><i class="bi bi-vest"></i> Fardamento</a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('stock_fardamento') }}"><i class="bi bi-box-seam"></i> Stock Fardamento</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('disponibilidades') }}"><i class="bi bi-person-check"></i> Disponibilidade</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- ============ DROPDOWN FARMÁCIA & AMBULÂNCIA ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-hospital me-1"></i> Farmácia/Amb.
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('stock_farmacia') }}"><i class="bi bi-capsule"></i> Stock Farmácia</a></li>
+                            {% endif %}
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('stock_ambulancia') }}"><i class="bi bi-truck-flatbed"></i> Stock Ambulância</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('checklist_ambulancia') }}"><i class="bi bi-clipboard-pulse"></i> Checklist Ambulância</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Mecanográfico do utilizador (apenas desktop) -->
+                    <li class="nav-item d-none d-lg-flex align-items-center">
+                        <span class="nav-link text-white-50">
+                            <i class="bi bi-person-badge me-1"></i>{{ current_user.mecanografico }}
+                        </span>
+                    </li>
+
+                    <!-- Sair -->
+                    <li class="nav-item">
+                        <a class="nav-link btn-sair" href="{{ url_for('logout') }}" title="Terminar Sessão">
+                            <i class="bi bi-box-arrow-right me-1"></i> Sair
+                        </a>
+                    </li>
+
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========== CONTEÚDO PRINCIPAL ========== -->
+    <div class="container py-3">
+
+        <!-- Botão Voltar (seta para a esquerda) – só aparece se NÃO for o dashboard -->
+        {% if request.endpoint != 'dashboard' %}
+            <a href="{{ url_for('dashboard') }}" class="btn-voltar">
+                <i class="bi bi-arrow-left-circle-fill"></i> Voltar ao Painel de Controlo
+            </a>
+        {% endif %}
+
+        <!-- Mensagens Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, msg in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {% if category == 'success' %}
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif category == 'danger' or category == 'error' %}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% elif category == 'warning' %}
+                            <i class="bi bi-exclamation-diamond-fill me-2"></i>
+                        {% elif category == 'info' %}
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        {{ msg }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Bloco de conteúdo específico de cada página -->
+        {% block content %}{% endblock %}
+
+    </div>
+
+    <!-- Bootstrap JS + Tooltips -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+</body>
+</html>

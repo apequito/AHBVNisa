@@ -1,0 +1,28 @@
+<h5>Histórico da viatura {{ viatura.matricula }} ({{ viatura.nomenclatura }})</h5>
+{% if registos %}
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>Código</th><th>Data Registo</th><th>Nome Oficina</th><th>Motivo</th>
+            <th>Nº Avaria</th><th>Kms</th><th>Estado</th><th>Chefe</th><th>Comando</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in registos %}
+        <tr>
+            <td>{{ r.codigo }}</td>
+            <td>{{ r.data_registo.strftime('%d/%m/%Y') if r.data_registo else '' }}</td>
+            <td>{{ r.nome_oficina }}</td>
+            <td>{{ r.motivo or '' }}</td>
+            <td>{{ r.avaria.codigo if r.avaria else '' }}</td>
+            <td>{{ r.kms or '' }}</td>
+            <td><span class="badge bg-{{ 'warning' if r.estado=='Oficina' else 'success' }}">{{ r.estado }}</span></td>
+            <td>{{ '✔️' if r.chefe_oficina else '❌' }}</td>
+            <td>{{ '✔️' if r.comando else '❌' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Sem registos de oficina para esta viatura.</p>
+{% endif %}

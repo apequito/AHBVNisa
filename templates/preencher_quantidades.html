@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Preencher Quantidades – Checklist #{{ checklist.id }}</h2>
+<p>Viatura: {{ checklist.viatura.matricula }} ({{ checklist.viatura.nomenclatura }})</p>
+
+<form method="POST">
+    <table class="table table-sm">
+        <thead><tr><th>Produto</th><th>Quantidade Necessária</th></tr></thead>
+        <tbody>
+            {% for item in checklist.itens %}
+            <tr>
+                <td>{{ item.produto.nome }}</td>
+                <td>
+                    <input type="number" name="qtd_{{ item.id }}" class="form-control" value="{{ item.quantidade }}" min="0">
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success">Confirmar Pedido de Reposição</button>
+    <a href="{{ url_for('checklist_ambulancia') }}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

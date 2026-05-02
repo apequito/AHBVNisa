@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gestão de Bombeiros</h2>
+
+<!-- Formulário de pesquisa -->
+<form method="GET" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input type="text" name="pesquisa" class="form-control form-control-sm" placeholder="Nome ou Mecanográfico" value="{{ pesquisa or '' }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+        {% if pesquisa %}
+        <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoBombeiro">+ Novo Bombeiro</button>
+    <a href="{{ url_for('exportar_bombeiros') }}" class="btn btn-outline-success btn-sm ms-2">📥 Exportar</a>
+    <button class="btn btn-outline-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarBombeiros">📤 Importar</button>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nº Interno</th>
+            <th>Mecanográfico</th>
+            <th>Nome</th>
+            <th>Nome Completo</th>
+            <th>Email</th>
+            <th>Telemóvel</th>
+            <th>Posto</th>
+            <th>Tipo Bombeiro</th>
+            <th>Resp. Departamento</th>
+            <th>Tipo</th>
+            <th>Ativo</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bombeiros %}
+        <tr>
+            <td>{{ b.numero_interno }}</td>
+            <td>{{ b.mecanografico }}</td>
+            <td>{{ b.nome }}</td>
+            <td>{{ b.nomecompleto or '-' }}</td>
+            <td>{{ b.email }}</td>
+            <td>{{ b.telemovel or '-' }}</td>
+            <td>{{ b.posto }}</td>
+            <td>{{ b.tipo_bombeiro }}</td>
+            <td>{{ b.resp_departamento or '-' }}</td>
+            <td><span class="badge bg-{{ 'danger' if b.tipo_user=='Admin' else 'primary' }}">{{ b.tipo_user }}</span></td>
+            <td>{{ 'Sim' if b.ativo else 'Não' }}</td>
+            <td>
+                <button class="btn btn-sm btn-warning btn-editar"
+                        data-id="{{ b.id }}"
+                        data-numero="{{ b.numero_interno }}"
+                        data-mecanografico="{{ b.mecanografico }}"
+                        data-nome="{{ b.nome }}"
+                        data-nomecompleto="{{ b.nomecompleto or '' }}"
+                        data-email="{{ b.email }}"
+                        data-telemovel="{{ b.telemovel or '' }}"
+                        data-posto="{{ b.posto }}"
+                        data-tipo_bombeiro="{{ b.tipo_bombeiro }}"
+                        data-resp_departamento="{{ b.resp_departamento or '' }}"
+                        data-tipo_user="{{ b.tipo_user }}"
+                        data-ativo="{{ 'on' if b.ativo else '' }}"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarBombeiro"
+                        title="Editar">✏️</button>
+                <a href="{{ url_for('apagar_bombeiro', id=b.id) }}"
+                   class="btn btn-sm btn-danger"
+                   onclick="return confirm('Apagar {{ b.nome }}?')"
+                   title="Apagar">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Novo Bombeiro (mantido como antes) -->
+<div class="modal fade" id="modalNovoBombeiro" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('gerir_bombeiros') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Novo Bombeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" name="numero_interno" placeholder="Nº Interno (ex: B001)" class="form-control mb-2" required>
+                    <input type="text" name="mecanografico" placeholder="Mecanográfico (ex: M001)" class="form-control mb-2" required>
+                    <input type="text" name="nome" placeholder="Nome" class="form-control mb-2" required>
+                    <input type="text" name="nomecompleto" placeholder="Nome Completo" class="form-control mb-2">
+                    <input type="email" name="email" placeholder="Email" class="form-control mb-2" required>
+                    <input type="text" name="telemovel" placeholder="Telemóvel" class="form-control mb-2">
+                    <input type="password" name="password" placeholder="Password" class="form-control mb-2" required>
+                    <select name="posto" class="form-select mb-2" required>
+                        <option value="">-- Selecione Posto --</option>
+                        <option>Comandante</option><option>2º Comandante</option><option>Adjunto Comando</option>
+                        <option>Of. Bomb. 1ª</option><option>Of. Bomb. 2ª</option><option>Chefe</option>
+                        <option>Sub Chefe</option><option>Bomb. 1ª</option><option>Bomb. 2ª</option>
+                        <option>Bomb. 3ª</option><option>Bombeiro Especialista</option>
+                        <option>Estagiário</option><option>Cadete</option>
+                    </select>
+                    <select name="tipo_bombeiro" class="form-select mb-2" required>
+                        <option value="Voluntário">Voluntário</option>
+                        <option value="Profissional">Profissional</option>
+                    </select>
+                    <select name="resp_departamento" class="form-select mb-2">
+                        <option value="">-- Resp. Departamento (opcional) --</option>
+                        <option>Oficina</option><option>Fardamento</option><option>Farmácia</option>
+                        <option>Comando</option><option>Central</option><option>Secretaria</option><option>Mergulho</option>
+                    </select>
+                    <select name="tipo_user" class="form-select mb-2" required>
+                        <option value="User">User</option><option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Criar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Bombeiro (mantido como antes) -->
+<div class="modal fade" id="modalEditarBombeiro" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formEditarBombeiro" method="POST" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Editar Bombeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" name="numero_interno" id="edit_numero" class="form-control mb-2" required>
+                    <input type="text" name="mecanografico" id="edit_mec" class="form-control mb-2" required>
+                    <input type="text" name="nome" id="edit_nome" class="form-control mb-2" required>
+                    <input type="text" name="nomecompleto" id="edit_nomecompleto" class="form-control mb-2">
+                    <input type="email" name="email" id="edit_email" class="form-control mb-2" required>
+                    <input type="text" name="telemovel" id="edit_telemovel" class="form-control mb-2">
+                    <input type="password" name="password" id="edit_password" class="form-control mb-2" placeholder="Nova password (deixe em branco para manter)">
+                    <select name="posto" id="edit_posto" class="form-select mb-2" required>
+                        <option value="">-- Selecione Posto --</option>
+                        <option>Comandante</option><option>2º Comandante</option><option>Adjunto Comando</option>
+                        <option>Of. Bomb. 1ª</option><option>Of. Bomb. 2ª</option><option>Chefe</option>
+                        <option>Sub Chefe</option><option>Bomb. 1ª</option><option>Bomb. 2ª</option>
+                        <option>Bomb. 3ª</option><option>Bombeiro Especialista</option>
+                        <option>Estagiário</option><option>Cadete</option>
+                    </select>
+                    <select name="tipo_bombeiro" id="edit_tipo_bombeiro" class="form-select mb-2" required>
+                        <option value="Voluntário">Voluntário</option>
+                        <option value="Profissional">Profissional</option>
+                    </select>
+                    <select name="resp_departamento" id="edit_departamento" class="form-select mb-2">
+                        <option value="">-- Resp. Departamento (opcional) --</option>
+                        <option>Oficina</option><option>Fardamento</option><option>Farmácia</option>
+                        <option>Comando</option><option>Central</option><option>Secretaria</option><option>Mergulho</option>
+                    </select>
+                    <select name="tipo_user" id="edit_tipo" class="form-select mb-2" required>
+                        <option value="User">User</option><option value="Admin">Admin</option>
+                    </select>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="ativo" id="edit_ativo">
+                        <label class="form-check-label" for="edit_ativo">Ativo</label>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar (mantido como estava) -->
+<div class="modal fade" id="modalImportarBombeiros" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_bombeiros') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Bombeiros (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const modalEditar = document.getElementById('modalEditarBombeiro');
+modalEditar.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formEditarBombeiro').action = '/bombeiros/editar/' + id;
+    document.getElementById('edit_numero').value = button.getAttribute('data-numero');
+    document.getElementById('edit_mec').value = button.getAttribute('data-mecanografico');
+    document.getElementById('edit_nome').value = button.getAttribute('data-nome');
+    document.getElementById('edit_nomecompleto').value = button.getAttribute('data-nomecompleto') || '';
+    document.getElementById('edit_email').value = button.getAttribute('data-email');
+    document.getElementById('edit_telemovel').value = button.getAttribute('data-telemovel') || '';
+    document.getElementById('edit_posto').value = button.getAttribute('data-posto');
+    document.getElementById('edit_tipo_bombeiro').value = button.getAttribute('data-tipo_bombeiro') || 'Voluntário';
+    document.getElementById('edit_departamento').value = button.getAttribute('data-resp_departamento') || '';
+    document.getElementById('edit_tipo').value = button.getAttribute('data-tipo_user');
+    document.getElementById('edit_ativo').checked = (button.getAttribute('data-ativo') === 'on');
+    document.getElementById('edit_password').value = '';
+});
+</script>
+{% endblock %}

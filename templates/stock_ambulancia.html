@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock Ambulância – Reposições</h2>
+
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Data</th>
+            <th>Ambulância</th>
+            <th>Produto</th>
+            <th>Quantidade</th>
+            <th>Solicitante</th>
+            <th>Responsável</th>
+            <th>Confirmado</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in reposicoes %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.data.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ r.ambulancia.matricula }}</td>
+            <td>{{ r.produto_stock.nome }}</td>
+            <td>{{ r.quantidade }}</td>
+            <td>{{ r.solicitante.nome }}</td>
+            <td>{{ r.responsavel.nome if r.responsavel else '-' }}</td>
+            <td>
+                {% if r.confirmado %}
+                    <span class="badge bg-success">Confirmado</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Pendente</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not r.confirmado and (current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia']) %}
+                <a href="{{ url_for('confirmar_reposicao', id=r.id) }}" class="btn btn-sm btn-success">Confirmar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

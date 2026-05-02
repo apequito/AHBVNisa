@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-pencil-square me-2"></i>Gestão de Notas / Recados</h2>
+
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaNota">
+        <i class="bi bi-plus-circle"></i> Nova Nota
+    </button>
+    <a href="{{ url_for('central') }}" class="btn btn-outline-secondary ms-2">
+        <i class="bi bi-arrow-left"></i> Voltar à Central
+    </a>
+</div>
+
+<!-- Filtro por datas -->
+<form method="GET" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label">Data Início</label>
+        <input type="date" name="inicio" class="form-control form-control-sm" value="{{ inicio }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Data Fim</label>
+        <input type="date" name="fim" class="form-control form-control-sm" value="{{ fim }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+        <a href="{{ url_for('central_notas') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+    </div>
+</form>
+
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Criador</th>
+            <th>Data Criação</th>
+            <th>Descrição</th>
+            <th>Data do Evento</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n in notas %}
+        <tr>
+            <td>{{ n.id }}</td>
+            <td>{{ n.criador.nome }}</td>
+            <td>{{ n.data_criacao.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ n.descricao }}</td>
+            <td>{{ n.data_evento.strftime('%d/%m/%Y') if n.data_evento else '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center">Nenhuma nota encontrada.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Nova Nota -->
+<div class="modal fade" id="modalNovaNota" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Nova Nota</h5></div>
+                <div class="modal-body">
+                    <textarea name="descricao" class="form-control mb-2" rows="4" placeholder="Escreva a nota ou recado..." required></textarea>
+                    <label>Data do Evento (opcional)</label>
+                    <input type="date" name="data_evento" class="form-control">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Registar Nota</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

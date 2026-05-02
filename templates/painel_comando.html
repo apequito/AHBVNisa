@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-speedometer2 me-2"></i>Painel de Comando</h2>
+
+<!-- Cartões de indicadores -->
+<div class="row g-3 mb-4">
+    <!-- Escalados Hoje (com modal) -->
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow-sm" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#modalEscaladosHoje">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ total_hoje }}</h1>
+                <p class="mb-0"><i class="bi bi-people-fill me-1"></i>Escalados Hoje</p>
+                <small>{{ hoje.strftime('%d/%m/%Y') }}</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avarias Ativas -->
+    <div class="col-md-3">
+        <div class="card text-white {{ 'bg-danger' if avarias_ativas > 0 else 'bg-success' }} shadow-sm">
+            <a href="{{ url_for('avarias') }}" class="text-white text-decoration-none">
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ avarias_ativas }}</h1>
+                    <p class="mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>Avarias Ativas</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Trocas Pendentes -->
+    <div class="col-md-2">
+        <div class="card text-white {{ 'bg-warning' if trocas_pendentes > 0 else 'bg-success' }} shadow-sm">
+            <a href="{{ url_for('trocas') }}" class="text-white text-decoration-none">
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ trocas_pendentes }}</h1>
+                    <p class="mb-0"><i class="bi bi-arrow-left-right me-1"></i>Trocas</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Dispensas por Aprovar -->
+    <div class="col-md-2">
+        <div class="card text-white {{ 'bg-warning' if dispensas_pendentes > 0 else 'bg-success' }} shadow-sm">
+            <a href="{{ url_for('dispensas') }}" class="text-white text-decoration-none">
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ dispensas_pendentes }}</h1>
+                    <p class="mb-0"><i class="bi bi-calendar-x me-1"></i>Dispensas</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Créditos em Análise -->
+    <div class="col-md-2">
+        <div class="card text-white {{ 'bg-info' if creditos_analise > 0 else 'bg-success' }} shadow-sm">
+            <a href="{{ url_for('listar_creditos') }}" class="text-white text-decoration-none">
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ creditos_analise }}</h1>
+                    <p class="mb-0"><i class="bi bi-credit-card me-1"></i>Créditos</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Linha do meio: Reuniões e Notas/Recados lado a lado -->
+<div class="row">
+    <!-- Reuniões -->
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Reuniões (7 dias)</h5>
+                <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalReuniao" onclick="limparModalReuniao()"><i class="bi bi-plus"></i> Adicionar</button>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for r in reunioes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ r.assunto }}</strong><br>
+                            <small class="text-muted">{{ r.data.strftime('%d/%m/%Y') }}{% if r.hora %} às {{ r.hora }}{% endif %}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalReuniao"
+                                    data-id="{{ r.id }}" data-data="{{ r.data.strftime('%Y-%m-%d') }}" data-hora="{{ r.hora or '' }}"
+                                    data-assunto="{{ r.assunto }}" data-descricao="{{ r.descricao or '' }}"
+                                    onclick="preencherModalReuniao(this)"><i class="bi bi-pencil"></i></button>
+                            <a href="{{ url_for('apagar_reuniao', id=r.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta reunião?')"><i class="bi bi-x"></i></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted">Nenhuma reunião planeada.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notas/Recados (Comando) -->
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Notas do Comando (7 dias)</h5>
+                <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalNota" onclick="limparModalNota()"><i class="bi bi-plus"></i> Adicionar</button>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for n in notas %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ n.descricao[:60] }}{% if n.descricao|length > 60 %}...{% endif %}</strong><br>
+                            <small class="text-muted">{{ n.data_evento.strftime('%d/%m/%Y') if n.data_evento else 'Sem data' }}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalNota"
+                                    data-id="{{ n.id }}" data-descricao="{{ n.descricao }}" data-data_evento="{{ n.data_evento.strftime('%Y-%m-%d') if n.data_evento else '' }}"
+                                    onclick="preencherModalNota(this)"><i class="bi bi-pencil"></i></button>
+                            <a href="{{ url_for('apagar_nota_comando', id=n.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta nota?')"><i class="bi bi-x"></i></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted">Nenhuma nota/recado nos próximos 7 dias.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Viaturas INOP -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-danger text-white"><h5 class="mb-0"><i class="bi bi-truck-front me-2"></i>Viaturas Inoperacionais</h5></div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead><tr><th>Matrícula</th><th>Nomenclatura</th><th>Marca / Modelo</th></tr></thead>
+                    <tbody>
+                        {% for v in viaturas_inop %}
+                        <tr>
+                            <td>{{ v.matricula }}</td>
+                            <td>{{ v.nomenclatura }}</td>
+                            <td>{{ v.marca }} {{ v.modelo }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-muted">Nenhuma viatura inoperacional.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MODAIS ========== -->
+
+<!-- Modal Reunião (Adicionar/Editar) -->
+<div class="modal fade" id="modalReuniao" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formReuniao" action="{{ url_for('adicionar_reuniao') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5 id="tituloReuniao">Nova Reunião</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="reuniaoId">
+                    <label>Data</label>
+                    <input type="date" name="data" id="reuniaoData" class="form-control mb-2" required>
+                    <label>Hora (opcional)</label>
+                    <input type="text" name="hora" id="reuniaoHora" class="form-control mb-2" placeholder="HH:MM">
+                    <label>Assunto</label>
+                    <input type="text" name="assunto" id="reuniaoAssunto" class="form-control mb-2" required>
+                    <label>Descrição</label>
+                    <textarea name="descricao" id="reuniaoDescricao" class="form-control mb-2" rows="3"></textarea>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Nota (Comando) -->
+<div class="modal fade" id="modalNota" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formNota" action="{{ url_for('adicionar_nota_comando') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5 id="tituloNota">Nova Nota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="notaId">
+                    <label>Descrição</label>
+                    <textarea name="descricao" id="notaDescricao" class="form-control mb-2" rows="4" required></textarea>
+                    <label>Data do Evento (opcional)</label>
+                    <input type="date" name="data_evento" id="notaDataEvento" class="form-control">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-info">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Escalados Hoje (mantido) -->
+<div class="modal fade" id="modalEscaladosHoje" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-people-fill me-1"></i>Escalados Hoje ({{ hoje.strftime('%d/%m/%Y') }})</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% set cores_categorias = {
+                    'Motorista': '#fd7e14',
+                    'Socorrista': '#20c997',
+                    'Centralista': '#0d6efd',
+                    'EIP': '#6f42c1',
+                    'ECIN': '#dc3545',
+                    'ELAC': '#fd7e14',
+                    'Piquete': '#198754',
+                    'Bombeiro': '#0dcaf0'
+                } %}
+                {% for cat, lista in categorias_hoje.items() %}
+                    <h6 style="color: {{ cores_categorias.get(cat, '#6c757d') }};"><i class="bi bi-person-badge me-1"></i>{{ cat }}</h6>
+                    <table class="table table-sm table-bordered mb-3">
+                        <thead><tr><th>Bombeiro</th><th>Mecanográfico</th><th>Turno</th><th>Posto</th></tr></thead>
+                        <tbody>
+                            {% for b in lista|sort(attribute='turno') %}
+                            <tr>
+                                <td>{{ b.nome }}</td>
+                                <td>{{ b.mecanografico }}</td>
+                                <td>{{ b.turno }}</td>
+                                <td>{{ b.posto }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- Modal Reunião ---
+function limparModalReuniao() {
+    document.getElementById('reuniaoId').value = '';
+    document.getElementById('reuniaoData').value = '';
+    document.getElementById('reuniaoHora').value = '';
+    document.getElementById('reuniaoAssunto').value = '';
+    document.getElementById('reuniaoDescricao').value = '';
+    document.getElementById('formReuniao').action = '{{ url_for('adicionar_reuniao') }}';
+    document.getElementById('tituloReuniao').textContent = 'Nova Reunião';
+}
+
+function preencherModalReuniao(btn) {
+    const id = btn.getAttribute('data-id');
+    document.getElementById('reuniaoId').value = id;
+    document.getElementById('reuniaoData').value = btn.getAttribute('data-data');
+    document.getElementById('reuniaoHora').value = btn.getAttribute('data-hora') || '';
+    document.getElementById('reuniaoAssunto').value = btn.getAttribute('data-assunto');
+    document.getElementById('reuniaoDescricao').value = btn.getAttribute('data-descricao') || '';
+    document.getElementById('formReuniao').action = '/painel/reuniao/editar/' + id;
+    document.getElementById('tituloReuniao').textContent = 'Editar Reunião';
+}
+
+// --- Modal Nota ---
+function limparModalNota() {
+    document.getElementById('notaId').value = '';
+    document.getElementById('notaDescricao').value = '';
+    document.getElementById('notaDataEvento').value = '';
+    document.getElementById('formNota').action = '{{ url_for('adicionar_nota_comando') }}';
+    document.getElementById('tituloNota').textContent = 'Nova Nota';
+}
+
+function preencherModalNota(btn) {
+    const id = btn.getAttribute('data-id');
+    document.getElementById('notaId').value = id;
+    document.getElementById('notaDescricao').value = btn.getAttribute('data-descricao') || '';
+    document.getElementById('notaDataEvento').value = btn.getAttribute('data-data_evento') || '';
+    document.getElementById('formNota').action = '/painel/notas/editar/' + id;
+    document.getElementById('tituloNota').textContent = 'Editar Nota';
+}
+</script>
+{% endblock %}

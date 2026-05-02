@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Meus Créditos de Horas</h2>
+
+<!-- Filtro por estado -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('meus_creditos') }}" class="btn btn-outline-secondary btn-sm {{ 'active' if not estado_atual }}">Todos</a>
+        {% for est in estados %}
+        <a href="{{ url_for('meus_creditos', estado=est) }}" class="btn btn-outline-secondary btn-sm {{ 'active' if estado_atual == est }}">{{ est }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Botão para abrir o modal de registo -->
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoCredito">+ Registrar Crédito</button>
+
+<!-- Tabela de créditos -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Horas</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in creditos %}
+        <tr>
+            <td>{{ c.data.strftime('%d/%m/%Y') }}</td>
+            <td>{{ c.descricao or '-' }}</td>
+            <td>{{ c.horas }}h</td>
+            <td>
+                {% if c.observacao == 'Em Análise' %}
+                    <span class="badge bg-info text-dark">Em Análise</span>
+                {% elif c.observacao == 'Não Gozado' %}
+                     <span class="badge bg-warning text-dark">Não Gozado</span>
+                {% else %}
+                <span class="badge bg-success">Gozado</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center">Nenhum crédito registado.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal para registar novo crédito -->
+<div class="modal fade" id="modalNovoCredito" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Registar Crédito de Horas</h5></div>
+                <div class="modal-body">
+                    <label>Data do serviço</label>
+                    <input type="date" name="data" class="form-control mb-2" required>
+                    <label>Descrição (opcional)</label>
+                    <textarea name="descricao" class="form-control mb-2" rows="2" placeholder="Motivo do crédito..."></textarea>
+                    <label>Horas</label>
+                    <input type="number" name="horas" class="form-control mb-2" value="8" min="1" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Registar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
