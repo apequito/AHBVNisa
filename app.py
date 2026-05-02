@@ -5216,5 +5216,5 @@ def apagar_nota_comando(id):
     return redirect(url_for('painel_comando'))
 
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     #app.run(debug=True)
