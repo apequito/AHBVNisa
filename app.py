@@ -23,10 +23,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Base de dados: usa PostgreSQL se a variável DATABASE_URL existir (Render),
 # senão mantém o SQLite local para desenvolvimento.
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL',
-    'sqlite:///' + os.path.join(basedir, 'bombeiros.db')
-)
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'bombeiros.db'))
+# Se for uma URL do PostgreSQL, converte para o formato aceite pelo pg8000
+if db_url and 'postgres://' in db_url:
+    db_url = db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
 # Inicializar a extensão com a aplicação
 db.init_app(app)
