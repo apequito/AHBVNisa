@@ -1,0 +1,26 @@
+# Base de dados SQLite (criada localmente)
+*.db
+bombeiros.db
+
+# Ambiente virtual
+venv/
+.venv/
+
+# Ficheiros do PyCharm/Local IDEs
+.idea/
+*.iml
+
+# Ficheiros Python temporários
+__pycache__/
+*.pyc
+*.pyo
+
+# Ficheiros do Flask
+instance/
+*.log
+
+# Outros ficheiros desnecessários
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
