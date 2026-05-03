@@ -1942,39 +1942,82 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
+    # Determina o separador ativo (assalariado ou ecin)
+    separador = request.args.get('tipo', 'assalariado')
+
     if request.method == 'POST':
-        destino_id = request.form['destino_id']
+        destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
         data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
-        turno_origem = request.form['turno_origem']
-        turno_destino = request.form['turno_destino']
         motivo = request.form.get('motivo', '')
+        tipo_pedido = request.form.get('tipo_pedido', 'assalariado')  # campo oculto
+
+        # Validação extra para pedidos ECIN
+        if tipo_pedido == 'ecin':
+            origem_escalado = Escala.query.filter(
+                Escala.bombeiro_id == current_user.id,
+                func.date(Escala.data_inicio) <= data_origem,
+                func.date(Escala.data_fim) >= data_origem,
+                Escala.categoria.in_(['ECIN', 'ELAC'])
+            ).first()
+            if not origem_escalado:
+                flash('Não está escalado em ECIN/ELAC para esse dia.', 'danger')
+                return redirect(url_for('trocas', tipo='ecin'))
 
         nova = TrocaServico(
             bombeiro_origem_id=current_user.id,
             bombeiro_destino_id=destino_id,
             data_origem=data_origem,
             data_destino=data_destino,
-            turno_origem=turno_origem,
-            turno_destino=turno_destino,
-            motivo=motivo
+            motivo=motivo,
+            estado='pendente'
         )
         db.session.add(nova)
         db.session.commit()
-        flash('Pedido de troca enviado (aguarda aprovação).', 'success')
-        return redirect(url_for('trocas'))
+        flash('Pedido de troca enviado.', 'success')
+        # Redireciona para o separador de onde veio
+        return redirect(url_for('trocas', tipo=tipo_pedido))
 
-    # GET – listagem (mantida como antes)
-    if current_user.tipo_user == 'Admin':
-        pedidos = TrocaServico.query.order_by(TrocaServico.data_pedido.desc()).all()
+    # --- GET: listagem com filtro dinâmico ---
+    query = TrocaServico.query
+
+    if separador == 'assalariado':
+        # Filtra bombeiros de origem que são Profissionais e das categorias Motorista/Socorrista/Centralista
+        query = query.join(Bombeiro, TrocaServico.bombeiro_origem_id == Bombeiro.id)\
+                     .filter(
+                         Bombeiro.tipo_bombeiro == 'Profissional',
+                         Bombeiro.posto.in_(['Motorista', 'Socorrista', 'Centralista'])
+                     )
+    else:  # ecin
+        # Filtra pedidos cujo bombeiro de origem estava escalado em ECIN/ELAC na data de origem
+        # (usa subconsulta)
+        sub = db.session.query(TrocaServico.id)\
+            .join(Escala, db.and_(
+                Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
+                func.date(Escala.data_inicio) <= TrocaServico.data_origem,
+                func.date(Escala.data_fim) >= TrocaServico.data_origem,
+                Escala.categoria.in_(['ECIN', 'ELAC'])
+            )).subquery()
+        query = query.filter(TrocaServico.id.in_(sub))
+
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
+        pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     else:
-        pedidos = TrocaServico.query.filter(
+        pedidos = query.filter(
             (TrocaServico.bombeiro_origem_id == current_user.id) |
             (TrocaServico.bombeiro_destino_id == current_user.id)
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
-    return render_template('trocas.html', pedidos=pedidos, bombeiros=bombeiros)
+    return render_template('trocas.html', pedidos=pedidos, bombeiros=bombeiros, separador_atual=separador)
+
+
+@app.route('/trocas/imprimir/<int:id>')
+@login_required
+def imprimir_troca(id):
+    troca = TrocaServico.query.get_or_404(id)
+    return render_template('imprimir_troca.html', troca=troca)
+
 
 @app.route('/api/escala_usuario/<int:user_id>')
 @login_required
