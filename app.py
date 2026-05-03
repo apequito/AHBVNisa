@@ -4802,7 +4802,8 @@ def backup_importar():
             if not row or all(c is None for c in row):
                 continue
             try:
-                # Coluna 0: ID (ignorado na importação)
+                # Coluna 0: ID original (pode ser None/vazio)
+                id_original = int(row[0]) if row[0] is not None else None
                 cat = str(row[1]).strip() if len(row) > 1 and row[1] else ''
                 nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
                 tamanho_val = str(row[3]).strip()[:100] if len(row) > 3 and row[3] else ''
@@ -4812,14 +4813,45 @@ def backup_importar():
                     erros.append(f"Stock Farmácia linha {row_num}: nome em branco")
                     continue
 
-                s = StockFarmacia(
-                    categoria=cat,
-                    nome=nome,
-                    tamanho=tamanho_val if tamanho_val else None,
-                    stock=stock_val,
-                    data_atualizacao=datetime.utcnow()
-                )
-                db.session.add(s)
+                # Se for fornecida a data de atualização na coluna 5, usá-la
+                data_atualizacao = datetime.utcnow()
+                if len(row) > 5 and row[5]:
+                    try:
+                        data_atualizacao = datetime.strptime(str(row[5]).strip(), '%d/%m/%Y %H:%M')
+                    except Exception:
+                        pass
+
+                if id_original:
+                    # Ver se já existe um registo com este ID
+                    existente = StockFarmacia.query.get(id_original)
+                    if existente:
+                        # Atualiza os campos (mantendo o mesmo ID)
+                        existente.categoria = cat
+                        existente.nome = nome
+                        existente.tamanho = tamanho_val if tamanho_val else None
+                        existente.stock = stock_val
+                        existente.data_atualizacao = data_atualizacao
+                    else:
+                        # Cria novo com o ID especificado
+                        s = StockFarmacia(
+                            id=id_original,
+                            categoria=cat,
+                            nome=nome,
+                            tamanho=tamanho_val if tamanho_val else None,
+                            stock=stock_val,
+                            data_atualizacao=data_atualizacao
+                        )
+                        db.session.add(s)
+                else:
+                    # Sem ID, cria novo com autoincremento
+                    s = StockFarmacia(
+                        categoria=cat,
+                        nome=nome,
+                        tamanho=tamanho_val if tamanho_val else None,
+                        stock=stock_val,
+                        data_atualizacao=data_atualizacao
+                    )
+                    db.session.add(s)
                 total_importado += 1
             except Exception as e:
                 erros.append(f"Stock Farmácia linha {row_num}: {str(e)[:150]}")
