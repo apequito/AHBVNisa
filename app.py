@@ -5700,5 +5700,27 @@ def apagar_nota_comando(id):
     return redirect(url_for('painel_comando'))
 
 
+@app.route('/admin/apagar-tudo')
+@login_required
+def apagar_tudo():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Ordem inversa para respeitar as chaves estrangeiras
+    modelos_para_apagar = [
+        Nota, MensagemCorreio, ChecklistAmbulanciaItem, ChecklistAmbulancia,
+        StockAmbulancia, StockFarmacia, CategoriaFarmacia,
+        Fardamento, Ecin, GestaoFrota, Oficina,
+        CreditoDispensa, Dispensa, TrocaServico, Escala,
+        Avaria, Disponibilidade, Viatura, Bombeiro
+    ]
+    for modelo in modelos_para_apagar:
+        db.session.query(modelo).delete()
+    db.session.commit()
+    flash('Todos os dados foram eliminados com sucesso!', 'success')
+    return redirect(url_for('dashboard'))
+
+
 #if __name__ == '__main__':
     #app.run(debug=True)
