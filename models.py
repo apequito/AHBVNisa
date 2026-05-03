@@ -243,7 +243,7 @@ class StockFarmacia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categoria = db.Column(db.String(50), nullable=False)
     nome = db.Column(db.String(100), nullable=False)
-    tamanho = db.Column(db.String(20))
+    tamanho = db.Column(db.String(100), nullable=True)   # aumentado para 100 caracteres
     stock = db.Column(db.Integer, default=0)
     data_atualizacao = db.Column(db.DateTime, nullable=True)
 
