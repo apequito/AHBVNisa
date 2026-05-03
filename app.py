@@ -2017,7 +2017,22 @@ def trocas():
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
-    return render_template('trocas.html', pedidos=pedidos, bombeiros=bombeiros, separador_atual=separador)
+
+    # Bombeiros elegíveis para troca assalariada: profissionais com escalas nas categorias certas
+    bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
+        .filter(
+        Bombeiro.id != current_user.id,
+        Bombeiro.ativo == True,
+        Bombeiro.tipo_bombeiro == 'Profissional',
+        Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+    ).distinct().all()
+
+    return render_template('trocas.html',
+                           pedidos=pedidos,
+                           bombeiros=bombeiros,
+                           bombeiros_assalariados=bombeiros_assalariados,  # nova variável
+                           separador_atual=separador)
+
 
 @app.route('/trocas/imprimir/<int:id>')
 @login_required
@@ -2109,43 +2124,61 @@ def imprimir_escala():
                            now=datetime.now())
 
 # ---------- Aceitar/Recusar pelo colega (destino) ----------
+def determinar_tipo_troca(troca):
+    """Retorna 'assalariado' ou 'ecin' conforme a origem da troca."""
+    # Verifica se o bombeiro de origem é profissional e tem escalas nas categorias de assalariado
+    bombeiro = Bombeiro.query.get(troca.bombeiro_origem_id)
+    if bombeiro and bombeiro.tipo_bombeiro == 'Profissional':
+        tem_escala = Escala.query.filter(
+            Escala.bombeiro_id == troca.bombeiro_origem_id,
+            func.date(Escala.data_inicio) == troca.data_origem,
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        ).first()
+        if tem_escala:
+            return 'assalariado'
+
+    # Caso contrário, assume ECIN
+    return 'ecin'
+
+
 @app.route('/trocas/aceitar/<int:id>')
 @login_required
 def aceitar_troca(id):
     troca = TrocaServico.query.get_or_404(id)
-    # Só o destinatário pode aceitar
     if current_user.id != troca.bombeiro_destino_id:
-        flash('Apenas o bombeiro recetor pode aceitar.', 'danger')
-        return redirect(url_for('trocas'))
-    if troca.estado != 'pendente_colega':
-        flash('Este pedido já não está pendente.', 'warning')
+        flash('Acesso negado.', 'danger')
         return redirect(url_for('trocas'))
 
-    troca.estado = 'aceite_colega'
-    db.session.commit()
-    flash('Troca aceite. Aguarda aprovação do Comando.', 'success')
-    return redirect(url_for('trocas'))
+    if troca.estado == 'pendente_colega':
+        troca.estado = 'aceite_colega'
+        db.session.commit()
+        flash('Troca aceite. Aguarda aprovação do Comando.', 'success')
+    else:
+        flash('Estado inválido.', 'warning')
+
+    # --- Determinar o tipo da troca para redirecionar para o separador certo ---
+    tipo = determinar_tipo_troca(troca)
+    return redirect(url_for('trocas', tipo=tipo))
 
 
 @app.route('/trocas/recusar/<int:id>')
 @login_required
 def recusar_troca(id):
     troca = TrocaServico.query.get_or_404(id)
-    # Pode ser recusada pelo destinatário, Comando ou Admin
-    permitido = (current_user.id == troca.bombeiro_destino_id) or \
-                (current_user.tipo_user == 'Admin') or \
-                (current_user.resp_departamento == 'Comando')
-    if not permitido:
-        flash('Sem permissão para recusar.', 'danger')
-        return redirect(url_for('trocas'))
-    if troca.estado in ['aprovada', 'recusada']:
-        flash('Este pedido já foi finalizado.', 'warning')
+    if current_user.id not in (troca.bombeiro_origem_id, troca.bombeiro_destino_id) \
+       and not (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando'):
+        flash('Acesso negado.', 'danger')
         return redirect(url_for('trocas'))
 
-    troca.estado = 'recusada'
-    db.session.commit()
-    flash('Troca recusada.', 'info')
-    return redirect(url_for('trocas'))
+    if troca.estado in ('pendente_colega', 'aceite_colega'):
+        troca.estado = 'recusada'
+        db.session.commit()
+        flash('Troca recusada.', 'info')
+    else:
+        flash('Estado inválido.', 'warning')
+
+    tipo = determinar_tipo_troca(troca)
+    return redirect(url_for('trocas', tipo=tipo))
 
 
 @app.route('/trocas/aprovar/<int:id>')
@@ -2160,29 +2193,30 @@ def aprovar_troca(id):
         flash('A troca precisa de ser aceite pelo colega primeiro.', 'warning')
         return redirect(url_for('trocas'))
 
+    # Lógica de troca de escalas (funciona para assalariados e ECINs)
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
-        Escala.data_inicio == troca.data_origem
+        func.date(Escala.data_inicio) == troca.data_origem,
+        Escala.turno == troca.turno_origem
     ).all()
 
     escalas_destino = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_destino_id,
-        Escala.data_inicio == troca.data_destino
+        func.date(Escala.data_inicio) == troca.data_destino,
+        Escala.turno == troca.turno_destino
     ).all()
 
     for escala in escalas_origem:
         escala.bombeiro_id = troca.bombeiro_destino_id
-        escala.observacao = 'troca de turno'
     for escala in escalas_destino:
         escala.bombeiro_id = troca.bombeiro_origem_id
-        escala.observacao = 'troca de turno'
 
     troca.estado = 'aprovada'
     db.session.commit()
+    flash('Troca aprovada e escalas atualizadas.', 'success')
 
-    total = len(escalas_origem) + len(escalas_destino)
-    flash(f'Troca aprovada. {len(escalas_origem)} escala(s) na origem, {len(escalas_destino)} no destino atualizadas com observação.', 'success')
-    return redirect(url_for('trocas'))
+    tipo = determinar_tipo_troca(troca)
+    return redirect(url_for('trocas', tipo=tipo))
 
 
 

@@ -79,10 +79,11 @@
                         <div class="col-md-6">
                             <label>Selecionar Colega</label>
                             <select name="destino_id" id="destino_id" class="form-select mb-2" required>
-                                <option value="">-- Escolha --</option>
-                                {% for b in bombeiros %}
-                                <option value="{{ b.id }}">{{ b.nome }}</option>
-                                {% endfor %}
+                                 <option value="">-- Escolha --</option>
+                                 {% for b in bombeiros_assalariados %}   <!-- NOVA LISTA FILTRADA -->
+                                 <option value="{{ b.id }}">{{ b.nome }}</option>
+                                 {% endfor %}
+                            </select>
                             </select>
                             <div id="calendarioColega" class="border p-2" style="min-height:250px;">
                                 <p class="text-muted">Escolha um colega para ver o calendário.</p>
