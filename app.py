@@ -4802,19 +4802,21 @@ def backup_importar():
             if not row or all(c is None for c in row):
                 continue
             try:
-                categoria = str(row[0]).strip() if row[0] else ''
-                nome = str(row[1]).strip() if len(row) > 1 else ''
+                # Coluna 0: ID (ignorado na importação)
+                cat = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+                nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+                tamanho_val = str(row[3]).strip()[:100] if len(row) > 3 and row[3] else ''
+                stock_val = int(row[4]) if len(row) > 4 and row[4] else 0
+
                 if not nome:
                     erros.append(f"Stock Farmácia linha {row_num}: nome em branco")
                     continue
-                # Tamanho: limitar a 100 caracteres (já compatível com o modelo)
-                tamanho = str(row[2]).strip()[:100] if len(row) > 2 and row[2] else ''
-                stock = int(row[3]) if len(row) > 3 and row[3] else 0
+
                 s = StockFarmacia(
-                    categoria=categoria,
+                    categoria=cat,
                     nome=nome,
-                    tamanho=tamanho if tamanho else None,  # guarda None em vez de ''
-                    stock=stock,
+                    tamanho=tamanho_val if tamanho_val else None,
+                    stock=stock_val,
                     data_atualizacao=datetime.utcnow()
                 )
                 db.session.add(s)
@@ -5362,14 +5364,15 @@ def backup_exportar():
         ws.append([s.nome, s.descricao or '', s.tamanho or '', s.tipo, s.stock])
 
     # ---- 10. Stock Farmácia ----
+
     ws = wb.create_sheet("Stock Farmacia")
-    cabecalhos = ['Categoria', 'Nome', 'Tamanho', 'Stock', 'Última Atualização']
+    cabecalhos = ['ID', 'Categoria', 'Nome', 'Tamanho', 'Stock', 'Última Atualização']
     ws.append(cabecalhos)
-    for col in range(1, len(cabecalhos)+1):
+    for col in range(1, len(cabecalhos) + 1):
         ws.cell(row=1, column=col).fill = header_fill
         ws.cell(row=1, column=col).font = header_font
     for s in StockFarmacia.query.order_by(StockFarmacia.nome).all():
-        ws.append([s.categoria, s.nome, s.tamanho or '', s.stock,
+        ws.append([s.id, s.categoria, s.nome, s.tamanho or '', s.stock,
                    s.data_atualizacao.strftime('%d/%m/%Y %H:%M') if s.data_atualizacao else ''])
 
     # ---- 11. Categorias Farmácia ----
