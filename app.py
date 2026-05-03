@@ -1942,25 +1942,26 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
-    # Determina o separador ativo (assalariado ou ecin)
     separador = request.args.get('tipo', 'assalariado')
 
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
         data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
+        turno_origem = request.form.get('turno_origem', '')
+        turno_destino = request.form.get('turno_destino', '')
         motivo = request.form.get('motivo', '')
-        tipo_pedido = request.form.get('tipo_pedido', 'assalariado')  # campo oculto
+        tipo_pedido = request.form.get('tipo_pedido', 'assalariado')   # campo oculto
 
-        # Validação extra para pedidos ECIN
+        # Validação extra para ECINs
         if tipo_pedido == 'ecin':
-            origem_escalado = Escala.query.filter(
+            escalado = Escala.query.filter(
                 Escala.bombeiro_id == current_user.id,
                 func.date(Escala.data_inicio) <= data_origem,
                 func.date(Escala.data_fim) >= data_origem,
                 Escala.categoria.in_(['ECIN', 'ELAC'])
             ).first()
-            if not origem_escalado:
+            if not escalado:
                 flash('Não está escalado em ECIN/ELAC para esse dia.', 'danger')
                 return redirect(url_for('trocas', tipo='ecin'))
 
@@ -1969,28 +1970,26 @@ def trocas():
             bombeiro_destino_id=destino_id,
             data_origem=data_origem,
             data_destino=data_destino,
+            turno_origem=turno_origem,
+            turno_destino=turno_destino,
             motivo=motivo,
-            estado='pendente'
+            estado='pendente_colega'
         )
         db.session.add(nova)
         db.session.commit()
         flash('Pedido de troca enviado.', 'success')
-        # Redireciona para o separador de onde veio
         return redirect(url_for('trocas', tipo=tipo_pedido))
 
-    # --- GET: listagem com filtro dinâmico ---
+    # --- GET ---
     query = TrocaServico.query
 
     if separador == 'assalariado':
-        # Filtra bombeiros de origem que são Profissionais e das categorias Motorista/Socorrista/Centralista
         query = query.join(Bombeiro, TrocaServico.bombeiro_origem_id == Bombeiro.id)\
                      .filter(
                          Bombeiro.tipo_bombeiro == 'Profissional',
                          Bombeiro.posto.in_(['Motorista', 'Socorrista', 'Centralista'])
                      )
     else:  # ecin
-        # Filtra pedidos cujo bombeiro de origem estava escalado em ECIN/ELAC na data de origem
-        # (usa subconsulta)
         sub = db.session.query(TrocaServico.id)\
             .join(Escala, db.and_(
                 Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
@@ -2010,7 +2009,6 @@ def trocas():
 
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
     return render_template('trocas.html', pedidos=pedidos, bombeiros=bombeiros, separador_atual=separador)
-
 
 @app.route('/trocas/imprimir/<int:id>')
 @login_required

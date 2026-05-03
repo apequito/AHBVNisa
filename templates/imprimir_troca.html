@@ -15,13 +15,12 @@
 <body>
     <h2>Detalhes da Troca</h2>
     <table>
-        <tr><th>ID</th><td>{{ troca.id }}</td></tr>
-        <tr><th>Tipo</th><td>{{ troca.tipo_troca|capitalize }}</td></tr>
         <tr><th>Origem</th><td>{{ troca.bombeiro_origem.nome }}</td></tr>
         <tr><th>Destino</th><td>{{ troca.bombeiro_destino.nome }}</td></tr>
         <tr><th>Data Origem</th><td>{{ troca.data_origem.strftime('%d/%m/%Y') }}</td></tr>
+        <tr><th>Turno Origem</th><td>{{ troca.turno_origem }}</td></tr>
         <tr><th>Data Destino</th><td>{{ troca.data_destino.strftime('%d/%m/%Y') }}</td></tr>
-        <tr><th>Motivo</th><td>{{ troca.motivo or '' }}</td></tr>
+        <tr><th>Turno Destino</th><td>{{ troca.turno_destino }}</td></tr>
         <tr><th>Estado</th><td>{{ troca.estado }}</td></tr>
         <tr><th>Data Pedido</th><td>{{ troca.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td></tr>
     </table>
