@@ -154,6 +154,25 @@
     </div>
 </div>
 
-<!-- Modal Nova Avaria (mantido) -->
-<div class="modal fade" id="modalNovaAvaria" tabindex="-1">...</div>
+<!-- Modal Nova Avaria (CORRIGIDO) -->
+<div class="modal fade" id="modalNovaAvaria" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('avarias') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Reportar Avaria</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <select name="viatura_id" class="form-select mb-2" required>
+                        <option value="">Selecione viatura</option>
+                        {% for v in viaturas %}
+                        <option value="{{ v.id }}">{{ v.matricula }} ({{ v.tipo }})</option>
+                        {% endfor %}
+                    </select>
+                    <textarea name="descricao" class="form-control mb-2" placeholder="Descrição detalhada" rows="4" required></textarea>
+                    <input type="number" name="kms" class="form-control" placeholder="Quilómetros (opcional)">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Registar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}

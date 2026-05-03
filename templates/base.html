@@ -17,6 +17,7 @@
             background-color: #f8f9fa;
         }
 
+        /* Navbar */
         .navbar-brand {
             font-weight: 700;
             letter-spacing: 0.5px;
@@ -68,21 +69,8 @@
             background-color: rgba(0,0,0,0.4);
         }
 
-        /* Badge de notificações */
-        @keyframes badgePulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-
-        .badge-pendentes {
-            position: absolute;
-            top: 0;
-            left: 100%;
-            transform: translate(-50%, -50%);
-            font-size: 0.65rem;
-            animation: badgePulse 1.5s infinite;
-            z-index: 10;
+        .nav-link span.badge {
+            font-size: 0.7rem;
         }
 
         /* Botão voltar */
@@ -117,6 +105,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
+        /* Responsivo */
         @media (max-width: 991px) {
             .navbar .navbar-nav {
                 margin-top: 0.5rem;
@@ -234,16 +223,10 @@
                         </ul>
                     </li>
 
-                    <!-- Mecanográfico do utilizador (apenas desktop) com badge de notificações -->
-                    <li class="nav-item d-none d-lg-flex align-items-center position-relative">
+                    <!-- Mecanográfico do utilizador (apenas desktop) -->
+                    <li class="nav-item d-none d-lg-flex align-items-center">
                         <span class="nav-link text-white-50">
                             <i class="bi bi-person-badge me-1"></i>{{ current_user.mecanografico }}
-                            {% if pendencias.total > 0 %}
-                            <span class="badge rounded-pill bg-danger badge-pendentes"
-                                  title="{% if pendencias.avarias %}Avarias: {{ pendencias.avarias }} | {% endif %}{% if pendencias.trocas %}Trocas: {{ pendencias.trocas }} | {% endif %}{% if pendencias.dispensas %}Dispensas: {{ pendencias.dispensas }} | {% endif %}{% if pendencias.fardamento %}Fardamento: {{ pendencias.fardamento }} | {% endif %}{% if pendencias.ecins %}ECINS: {{ pendencias.ecins }} | {% endif %}{% if pendencias.stock_ambulancia %}Stock Amb.: {{ pendencias.stock_ambulancia }}{% endif %}">
-                                {{ pendencias.total }}
-                            </span>
-                            {% endif %}
                         </span>
                     </li>
 
