@@ -49,17 +49,14 @@
                 {% endif %}
             </td>
             <td>
-                <!-- Ações do colega recetor -->
                 {% if t.estado == 'pendente_colega' and current_user.id == t.bombeiro_destino_id %}
                     <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">✅</a>
                     <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">❌</a>
                 {% endif %}
-                <!-- Ações do Comando/Admin -->
                 {% if t.estado == 'aceite_colega' and (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') %}
                     <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">Aprovar</a>
                     <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">Recusar</a>
                 {% endif %}
-                <!-- Imprimir -->
                 <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimir"><i class="bi bi-printer"></i></a>
             </td>
         </tr>
@@ -117,7 +114,7 @@
     </div>
 </div>
 
-<!-- ========== MODAL ECINS (IGUAL, COM NOTA INFORMATIVA) ========== -->
+<!-- ========== NOVO MODAL ECINS (TURNOS DO PRÓPRIO + OPÇÕES DO COLEGA) ========== -->
 <div class="modal fade" id="modalNovaTrocaEcin" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="POST" id="formNovaTrocaEcin">
@@ -128,38 +125,58 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> Apenas bombeiros escalados em ECIN/ELAC podem solicitar troca.
+                    <!-- Passo 1: Turnos do próprio (apenas ECIN/ELAC futuros) -->
+                    <h6><i class="bi bi-person-check me-1"></i> Os meus turnos ECIN/ELAC (mês atual)</h6>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered" id="tabelaTurnosOrigem">
+                            <thead class="table-light">
+                                <tr><th>Data</th><th>Turno</th><th>Selecionar</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="3" class="text-muted">A carregar...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Selecionar Colega</label>
-                            <select name="destino_id" id="destino_id_ecin" class="form-select mb-2" required>
-                                <option value="">-- Escolha --</option>
-                                {% for b in bombeiros %}
-                                <option value="{{ b.id }}">{{ b.nome }}</option>
-                                {% endfor %}
-                            </select>
-                            <div id="calendarioColegaEcin" class="border p-2" style="min-height:250px;">
-                                <p class="text-muted">Escolha um colega para ver o calendário.</p>
+                    <input type="hidden" name="data_origem" id="ecin_data_origem">
+                    <input type="hidden" name="turno_origem" id="ecin_turno_origem">
+
+                    <hr>
+
+                    <!-- Passo 2: Escolher colega e tipo de aceitação -->
+                    <div id="ecin_secao_colega" style="display: none;">
+                        <h6><i class="bi bi-people-fill me-1"></i> Colega que irá fazer a troca</h6>
+                        <select id="ecin_destino_id" class="form-select mb-2">
+                            <option value="">-- Selecione --</option>
+                            {% for b in bombeiros %}
+                            <option value="{{ b.id }}">{{ b.nome }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="ecin_tipo_aceite" id="ecin_radio_troca" value="troca">
+                            <label class="form-check-label" for="ecin_radio_troca">Troca Turno (o colega oferece um turno dele)</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="ecin_tipo_aceite" id="ecin_radio_aceita" value="aceita">
+                            <label class="form-check-label" for="ecin_radio_aceita">Aceita Turno (o colega fica com o meu turno, sem trocar)</label>
+                        </div>
+
+                        <!-- Tabela de turnos do colega (aparece apenas se "Troca Turno") -->
+                        <div id="ecin_tabela_colega" style="display: none;">
+                            <h6>Turnos do colega (mês atual)</h6>
+                            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered" id="tabelaTurnosDestino">
+                                    <thead class="table-light">
+                                        <tr><th>Data</th><th>Turno</th><th>Selecionar</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="3" class="text-muted">Selecione um colega...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <label class="mt-2">Data Destino</label>
-                            <input type="date" name="data_destino" id="data_destino_ecin" class="form-control mb-2" readonly required>
-                            <label>Turno Destino</label>
-                            <select name="turno_destino" id="turno_destino_ecin" class="form-select mb-2" required></select>
+                            <input type="hidden" name="data_destino" id="ecin_data_destino">
+                            <input type="hidden" name="turno_destino" id="ecin_turno_destino">
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>O meu calendário</strong></p>
-                            <div id="calendarioProprioEcin" class="border p-2" style="min-height:250px;"></div>
-                            <label class="mt-2">Data Origem</label>
-                            <input type="date" name="data_origem" id="data_origem_ecin" class="form-control mb-2" readonly required>
-                            <label>Turno Origem</label>
-                            <select name="turno_origem" id="turno_origem_ecin" class="form-select mb-2" required></select>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <label>Motivo (opcional)</label>
-                        <textarea name="motivo" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -171,11 +188,13 @@
 </div>
 
 <script>
-// ---------- Configuração dos modais ----------
+// ---------- CONFIGURAÇÃO GERAL ----------
 const userId = {{ current_user.id }};
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let mesAtual = new Date().getMonth() + 1;
+let anoAtual = new Date().getFullYear();
 
-// Estrutura que guarda o estado de cada modal
+// ========== MODAL ASSALARIADOS (FUNÇÕES JÁ EXISTENTES) ==========
 const modais = {
     assalariado: {
         prefix: '',
@@ -186,23 +205,9 @@ const modais = {
         turnoOrigem: 'turno_origem',
         dataDestino: 'data_destino',
         turnoDestino: 'turno_destino'
-    },
-    ecin: {
-        prefix: '_ecin',
-        destinoSelect: 'destino_id_ecin',
-        calendarioProprio: 'calendarioProprioEcin',
-        calendarioColega: 'calendarioColegaEcin',
-        dataOrigem: 'data_origem_ecin',
-        turnoOrigem: 'turno_origem_ecin',
-        dataDestino: 'data_destino_ecin',
-        turnoDestino: 'turno_destino_ecin'
     }
 };
 
-let mesAtual = new Date().getMonth() + 1;
-let anoAtual = new Date().getFullYear();
-
-// ---------- Função genérica para selecionar um dia ----------
 function selecionarDia(prefix, tipo, dia, turnos) {
     const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
     document.getElementById(`data_${tipo}${prefix}`).value = dataStr;
@@ -218,7 +223,6 @@ function selecionarDia(prefix, tipo, dia, turnos) {
     }
 }
 
-// ---------- Criar calendário ----------
 function criarCalendario(containerId, diasEscala, prefix, tipo) {
     const container = document.getElementById(containerId);
     const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
@@ -253,9 +257,8 @@ function criarCalendario(containerId, diasEscala, prefix, tipo) {
     }
     html += '</tbody></table>';
     container.innerHTML = html;
-    container._diasEscala = diasEscala;  // guarda para uso nos cliques
+    container._diasEscala = diasEscala;
 
-    // Evento de clique
     container.querySelectorAll('td[data-dia]').forEach(td => {
         td.addEventListener('click', function() {
             const diaNum = parseInt(this.getAttribute('data-dia'));
@@ -264,7 +267,6 @@ function criarCalendario(containerId, diasEscala, prefix, tipo) {
     });
 }
 
-// ---------- Navegação de mês ----------
 function mudarMes(delta, containerId, prefix, tipo) {
     mesAtual += delta;
     if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
@@ -273,7 +275,6 @@ function mudarMes(delta, containerId, prefix, tipo) {
     else carregarColega(prefix);
 }
 
-// ---------- Carregar calendário do próprio ----------
 function carregarProprio(prefix) {
     fetch(`/api/escala_usuario/${userId}?ano=${anoAtual}&mes=${mesAtual}`)
         .then(r => r.json())
@@ -286,7 +287,6 @@ function carregarProprio(prefix) {
         });
 }
 
-// ---------- Carregar calendário do colega ----------
 function carregarColega(prefix) {
     const select = document.getElementById(`destino_id${prefix}`);
     const colegaId = select.value;
@@ -305,7 +305,6 @@ function carregarColega(prefix) {
         });
 }
 
-// ---------- Inicialização ao abrir cada modal ----------
 document.getElementById('modalNovaTroca').addEventListener('show.bs.modal', function() {
     mesAtual = new Date().getMonth() + 1;
     anoAtual = new Date().getFullYear();
@@ -314,12 +313,118 @@ document.getElementById('modalNovaTroca').addEventListener('show.bs.modal', func
     document.getElementById('destino_id').addEventListener('change', () => carregarColega(''));
 });
 
+// ========== MODAL ECIN ==========
+const hoje = new Date();
+const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+
+async function carregarTurnosOrigem() {
+    const resposta = await fetch(`/api/escala_usuario/${userId}?ano=${hoje.getFullYear()}&mes=${hoje.getMonth()+1}`);
+    const dados = await resposta.json();
+    const tbody = document.querySelector('#tabelaTurnosOrigem tbody');
+    tbody.innerHTML = '';
+    let temTurnos = false;
+    for (const [dia, escalas] of Object.entries(dados)) {
+        // Filtrar apenas datas >= hoje
+        const dataDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+        if (dataDia < hojeStr) continue;
+        escalas.forEach(esc => {
+            // Apenas ECIN ou ELAC
+            if (['ECIN', 'ELAC'].includes(esc.categoria)) {
+                temTurnos = true;
+                const row = tbody.insertRow();
+                row.insertCell().textContent = dataDia.split('-').reverse().join('/');
+                row.insertCell().textContent = esc.turno;
+                const tdCheck = row.insertCell();
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'origem_turno';
+                radio.dataset.data = dataDia;
+                radio.dataset.turno = esc.turno;
+                radio.addEventListener('change', function() {
+                    document.getElementById('ecin_data_origem').value = this.dataset.data;
+                    document.getElementById('ecin_turno_origem').value = this.dataset.turno;
+                    document.getElementById('ecin_secao_colega').style.display = 'block';
+                    // Limpar seleções do colega
+                    document.getElementById('ecin_destino_id').value = '';
+                    document.getElementById('ecin_tabela_colega').style.display = 'none';
+                    document.getElementById('ecin_radio_troca').checked = false;
+                    document.getElementById('ecin_radio_aceita').checked = false;
+                });
+                tdCheck.appendChild(radio);
+            }
+        });
+    }
+    if (!temTurnos) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum turno ECIN/ELAC disponível este mês.</td></tr>';
+    }
+}
+
+// Carregar turnos do colega (todos, sem filtro de categoria)
+async function carregarTurnosColega() {
+    const colegaId = document.getElementById('ecin_destino_id').value;
+    if (!colegaId) {
+        document.querySelector('#tabelaTurnosDestino tbody').innerHTML = '<tr><td colspan="3" class="text-muted">Selecione um colega.</td></tr>';
+        return;
+    }
+    const resposta = await fetch(`/api/escala_usuario/${colegaId}?ano=${hoje.getFullYear()}&mes=${hoje.getMonth()+1}`);
+    const dados = await resposta.json();
+    const tbody = document.querySelector('#tabelaTurnosDestino tbody');
+    tbody.innerHTML = '';
+    let temTurnos = false;
+    for (const [dia, escalas] of Object.entries(dados)) {
+        escalas.forEach(esc => {
+            temTurnos = true;
+            const row = tbody.insertRow();
+            const dataDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+            row.insertCell().textContent = dataDia.split('-').reverse().join('/');
+            row.insertCell().textContent = esc.turno;
+            const tdCheck = row.insertCell();
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'destino_turno';
+            radio.dataset.data = dataDia;
+            radio.dataset.turno = esc.turno;
+            radio.addEventListener('change', function() {
+                document.getElementById('ecin_data_destino').value = this.dataset.data;
+                document.getElementById('ecin_turno_destino').value = this.dataset.turno;
+            });
+            tdCheck.appendChild(radio);
+        });
+    }
+    if (!temTurnos) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Colega sem turnos este mês.</td></tr>';
+    }
+}
+
+// Eventos do modal ECIN
 document.getElementById('modalNovaTrocaEcin').addEventListener('show.bs.modal', function() {
-    mesAtual = new Date().getMonth() + 1;
-    anoAtual = new Date().getFullYear();
-    carregarProprio('_ecin');
-    carregarColega('_ecin');
-    document.getElementById('destino_id_ecin').addEventListener('change', () => carregarColega('_ecin'));
+    carregarTurnosOrigem();
+    document.getElementById('ecin_secao_colega').style.display = 'none';
+    document.getElementById('ecin_tabela_colega').style.display = 'none';
+    document.getElementById('ecin_radio_troca').checked = false;
+    document.getElementById('ecin_radio_aceita').checked = false;
+});
+
+document.getElementById('ecin_destino_id').addEventListener('change', function() {
+    if (document.getElementById('ecin_radio_troca').checked) {
+        carregarTurnosColega();
+    }
+});
+
+document.getElementById('ecin_radio_troca').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('ecin_tabela_colega').style.display = 'block';
+        carregarTurnosColega();
+    }
+});
+
+document.getElementById('ecin_radio_aceita').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('ecin_tabela_colega').style.display = 'none';
+        // Para "Aceita Turno", data/turno destino são iguais ao origem (subentende-se que o colega fará aquele turno)
+        document.getElementById('ecin_data_destino').value = document.getElementById('ecin_data_origem').value;
+        document.getElementById('ecin_turno_destino').value = document.getElementById('ecin_turno_origem').value;
+    }
 });
 </script>
 {% endblock %}
