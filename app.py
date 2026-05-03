@@ -4276,7 +4276,395 @@ def inject_novas_mensagens():
         naolidas = 0
     return dict(msgs_naolidas=naolidas)
 
-#------------------Restaurar----------------
+#------------------Importar 03-05-26----------------
+# ========== FUNÇÕES AUXILIARES DE IMPORTAÇÃO ==========
+
+def _importar_linha_bombeiros(row, row_num):
+    numero = str(row[0]).strip() if row[0] else ''
+    mecanografico = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+    nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+    nomecompleto = str(row[3]).strip() if len(row) > 3 and row[3] else ''
+    email = str(row[4]).strip().lower() if len(row) > 4 and row[4] else ''
+    telemovel = str(row[5]).strip() if len(row) > 5 and row[5] else None
+    posto = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+    tipo_bombeiro = str(row[7]).strip() if len(row) > 7 and row[7] else 'Voluntário'
+    departamento = str(row[8]).strip() if len(row) > 8 and row[8] else None
+    tipo_user = str(row[9]).strip() if len(row) > 9 and row[9] else 'User'
+    ativo = str(row[10]).strip().lower() == 'sim' if len(row) > 10 and row[10] else True
+    password_hash = str(row[11]).strip() if len(row) > 11 and row[11] else generate_password_hash('123456')
+
+    if not numero or not mecanografico or not nome or not email:
+        return "Campos obrigatórios em falta (Nº Interno, Mecanográfico, Nome, Email)"
+    if Bombeiro.query.filter(
+        (Bombeiro.numero_interno == numero) |
+        (Bombeiro.mecanografico == mecanografico) |
+        (Bombeiro.email == email)
+    ).first():
+        return "Duplicado"
+    b = Bombeiro(
+        numero_interno=numero,
+        mecanografico=mecanografico,
+        nome=nome,
+        nomecompleto=nomecompleto if nomecompleto else None,
+        email=email,
+        telemovel=telemovel if telemovel and telemovel != '' else None,
+        posto=posto,
+        tipo_bombeiro=tipo_bombeiro,
+        resp_departamento=departamento if departamento and departamento != '' else None,
+        tipo_user=tipo_user,
+        ativo=ativo,
+        password_hash=password_hash
+    )
+    db.session.add(b)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_viaturas(row, row_num):
+    matricula = str(row[0]).strip() if row[0] else ''
+    if not matricula:
+        return "Matrícula obrigatória"
+    if Viatura.query.filter_by(matricula=matricula).first():
+        return "Matrícula já existe"
+    tipo = str(row[1]).strip() if len(row) > 1 else ''
+    nomenclatura = str(row[2]).strip() if len(row) > 2 else ''
+    marca = str(row[3]).strip() if len(row) > 3 else ''
+    modelo = str(row[4]).strip() if len(row) > 4 else ''
+    ano = int(row[5]) if len(row) > 5 and row[5] else 0
+    estado = str(row[6]).strip().lower() if len(row) > 6 else 'operacional'
+    v = Viatura(matricula=matricula, tipo=tipo, nomenclatura=nomenclatura,
+                marca=marca, modelo=modelo, ano=ano, estado=estado)
+    db.session.add(v)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_categorias_farmacia(row, row_num):
+    nome = str(row[0]).strip() if row[0] else ''
+    if not nome:
+        return "Nome da categoria obrigatório"
+    if CategoriaFarmacia.query.filter_by(nome=nome).first():
+        return "Categoria já existe"
+    checklist = str(row[1]).strip().lower() == 'sim' if len(row) > 1 else False
+    c = CategoriaFarmacia(nome=nome, checklist=checklist)
+    db.session.add(c)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_stock_farmacia(row, row_num):
+    categoria = str(row[0]).strip() if row[0] else ''
+    nome = str(row[1]).strip() if len(row) > 1 else ''
+    if not nome:
+        return "Nome do produto obrigatório"
+    tamanho = str(row[2]).strip() if len(row) > 2 else ''
+    stock = int(row[3]) if len(row) > 3 and row[3] else 0
+    s = StockFarmacia(categoria=categoria, nome=nome, tamanho=tamanho, stock=stock,
+                      data_atualizacao=datetime.utcnow())
+    db.session.add(s)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_stock_fardamento(row, row_num):
+    nome = str(row[0]).strip() if row[0] else ''
+    descricao = str(row[1]).strip() if len(row) > 1 else ''
+    tamanho = str(row[2]).strip() if len(row) > 2 else ''
+    tipo = str(row[3]).strip() if len(row) > 3 else ''
+    stock = int(row[4]) if len(row) > 4 and row[4] else 0
+    s = StockFardamento(nome=nome, descricao=descricao, tamanho=tamanho, tipo=tipo, stock=stock)
+    db.session.add(s)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_disponibilidades(row, row_num):
+    mec = str(row[0]).strip() if row[0] else None
+    data_str = str(row[1]).strip() if len(row) > 1 else None
+    turno_extra = str(row[2]).strip() if len(row) > 2 else ''
+    categoria = str(row[3]).strip() if len(row) > 3 else ''
+    confirmada = str(row[4]).strip().lower() == 'sim' if len(row) > 4 else False
+    data = _parse_data(data_str) if data_str else None
+    if not mec or not data:
+        return "Mecanográfico ou data obrigatórios"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    d = Disponibilidade(bombeiro_id=bombeiro.id, data=data, turno_extra=turno_extra,
+                        categoria=categoria, confirmada=confirmada)
+    db.session.add(d)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_escalas(row, row_num):
+    mec = str(row[0]).strip() if row[0] else None
+    inicio_str = str(row[1]).strip() if len(row) > 1 else None
+    fim_str = str(row[2]).strip() if len(row) > 2 else None
+    turno = str(row[3]).strip() if len(row) > 3 else ''
+    categoria = str(row[4]).strip() if len(row) > 4 else 'Bombeiro'
+    funcao = str(row[5]).strip() if len(row) > 5 else None
+    inicio = _parse_datetime(inicio_str)
+    fim = _parse_datetime(fim_str)
+    if not mec or not inicio or not fim:
+        return "Dados de escala incompletos"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    e = Escala(bombeiro_id=bombeiro.id, data_inicio=inicio, data_fim=fim,
+               turno=turno, categoria=categoria,
+               funcao=funcao if funcao and funcao != '' else None)
+    db.session.add(e)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_avarias(row, row_num):
+    codigo = str(row[0]).strip() if row[0] else None
+    matricula = str(row[1]).strip() if len(row) > 1 else None
+    descricao = str(row[2]).strip() if len(row) > 2 else ''
+    reportador_mec = str(row[3]).strip() if len(row) > 3 else None
+    kms = int(row[4]) if len(row) > 4 and row[4] else None
+    resp_oficina = str(row[5]).strip().lower() == 'sim' if len(row) > 5 else False
+    comando = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
+    estado = str(row[7]).strip() if len(row) > 7 else 'Pendente'
+    data_str = str(row[8]).strip() if len(row) > 8 else None
+
+    if not descricao or not matricula:
+        return "Descrição e matrícula obrigatórias"
+    viatura = Viatura.query.filter_by(matricula=matricula).first()
+    if not viatura:
+        return f"Viatura {matricula} não encontrada"
+    reportador = Bombeiro.query.filter_by(mecanografico=reportador_mec).first() if reportador_mec else None
+    data_reporte = _parse_datetime(data_str) or datetime.utcnow()
+
+    a = Avaria(codigo=codigo, viatura_id=viatura.id,
+               descricao=descricao, reportado_por=reportador.id if reportador else 1,
+               kms=kms, responsavel_oficina=resp_oficina, comando_verificado=comando,
+               estado=estado, data_reporte=data_reporte)
+    db.session.add(a)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_trocas(row, row_num):
+    mec_origem = str(row[0]).strip() if row[0] else None
+    mec_destino = str(row[1]).strip() if len(row) > 1 else None
+    data_origem_str = str(row[2]).strip() if len(row) > 2 else None
+    data_destino_str = str(row[3]).strip() if len(row) > 3 else None
+    motivo = str(row[4]).strip() if len(row) > 4 else ''
+    estado = str(row[5]).strip() if len(row) > 5 else ''
+    data_pedido_str = str(row[6]).strip() if len(row) > 6 else None
+
+    b_orig = Bombeiro.query.filter_by(mecanografico=mec_origem).first() if mec_origem else None
+    b_dest = Bombeiro.query.filter_by(mecanografico=mec_destino).first() if mec_destino else None
+    data_orig = _parse_data(data_origem_str)
+    data_dest = _parse_data(data_destino_str)
+    data_pedido = _parse_datetime(data_pedido_str) or datetime.utcnow()
+    if not b_orig or not b_dest or not data_orig or not data_dest:
+        return "Dados de troca incompletos"
+    t = TrocaServico(bombeiro_origem_id=b_orig.id, bombeiro_destino_id=b_dest.id,
+                     data_origem=data_orig, data_destino=data_dest,
+                     motivo=motivo, estado=estado, data_pedido=data_pedido)
+    db.session.add(t)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_dispensas(row, row_num):
+    mec = str(row[0]).strip() if row[0] else None
+    inicio_str = str(row[1]).strip() if len(row) > 1 else None
+    fim_str = str(row[2]).strip() if len(row) > 2 else None
+    motivo = str(row[3]).strip() if len(row) > 3 else ''
+    aprovada = str(row[4]).strip().lower() == 'sim' if len(row) > 4 else False
+    inicio = _parse_data(inicio_str)
+    fim = _parse_data(fim_str)
+    if not mec or not inicio or not fim:
+        return "Dados de dispensa incompletos"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    d = Dispensa(bombeiro_id=bombeiro.id, data_inicio=inicio, data_fim=fim,
+                 motivo=motivo, aprovada=aprovada)
+    db.session.add(d)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_creditos(row, row_num):
+    mec = str(row[0]).strip() if row[0] else None
+    data_str = str(row[1]).strip() if len(row) > 1 else None
+    descricao = str(row[2]).strip() if len(row) > 2 else ''
+    horas = int(row[3]) if len(row) > 3 and row[3] else 8
+    estado = str(row[4]).strip() if len(row) > 4 else 'Não Gozado'
+    data = _parse_data(data_str)
+    if not mec or not data:
+        return "Dados de crédito incompletos"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    c = CreditoDispensa(bombeiro_id=bombeiro.id, data=data,
+                        descricao=descricao, horas=horas, observacao=estado)
+    db.session.add(c)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_ecins(row, row_num):
+    mec = str(row[0]).strip() if row[0] else None
+    data_str = str(row[1]).strip() if len(row) > 1 else None
+    turno = str(row[2]).strip() if len(row) > 2 else ''
+    categoria = str(row[3]).strip() if len(row) > 3 else ''
+    funcao = str(row[4]).strip() if len(row) > 4 else None
+    estado = str(row[5]).strip() if len(row) > 5 else 'Pendente'
+    data = _parse_data(data_str)
+    if not mec or not data:
+        return "Dados de ECIN incompletos"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    ec = Ecin(bombeiro_id=bombeiro.id, data=data, turno=turno,
+              categoria=categoria, funcao=funcao, estado=estado)
+    db.session.add(ec)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_fardamentos(row, row_num):
+    mec = str(row[1]).strip() if len(row) > 1 and row[1] else None  # coluna 1 = mec
+    tipo = str(row[2]).strip() if len(row) > 2 else ''
+    nome = str(row[3]).strip() if len(row) > 3 else ''
+    tamanho = str(row[4]).strip() if len(row) > 4 else ''
+    motivo = str(row[5]).strip() if len(row) > 5 else ''
+    estado = str(row[6]).strip() if len(row) > 6 else 'Pedido'
+    data_reg_str = str(row[0]).strip() if len(row) > 0 and row[0] else None  # coluna 0 = data registo
+    data_reg = _parse_datetime(data_reg_str) or datetime.utcnow()
+    if not mec:
+        return "Mecanográfico do bombeiro obrigatório"
+    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+    if not bombeiro:
+        return f"Bombeiro {mec} não encontrado"
+    f = Fardamento(bombeiro_id=bombeiro.id, tipo=tipo, nome=nome,
+                   tamanho=tamanho, motivo=motivo, estado=estado, data_registo=data_reg)
+    db.session.add(f)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_oficina(row, row_num):
+    codigo = str(row[0]).strip() if row[0] else ''
+    nome_oficina = str(row[1]).strip() if len(row) > 1 else ''
+    data_rec_str = str(row[2]).strip() if len(row) > 2 else None
+    motivo = str(row[3]).strip() if len(row) > 3 else ''
+    avaria_cod = str(row[4]).strip() if len(row) > 4 else None
+    matricula = str(row[5]).strip() if len(row) > 5 else None
+    kms = int(row[6]) if len(row) > 6 and row[6] else None
+    estado = str(row[7]).strip() if len(row) > 7 else 'Oficina'
+
+    if not nome_oficina:
+        return "Nome da oficina obrigatório"
+    viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
+    avaria = Avaria.query.filter_by(codigo=avaria_cod).first() if avaria_cod else None
+    data_recepcao = _parse_data(data_rec_str)
+    o = Oficina(codigo=codigo, nome_oficina=nome_oficina,
+                data_recepcao=data_recepcao,
+                motivo=motivo, avaria_id=avaria.id if avaria else None,
+                viatura_id=viatura.id if viatura else 1,
+                kms=kms, estado=estado)
+    db.session.add(o)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_gestao_frota(row, row_num):
+    matricula = str(row[0]).strip() if row[0] else None
+    if not matricula:
+        return "Matrícula obrigatória"
+    viatura = Viatura.query.filter_by(matricula=matricula).first()
+    if not viatura:
+        return f"Viatura {matricula} não encontrada"
+    g = GestaoFrota(viatura_id=viatura.id)
+    g.inspecao_periodica = _parse_data(str(row[1]).strip()) if len(row) > 1 and row[1] else None
+    g.kms_ultima_revisao = int(row[2]) if len(row) > 2 and row[2] else None
+    g.kms_proxima_revisao = int(row[3]) if len(row) > 3 and row[3] else None
+    g.kms_pneus_dianteiros = int(row[4]) if len(row) > 4 and row[4] else None
+    g.kms_pneus_trazeiros = int(row[5]) if len(row) > 5 and row[5] else None
+    g.kms_correia = int(row[6]) if len(row) > 6 and row[6] else None
+    g.outros_apontamentos = str(row[7]).strip() if len(row) > 7 and row[7] else ''
+    db.session.add(g)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_stock_ambulancia(row, row_num):
+    data_str = str(row[0]).strip() if row[0] else None
+    matricula = str(row[1]).strip() if len(row) > 1 else None
+    nome_produto = str(row[2]).strip() if len(row) > 2 else ''
+    quantidade = int(row[3]) if len(row) > 3 and row[3] else 0
+    mec_solicitante = str(row[4]).strip() if len(row) > 4 else None
+    mec_responsavel = str(row[5]).strip() if len(row) > 5 else None
+    confirmado = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
+
+    viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
+    produto = StockFarmacia.query.filter_by(nome=nome_produto).first() if nome_produto else None
+    solicitante = Bombeiro.query.filter_by(mecanografico=mec_solicitante).first() if mec_solicitante else None
+    responsavel = Bombeiro.query.filter_by(mecanografico=mec_responsavel).first() if mec_responsavel else None
+
+    sa = StockAmbulancia(
+        ambulancia_id=viatura.id if viatura else 1,
+        produto_id=produto.id if produto else 1,
+        quantidade=quantidade,
+        solicitante_id=solicitante.id if solicitante else 1,
+        responsavel_id=responsavel.id if responsavel else None,
+        checklist_id=None,
+        confirmado=confirmado,
+        data=_parse_datetime(data_str) or datetime.utcnow()
+    )
+    db.session.add(sa)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_notas_central(row, row_num):
+    criador_mec = str(row[0]).strip() if row[0] else None
+    data_criacao_str = str(row[1]).strip() if len(row) > 1 else None
+    descricao = str(row[2]).strip() if len(row) > 2 else ''
+    data_evento_str = str(row[3]).strip() if len(row) > 3 else None
+
+    criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
+    data_criacao = _parse_datetime(data_criacao_str) or datetime.utcnow()
+    data_evento = _parse_data(data_evento_str)
+
+    n = Nota(criador_id=criador.id if criador else 1, data_criacao=data_criacao,
+             descricao=descricao, data_evento=data_evento)
+    db.session.add(n)
+    db.session.flush()
+    return None
+
+
+def _importar_linha_mensagens_correio(row, row_num):
+    remetente_mec = str(row[0]).strip() if row[0] else None
+    destinatario_mec = str(row[1]).strip() if len(row) > 1 else None
+    departamento = str(row[2]).strip() if len(row) > 2 else None
+    assunto = str(row[3]).strip() if len(row) > 3 else ''
+    corpo = str(row[4]).strip() if len(row) > 4 else ''
+    data_envio_str = str(row[5]).strip() if len(row) > 5 else None
+    lida = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
+
+    remetente = Bombeiro.query.filter_by(mecanografico=remetente_mec).first() if remetente_mec else None
+    destinatario = Bombeiro.query.filter_by(mecanografico=destinatario_mec).first() if destinatario_mec else None
+    data_envio = _parse_datetime(data_envio_str) or datetime.utcnow()
+
+    m = MensagemCorreio(
+        remetente_id=remetente.id if remetente else 1,
+        destinatario_id=destinatario.id if destinatario else None,
+        departamento=departamento if departamento and departamento != '' else None,
+        assunto=assunto, corpo=corpo, data_envio=data_envio, lida=lida
+    )
+    db.session.add(m)
+    db.session.flush()
+    return None
+
 @app.route('/backup/importar', methods=['POST'])
 @login_required
 def backup_importar():
@@ -4299,474 +4687,112 @@ def backup_importar():
         flash(f'Erro ao ler ficheiro: {str(e)}', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ---------- 1. APAGAR TODOS OS DADOS EXISTENTES (ordem inversa para respeitar chaves) ----------
-    modelos_para_apagar = [
-        Nota, MensagemCorreio, ChecklistAmbulanciaItem, ChecklistAmbulancia,
-        StockAmbulancia, StockFarmacia, CategoriaFarmacia,
-        Fardamento, Ecin, GestaoFrota, Oficina,
-        CreditoDispensa, Dispensa, TrocaServico, Escala,
-        Avaria, Disponibilidade, Viatura, Bombeiro
+    erros_globais = []
+    total_importado = 0
+
+    # ---------- ORDEM CORRETA DE IMPORTAÇÃO (respeitar chaves estrangeiras) ----------
+    # Tabelas que não dependem de outras (ou só de Bombeiro e Viatura)
+    # 1. Bombeiros (já feito, mas vamos garantir que é o primeiro)
+    # 2. Viaturas
+    # 3. CategoriasFarmacia
+    # 4. StockFarmacia, StockFardamento
+    # 5. Disponibilidades, Escalas, Avarias, Trocas, Dispensas, Creditos
+    # 6. ECINS, Oficina, GestaoFrota, Fardamentos, Notas, etc.
+
+    ordem_importacao = [
+        'Bombeiros',
+        'Viaturas',
+        'Categorias Farmacia',
+        'Stock Farmacia',
+        'Stock Fardamento',
+        'Disponibilidades',
+        'Escalas',
+        'Avarias',
+        'Trocas',
+        'Dispensas',
+        'Créditos',
+        'ECINS',
+        'Fardamentos',
+        'Oficina',
+        'Gestao Frota',
+        'Checklist Ambulância',
+        'Checklist Itens',
+        'Stock Ambulância',
+        'Notas Central',
+        'Mensagens Correio',
     ]
-    for modelo in modelos_para_apagar:
-        db.session.query(modelo).delete()
-    db.session.flush()
 
-    # ---------- 2. IMPORTAR BOMBEIROS ----------
-    if 'Bombeiros' in wb.sheetnames:
-        ws = wb['Bombeiros']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            numero = str(row[0]).strip() if row[0] else ''
-            mecanografico = str(row[1]).strip() if row[1] else ''
-            nome = str(row[2]).strip() if row[2] else ''
-            nomecompleto = str(row[3]).strip() if len(row) > 3 and row[3] else ''
-            email = str(row[4]).strip().lower() if len(row) > 4 and row[4] else ''
-            telemovel = str(row[5]).strip() if len(row) > 5 and row[5] else None
-            posto = str(row[6]).strip() if len(row) > 6 and row[6] else ''
-            tipo_bombeiro = str(row[7]).strip() if len(row) > 7 and row[7] else 'Voluntário'
-            departamento = str(row[8]).strip() if len(row) > 8 and row[8] else None
-            tipo_user = str(row[9]).strip() if len(row) > 9 and row[9] else 'User'
-            ativo = str(row[10]).strip().lower() == 'sim' if len(row) > 10 and row[10] else True
-            password_hash = str(row[11]).strip() if len(row) > 11 and row[11] else generate_password_hash('123456')
-
-            b = Bombeiro(
-                numero_interno=numero,
-                mecanografico=mecanografico,
-                nome=nome,
-                nomecompleto=nomecompleto if nomecompleto else None,
-                email=email,
-                telemovel=telemovel if telemovel and telemovel != '' else None,
-                posto=posto,
-                tipo_bombeiro=tipo_bombeiro,
-                resp_departamento=departamento if departamento and departamento != '' else None,
-                tipo_user=tipo_user,
-                ativo=ativo,
-                password_hash=password_hash
-            )
-            db.session.add(b)
-        db.session.flush()
-
-    # ---------- 3. IMPORTAR VIATURAS ----------
-    if 'Viaturas' in wb.sheetnames:
-        ws = wb['Viaturas']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            matricula = str(row[0]).strip() if row[0] else ''
-            tipo = str(row[1]).strip() if len(row) > 1 else ''
-            nomenclatura = str(row[2]).strip() if len(row) > 2 else ''
-            marca = str(row[3]).strip() if len(row) > 3 else ''
-            modelo = str(row[4]).strip() if len(row) > 4 else ''
-            ano = int(row[5]) if len(row) > 5 and row[5] else 0
-            estado = str(row[6]).strip().lower() if len(row) > 6 else 'operacional'
-            v = Viatura(matricula=matricula, tipo=tipo, nomenclatura=nomenclatura,
-                        marca=marca, modelo=modelo, ano=ano, estado=estado)
-            db.session.add(v)
-        db.session.flush()
-
-    # ---------- 4. IMPORTAR DISPONIBILIDADES ----------
-    if 'Disponibilidades' in wb.sheetnames:
-        ws = wb['Disponibilidades']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec = str(row[0]).strip() if row[0] else None
-            data_str = str(row[1]).strip() if len(row) > 1 else None
-            turno_extra = str(row[2]).strip() if len(row) > 2 else ''
-            categoria = str(row[3]).strip() if len(row) > 3 else ''
-            confirmada = str(row[4]).strip().lower() == 'sim' if len(row) > 4 else False
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            if not bombeiro:
-                continue
-            data = _parse_data(data_str) if data_str else None
-            if not data:
-                continue
-            d = Disponibilidade(bombeiro_id=bombeiro.id, data=data, turno_extra=turno_extra,
-                                categoria=categoria, confirmada=confirmada)
-            db.session.add(d)
-        db.session.flush()
-
-    # ---------- 5. IMPORTAR ESCALAS ----------
-    if 'Escalas' in wb.sheetnames:
-        ws = wb['Escalas']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec = str(row[0]).strip() if row[0] else None
-            inicio_str = str(row[1]).strip() if len(row) > 1 else None
-            fim_str = str(row[2]).strip() if len(row) > 2 else None
-            turno = str(row[3]).strip() if len(row) > 3 else ''
-            categoria = str(row[4]).strip() if len(row) > 4 else 'Bombeiro'
-            funcao = str(row[5]).strip() if len(row) > 5 else None
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            if not bombeiro:
-                continue
-            inicio = _parse_datetime(inicio_str)
-            fim = _parse_datetime(fim_str)
-            if not inicio or not fim:
-                continue
-            e = Escala(bombeiro_id=bombeiro.id, data_inicio=inicio, data_fim=fim,
-                       turno=turno, categoria=categoria,
-                       funcao=funcao if funcao and funcao != '' else None)
-            db.session.add(e)
-        db.session.flush()
-
-    # ---------- 6. IMPORTAR AVARIAS ----------
-    if 'Avarias' in wb.sheetnames:
-        ws = wb['Avarias']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            codigo = str(row[0]).strip() if row[0] else None
-            matricula = str(row[1]).strip() if len(row) > 1 else None
-            descricao = str(row[2]).strip() if len(row) > 2 else ''
-            reportador_mec = str(row[3]).strip() if len(row) > 3 else None
-            kms = int(row[4]) if len(row) > 4 and row[4] else None
-            resp_oficina = str(row[5]).strip().lower() == 'sim' if len(row) > 5 else False
-            comando = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
-            estado = str(row[7]).strip() if len(row) > 7 else 'Pendente'
-            data_str = str(row[8]).strip() if len(row) > 8 else None
-
-            viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-            reportador = Bombeiro.query.filter_by(mecanografico=reportador_mec).first() if reportador_mec else None
-            data_reporte = _parse_datetime(data_str) or datetime.utcnow()
-
-            a = Avaria(codigo=codigo, viatura_id=viatura.id if viatura else 1,
-                       descricao=descricao, reportado_por=reportador.id if reportador else 1,
-                       kms=kms, responsavel_oficina=resp_oficina, comando_verificado=comando,
-                       estado=estado, data_reporte=data_reporte)
-            db.session.add(a)
-        db.session.flush()
-
-    # ---------- 7. IMPORTAR TROCAS ----------
-    if 'Trocas' in wb.sheetnames:
-        ws = wb['Trocas']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec_origem = str(row[0]).strip() if row[0] else None
-            mec_destino = str(row[1]).strip() if len(row) > 1 else None
-            data_origem_str = str(row[2]).strip() if len(row) > 2 else None
-            data_destino_str = str(row[3]).strip() if len(row) > 3 else None
-            motivo = str(row[4]).strip() if len(row) > 4 else ''
-            estado = str(row[5]).strip() if len(row) > 5 else ''
-            data_pedido_str = str(row[6]).strip() if len(row) > 6 else None
-
-            b_orig = Bombeiro.query.filter_by(mecanografico=mec_origem).first() if mec_origem else None
-            b_dest = Bombeiro.query.filter_by(mecanografico=mec_destino).first() if mec_destino else None
-            data_orig = datetime.strptime(data_origem_str, '%d/%m/%Y').date() if data_origem_str else None
-            data_dest = datetime.strptime(data_destino_str, '%d/%m/%Y').date() if data_destino_str else None
-            data_pedido = _parse_datetime(data_pedido_str)
-
-            t = TrocaServico(bombeiro_origem_id=b_orig.id if b_orig else 1,
-                             bombeiro_destino_id=b_dest.id if b_dest else 1,
-                             data_origem=data_orig, data_destino=data_dest,
-                             motivo=motivo, estado=estado, data_pedido=data_pedido)
-            db.session.add(t)
-        db.session.flush()
-
-    # ---------- 8. IMPORTAR DISPENSAS ----------
-    if 'Dispensas' in wb.sheetnames:
-        ws = wb['Dispensas']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec = str(row[0]).strip() if row[0] else None
-            inicio_str = str(row[1]).strip() if len(row) > 1 else None
-            fim_str = str(row[2]).strip() if len(row) > 2 else None
-            motivo = str(row[3]).strip() if len(row) > 3 else ''
-            aprovada = str(row[4]).strip().lower() == 'sim' if len(row) > 4 else False
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            inicio = _parse_data(inicio_str)
-            fim = _parse_data(fim_str)
-
-            # Ignorar se não tiver bombeiro ou datas válidas
-            if not bombeiro or not inicio or not fim:
-                continue
-
-            d = Dispensa(
-                bombeiro_id=bombeiro.id,
-                data_inicio=inicio,
-                data_fim=fim,
-                motivo=motivo,
-                aprovada=aprovada
-            )
-            db.session.add(d)
-        db.session.flush()
-
-    # ---------- 9. IMPORTAR CRÉDITOS ----------
-    if 'Créditos' in wb.sheetnames:
-        ws = wb['Créditos']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec = str(row[0]).strip() if row[0] else None
-            data_str = str(row[1]).strip() if len(row) > 1 else None
-            descricao = str(row[2]).strip() if len(row) > 2 else ''
-            horas = int(row[3]) if len(row) > 3 and row[3] else 8
-            estado = str(row[4]).strip() if len(row) > 4 else 'Não Gozado'
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            data = _parse_data(data_str)
-            if not data:
-                continue   # ignora linhas sem data válida
-
-            c = CreditoDispensa(bombeiro_id=bombeiro.id if bombeiro else 1, data=data,
-                                descricao=descricao, horas=horas, observacao=estado)
-            db.session.add(c)
-        db.session.flush()
-
-    # ---------- 10. IMPORTAR STOCK FARDAMENTO ----------
-    if 'Stock Fardamento' in wb.sheetnames:
-        ws = wb['Stock Fardamento']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            nome = str(row[0]).strip() if row[0] else ''
-            descricao = str(row[1]).strip() if len(row) > 1 else ''
-            tamanho = str(row[2]).strip() if len(row) > 2 else ''
-            tipo = str(row[3]).strip() if len(row) > 3 else ''
-            stock = int(row[4]) if len(row) > 4 and row[4] else 0
-            s = StockFardamento(nome=nome, descricao=descricao, tamanho=tamanho, tipo=tipo, stock=stock)
-            db.session.add(s)
-        db.session.flush()
-
-    # ---------- 11. IMPORTAR CATEGORIAS FARMÁCIA ----------
-    if 'Categorias Farmacia' in wb.sheetnames:
-        ws = wb['Categorias Farmacia']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            nome = str(row[0]).strip() if row[0] else ''
-            checklist = str(row[1]).strip().lower() == 'sim' if len(row) > 1 else False
-            c = CategoriaFarmacia(nome=nome, checklist=checklist)
-            db.session.add(c)
-        db.session.flush()
-
-    # ---------- 12. IMPORTAR STOCK FARMÁCIA ----------
-    if 'Stock Farmacia' in wb.sheetnames:
-        ws = wb['Stock Farmacia']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            categoria = str(row[0]).strip() if row[0] else ''
-            nome = str(row[1]).strip() if len(row) > 1 else ''
-            tamanho = str(row[2]).strip() if len(row) > 2 else ''
-            stock = int(row[3]) if len(row) > 3 and row[3] else 0
-            s = StockFarmacia(categoria=categoria, nome=nome, tamanho=tamanho, stock=stock,
-                              data_atualizacao=datetime.utcnow())
-            db.session.add(s)
-        db.session.flush()
-
-    # ---------- 13. IMPORTAR CHECKLIST AMBULÂNCIA ----------
-    if 'Checklist Ambulância' in wb.sheetnames:
-        ws = wb['Checklist Ambulância']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            # ID original não será usado; criamos novo
-            data_hora_str = str(row[1]).strip() if len(row) > 1 else None
-            matricula = str(row[2]).strip() if len(row) > 2 else None
-            mec_bombeiro = str(row[3]).strip() if len(row) > 3 else None
-            finalizado = str(row[4]).strip().lower() == 'sim' if len(row) > 4 else False
-
-            viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec_bombeiro).first() if mec_bombeiro else None
-            data_hora = _parse_datetime(data_hora_str) or datetime.utcnow()
-
-            ch = ChecklistAmbulancia(viatura_id=viatura.id if viatura else 1,
-                                     bombeiro_id=bombeiro.id if bombeiro else 1,
-                                     data_hora=data_hora, finalizado=finalizado)
-            db.session.add(ch)
-        db.session.flush()
-
-    # ---------- 14. IMPORTAR ITENS DE CHECKLIST ----------
-    if 'Checklist Itens' in wb.sheetnames:
-        ws = wb['Checklist Itens']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            checklist_id_original = int(row[0]) if row[0] else None
-            nome_produto = str(row[1]).strip() if len(row) > 1 else ''
-            quantidade = int(row[2]) if len(row) > 2 and row[2] else 0
-
-            # Aqui a correspondência seria complexa porque os IDs antigos não existem mais.
-            # Simplificamos ignorando a importação de itens individuais, visto que são dependentes.
+    for nome_folha in ordem_importacao:
+        if nome_folha not in wb.sheetnames:
             continue
 
-    # ---------- 15. IMPORTAR STOCK AMBULÂNCIA ----------
-    if 'Stock Ambulância' in wb.sheetnames:
-        ws = wb['Stock Ambulância']
-        for row in ws.iter_rows(min_row=2, values_only=True):
+        ws = wb[nome_folha]
+        erros_folha = []
+        linhas_ok = 0
+
+        # Função auxiliar para processar cada linha dentro de uma transação isolada
+        def processar_linha(nome_folha, row_num, linha):
+            nonlocal total_importado
+            from sqlalchemy.exc import IntegrityError
+
+            try:
+                if nome_folha == 'Bombeiros':
+                    return _importar_linha_bombeiros(linha, row_num)
+                elif nome_folha == 'Viaturas':
+                    return _importar_linha_viaturas(linha, row_num)
+                elif nome_folha == 'Categorias Farmacia':
+                    return _importar_linha_categorias_farmacia(linha, row_num)
+                elif nome_folha == 'Stock Farmacia':
+                    return _importar_linha_stock_farmacia(linha, row_num)
+                elif nome_folha == 'Stock Fardamento':
+                    return _importar_linha_stock_fardamento(linha, row_num)
+                elif nome_folha == 'Disponibilidades':
+                    return _importar_linha_disponibilidades(linha, row_num)
+                elif nome_folha == 'Escalas':
+                    return _importar_linha_escalas(linha, row_num)
+                elif nome_folha == 'Avarias':
+                    return _importar_linha_avarias(linha, row_num)
+                elif nome_folha == 'Trocas':
+                    return _importar_linha_trocas(linha, row_num)
+                elif nome_folha == 'Dispensas':
+                    return _importar_linha_dispensas(linha, row_num)
+                elif nome_folha == 'Créditos':
+                    return _importar_linha_creditos(linha, row_num)
+                elif nome_folha == 'ECINS':
+                    return _importar_linha_ecins(linha, row_num)
+                elif nome_folha == 'Fardamentos':
+                    return _importar_linha_fardamentos(linha, row_num)
+                elif nome_folha == 'Oficina':
+                    return _importar_linha_oficina(linha, row_num)
+                elif nome_folha == 'Gestao Frota':
+                    return _importar_linha_gestao_frota(linha, row_num)
+                # Outras folhas podem ser ignoradas por enquanto
+                return None
+            except IntegrityError as e:
+                db.session.rollback()
+                return f"Erro de integridade: {str(e.orig)[:200]}"
+            except Exception as e:
+                db.session.rollback()
+                return f"Erro: {str(e)[:200]}"
+
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             if not row or all(c is None for c in row):
                 continue
-            data_str = str(row[0]).strip() if row[0] else None
-            matricula = str(row[1]).strip() if len(row) > 1 else None
-            nome_produto = str(row[2]).strip() if len(row) > 2 else ''
-            quantidade = int(row[3]) if len(row) > 3 and row[3] else 0
-            mec_solicitante = str(row[4]).strip() if len(row) > 4 else None
-            mec_responsavel = str(row[5]).strip() if len(row) > 5 else None
-            confirmado = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
+            erro = processar_linha(nome_folha, row_num, row)
+            if erro:
+                erros_folha.append(f"Linha {row_num}: {erro}")
+            else:
+                linhas_ok += 1
 
-            viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-            produto = StockFarmacia.query.filter_by(nome=nome_produto).first() if nome_produto else None
-            solicitante = Bombeiro.query.filter_by(mecanografico=mec_solicitante).first() if mec_solicitante else None
-            responsavel = Bombeiro.query.filter_by(mecanografico=mec_responsavel).first() if mec_responsavel else None
+        total_importado += linhas_ok
+        if erros_folha:
+            erros_globais.append(f"--- {nome_folha} ---")
+            erros_globais.extend(erros_folha[:5])  # mostramos até 5 erros por folha para não sobrecarregar
 
-            sa = StockAmbulancia(
-                ambulancia_id=viatura.id if viatura else 1,
-                produto_id=produto.id if produto else 1,
-                quantidade=quantidade,
-                solicitante_id=solicitante.id if solicitante else 1,
-                responsavel_id=responsavel.id if responsavel else None,
-                checklist_id=None,
-                confirmado=confirmado,
-                data=_parse_datetime(data_str) or datetime.utcnow()
-            )
-            db.session.add(sa)
-        db.session.flush()
-
-    # ---------- 16. IMPORTAR OFICINA ----------
-    if 'Oficina' in wb.sheetnames:
-        ws = wb['Oficina']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            codigo = str(row[0]).strip() if row[0] else ''
-            nome_oficina = str(row[1]).strip() if len(row) > 1 else ''
-            data_rec_str = str(row[2]).strip() if len(row) > 2 else None
-            motivo = str(row[3]).strip() if len(row) > 3 else ''
-            avaria_cod = str(row[4]).strip() if len(row) > 4 else None
-            matricula = str(row[5]).strip() if len(row) > 5 else None
-            kms = int(row[6]) if len(row) > 6 and row[6] else None
-            estado = str(row[7]).strip() if len(row) > 7 else 'Oficina'
-
-            viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-            avaria = Avaria.query.filter_by(codigo=avaria_cod).first() if avaria_cod else None
-            data_recepcao = datetime.strptime(data_rec_str, '%d/%m/%Y').date() if data_rec_str else None
-
-            o = Oficina(codigo=codigo, nome_oficina=nome_oficina, data_recepcao=data_recepcao,
-                        motivo=motivo, avaria_id=avaria.id if avaria else None,
-                        viatura_id=viatura.id if viatura else 1, kms=kms, estado=estado)
-            db.session.add(o)
-        db.session.flush()
-
-    # ---------- 17. IMPORTAR GESTÃO FROTA ----------
-    if 'Gestao Frota' in wb.sheetnames:
-        ws = wb['Gestao Frota']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            matricula = str(row[0]).strip() if row[0] else None
-            # Os outros campos podem ser None
-            viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-            if not viatura:
-                continue
-            g = GestaoFrota(viatura_id=viatura.id)
-            g.inspecao_periodica = datetime.strptime(str(row[1]).strip(), '%d/%m/%Y').date() if len(row) > 1 and row[1] else None
-            g.kms_ultima_revisao = int(row[2]) if len(row) > 2 and row[2] else None
-            g.kms_proxima_revisao = int(row[3]) if len(row) > 3 and row[3] else None
-            g.kms_pneus_dianteiros = int(row[4]) if len(row) > 4 and row[4] else None
-            g.kms_pneus_trazeiros = int(row[5]) if len(row) > 5 and row[5] else None
-            g.kms_correia = int(row[6]) if len(row) > 6 and row[6] else None
-            g.outros_apontamentos = str(row[7]).strip() if len(row) > 7 else ''
-            db.session.add(g)
-        db.session.flush()
-
-    # ---------- 18. IMPORTAR FARDAMENTOS ----------
-    if 'Fardamentos' in wb.sheetnames:
-        ws = wb['Fardamentos']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            data_reg_str = str(row[0]).strip() if row[0] else None
-            mec = str(row[1]).strip() if len(row) > 1 else None
-            tipo = str(row[2]).strip() if len(row) > 2 else ''
-            nome = str(row[3]).strip() if len(row) > 3 else ''
-            tamanho = str(row[4]).strip() if len(row) > 4 else ''
-            motivo = str(row[5]).strip() if len(row) > 5 else ''
-            estado = str(row[6]).strip() if len(row) > 6 else 'Pedido'
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            data_reg = _parse_datetime(data_reg_str) or datetime.utcnow()
-
-            f = Fardamento(bombeiro_id=bombeiro.id if bombeiro else 1, tipo=tipo, nome=nome,
-                           tamanho=tamanho, motivo=motivo, estado=estado, data_registo=data_reg)
-            db.session.add(f)
-        db.session.flush()
-
-    # ---------- 19. IMPORTAR ECINS ----------
-    if 'ECINS' in wb.sheetnames:
-        ws = wb['ECINS']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            mec = str(row[0]).strip() if row[0] else None
-            data_str = str(row[1]).strip() if len(row) > 1 else None
-            turno = str(row[2]).strip() if len(row) > 2 else ''
-            categoria = str(row[3]).strip() if len(row) > 3 else ''
-            funcao = str(row[4]).strip() if len(row) > 4 else None
-            estado = str(row[5]).strip() if len(row) > 5 else 'Pendente'
-
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-            data = _parse_data(data_str) if data_str else None
-
-            ec = Ecin(bombeiro_id=bombeiro.id if bombeiro else 1, data=data, turno=turno,
-                      categoria=categoria, funcao=funcao, estado=estado)
-            db.session.add(ec)
-        db.session.flush()
-
-    # ---------- 20. IMPORTAR MENSAGENS CORREIO ----------
-    if 'Mensagens Correio' in wb.sheetnames:
-        ws = wb['Mensagens Correio']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            remetente_mec = str(row[0]).strip() if row[0] else None
-            destinatario_mec = str(row[1]).strip() if len(row) > 1 else None
-            departamento = str(row[2]).strip() if len(row) > 2 else None
-            assunto = str(row[3]).strip() if len(row) > 3 else ''
-            corpo = str(row[4]).strip() if len(row) > 4 else ''
-            data_envio_str = str(row[5]).strip() if len(row) > 5 else None
-            lida = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
-
-            remetente = Bombeiro.query.filter_by(mecanografico=remetente_mec).first() if remetente_mec else None
-            destinatario = Bombeiro.query.filter_by(mecanografico=destinatario_mec).first() if destinatario_mec else None
-            data_envio = _parse_datetime(data_envio_str) or datetime.utcnow()
-
-            m = MensagemCorreio(remetente_id=remetente.id if remetente else 1,
-                                destinatario_id=destinatario.id if destinatario else None,
-                                departamento=departamento if departamento and departamento != '' else None,
-                                assunto=assunto, corpo=corpo, data_envio=data_envio, lida=lida)
-            db.session.add(m)
-        db.session.flush()
-
-    # ---------- 21. IMPORTAR NOTAS ----------
-    if 'Notas Central' in wb.sheetnames:
-        ws = wb['Notas Central']
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or all(c is None for c in row):
-                continue
-            criador_mec = str(row[0]).strip() if row[0] else None
-            data_criacao_str = str(row[1]).strip() if len(row) > 1 else None
-            descricao = str(row[2]).strip() if len(row) > 2 else ''
-            data_evento_str = str(row[3]).strip() if len(row) > 3 else None
-
-            criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
-            data_criacao = _parse_datetime(data_criacao_str) or datetime.utcnow()
-            data_evento = _parse_data(data_evento_str) if data_evento_str else None
-
-            n = Nota(criador_id=criador.id if criador else 1, data_criacao=data_criacao,
-                     descricao=descricao, data_evento=data_evento)
-            db.session.add(n)
-        db.session.flush()
-
-    db.session.commit()
-    flash('Backup restaurado com sucesso!', 'success')
+    if erros_globais:
+        flash(f"{total_importado} registos importados. Alguns erros: " + "; ".join(erros_globais[:10]), 'warning')
+    else:
+        flash(f"{total_importado} registos importados com sucesso!", 'success')
     return redirect(url_for('dashboard'))
 
 #-----------------Backup-----------------------
