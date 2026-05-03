@@ -1984,11 +1984,20 @@ def trocas():
     query = TrocaServico.query
 
     if separador == 'assalariado':
-        query = query.join(Bombeiro, TrocaServico.bombeiro_origem_id == Bombeiro.id)\
-                     .filter(
-                         Bombeiro.tipo_bombeiro == 'Profissional',
-                         Bombeiro.posto.in_(['Motorista', 'Socorrista', 'Centralista'])
-                     )
+        # Profissionais que estejam escalados nas categorias Motorista/Socorrista/Centralista no dia de origem
+        sub_assalariado = db.session.query(TrocaServico.id) \
+            .join(Escala, db.and_(
+            Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
+            func.date(Escala.data_inicio) <= TrocaServico.data_origem,
+            func.date(Escala.data_fim) >= TrocaServico.data_origem,
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        )) \
+            .join(Bombeiro, Bombeiro.id == TrocaServico.bombeiro_origem_id) \
+            .filter(Bombeiro.tipo_bombeiro == 'Profissional') \
+            .subquery()
+        query = query.filter(TrocaServico.id.in_(sub_assalariado))
+
+
     else:  # ecin
         sub = db.session.query(TrocaServico.id)\
             .join(Escala, db.and_(
