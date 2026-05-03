@@ -3894,7 +3894,7 @@ def checklist_ambulancia():
         query = query.filter_by(viatura_id=viatura_id)
     checklists = query.order_by(ChecklistAmbulancia.data_hora.desc()).all()
 
-    viaturas = Viatura.query.order_by(Viatura.matricula).all()
+    viaturas = Viatura.query.filter(Viatura.tipo.in_(['ABSC', 'ABTD', 'ABTM'])).order_by(Viatura.matricula).all()
 
     # Dados para o modal de criação
     categorias = CategoriaFarmacia.query.filter_by(checklist=True).order_by(CategoriaFarmacia.nome).all()
@@ -5752,6 +5752,37 @@ def apagar_tudo():
     db.session.commit()
     flash('Todos os dados foram eliminados com sucesso!', 'success')
     return redirect(url_for('dashboard'))
+
+@app.context_processor
+def inject_pendencias():
+    pendencias = {}
+    if current_user.is_authenticated:
+        user = current_user
+        total = 0
+
+        if user.tipo_user == 'Admin' or user.resp_departamento == 'Comando':
+            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
+            pendencias['trocas'] = TrocaServico.query.filter_by(estado='aceite_colega').count()
+            pendencias['dispensas'] = Dispensa.query.filter_by(aprovada=False).count()
+            pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
+            pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
+            pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
+            total = sum(pendencias.values())
+        else:
+            if user.resp_departamento == 'Oficina':
+                pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
+            if user.resp_departamento == 'Fardamento':
+                pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
+            if user.resp_departamento == 'Secretaria':
+                pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
+            if user.resp_departamento == 'Farmacia':
+                pendencias['stock_farmacia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+            if user.resp_departamento == 'Socorrista':
+                pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+            total = sum(pendencias.values())
+
+        pendencias['total'] = total
+    return dict(pendencias=pendencias)
 
 
 #if __name__ == '__main__':

@@ -36,6 +36,18 @@
                     <div>
                         <h5 class="card-title mb-0">Bombeiro</h5>
                         <small class="text-muted">Área pessoal e gestão</small>
+                        {% if pendencias.total > 0 %}
+                        <div class="alert alert-danger alert-dismissible fade show mt-2 mb-0 p-2" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <strong>{{ pendencias.total }} pendência(s)!</strong> Verifique:
+                                    {% if pendencias.avarias %}Avarias ({{ pendencias.avarias }}){% endif %}
+                                    {% if pendencias.trocas %}Trocas ({{ pendencias.trocas }}){% endif %}
+                                    {% if pendencias.dispensas %}Dispensas ({{ pendencias.dispensas }}){% endif %}
+                                    {% if pendencias.fardamento %}Fardamento ({{ pendencias.fardamento }}){% endif %}
+                                    {% if pendencias.ecins %}ECINS ({{ pendencias.ecins }}){% endif %}
+                                    {% if pendencias.stock_ambulancia %}Stock Amb. ({{ pendencias.stock_ambulancia }}){% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
