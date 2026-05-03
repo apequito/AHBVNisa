@@ -373,6 +373,9 @@ async function carregarTurnosColega() {
     let temTurnos = false;
     for (const [dia, escalas] of Object.entries(dados)) {
         escalas.forEach(esc => {
+            // 🔁 Apenas turnos ECIN ou ELAC do colega
+            if (!['ECIN', 'ELAC'].includes(esc.categoria)) return;
+
             temTurnos = true;
             const row = tbody.insertRow();
             const dataDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
@@ -392,7 +395,7 @@ async function carregarTurnosColega() {
         });
     }
     if (!temTurnos) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Colega sem turnos este mês.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Colega sem turnos ECIN/ELAC este mês.</td></tr>';
     }
 }
 

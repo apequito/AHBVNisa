@@ -27,7 +27,7 @@
 
     <!-- ========== SECÇÃO BOMBEIRO ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd; box-shadow: 0 0 15px rgba(13,110,253,0.3) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd; box-shadow: 0 4px 12px rgba(13,110,253,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
@@ -73,7 +73,7 @@
 
     <!-- ========== SECÇÃO VIATURAS ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545; box-shadow: 0 0 15px rgba(220,53,69,0.3) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545; box-shadow: 0 4px 12px rgba(220,53,69,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
@@ -111,7 +111,7 @@
 
     <!-- ========== SECÇÃO SERVIÇO ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #198754; box-shadow: 0 0 15px rgba(25,135,84,0.3) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #198754; box-shadow: 0 4px 12px rgba(25,135,84,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
@@ -159,7 +159,7 @@
 
     <!-- ========== SECÇÃO OPERAÇÕES ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0dcaf0; box-shadow: 0 0 15px rgba(13,202,240,0.3) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0dcaf0; box-shadow: 0 4px 12px rgba(13,202,240,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
@@ -200,7 +200,7 @@
 
     <!-- ========== SECÇÃO FARMÁCIA & AMBULÂNCIA ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1; box-shadow: 0 0 15px rgba(111,66,193,0.3) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1; box-shadow: 0 4px 12px rgba(111,66,193,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-purple bg-opacity-10 p-3 me-3" style="background-color: rgba(111,66,193,0.1);">
@@ -240,89 +240,52 @@
         </div>
     </div>
 
-    <!-- ========== SECÇÃO GESTÃO (Admin e Comando) ========== -->
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    <!-- ========== NOVA SECÇÃO: GESTÃO ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545; box-shadow: 0 0 15px rgba(220,53,69,0.4) !important;">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-speedometer2 fs-2 text-danger"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title mb-0">Gestão</h5>
-                        <small class="text-muted">Painel de comando e backup</small>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('painel_comando') }}" class="btn btn-outline-danger btn-sm rounded-pill">
-                        <i class="bi bi-speedometer2 me-1"></i>Painel Comando
-                    </a>
-                    <div class="d-flex gap-2 mt-2">
-                        <a href="{{ url_for('backup_exportar') }}" class="btn btn-outline-success btn-sm rounded-pill">
-                            <i class="bi bi-download me-1"></i>Backup
-                        </a>
-                        <button class="btn btn-outline-danger btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
-                            <i class="bi bi-upload me-1"></i>Restaurar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- ========== SECÇÃO CENTRAL (Admin, Comando e Central) ========== -->
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Central'] %}
-    <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14; box-shadow: 0 0 15px rgba(253,126,20,0.4) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14; box-shadow: 0 4px 12px rgba(253,126,20,0.2) !important;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-broadcast fs-2 text-warning"></i>
+                        <i class="bi bi-gear fs-2 text-warning"></i>
                     </div>
                     <div>
-                        <h5 class="card-title mb-0">Central</h5>
-                        <small class="text-muted">Informações e notas</small>
+                        <h5 class="card-title mb-0">Gestão</h5>
+                        <small class="text-muted">Painéis de administração</small>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('central') }}" class="btn btn-outline-warning btn-sm rounded-pill">
-                        <i class="bi bi-broadcast me-1"></i>Central
-                    </a>
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                        <a href="{{ url_for('painel_comando') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                            <i class="bi bi-speedometer2 me-1"></i>Painel Comando
+                        </a>
+                    {% endif %}
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.resp_departamento == 'Central' %}
+                        <a href="{{ url_for('central') }}" class="btn btn-outline-success btn-sm rounded-pill">
+                            <i class="bi bi-broadcast me-1"></i>Central
+                        </a>
+                    {% endif %}
+                    {% if current_user.tipo_user == 'Admin' %}
+                        <a href="#" class="btn btn-outline-primary btn-sm rounded-pill disabled" title="Brevemente">
+                            <i class="bi bi-building me-1"></i>Administrativo
+                        </a>
+                    {% endif %}
+                    <!-- Backup e Restauro (apenas Admin/Comando) -->
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                        <a href="{{ url_for('backup_exportar') }}" class="btn btn-outline-success btn-sm rounded-pill">
+                            <i class="bi bi-download me-1"></i> Backup
+                        </a>
+                        <button class="btn btn-outline-danger btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
+                            <i class="bi bi-upload me-1"></i> Restaurar
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- ========== SECÇÃO ADMINISTRATIVO (só Admin) ========== -->
-    {% if current_user.tipo_user == 'Admin' %}
-    <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd; box-shadow: 0 0 15px rgba(13,110,253,0.4) !important;">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-shield-lock fs-2 text-primary"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title mb-0">Administrativo</h5>
-                        <small class="text-muted">Gestão de utilizadores</small>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-outline-primary btn-sm rounded-pill">
-                        <i class="bi bi-people-fill me-1"></i>Gerir Bombeiros
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
 </div>
 
-<!-- Estilo adicional para a cor roxa personalizada e sombras coloridas -->
+<!-- Estilo adicional para a cor roxa personalizada -->
 <style>
     .btn-outline-purple:hover {
         color: #fff !important;
@@ -343,7 +306,7 @@
     }
 </style>
 
-<!-- Modal de confirmação para importar backup (mantido) -->
+<!-- Modal de confirmação para importar backup -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
 <div class="modal fade" id="modalImportarBackup" tabindex="-1">
     <div class="modal-dialog">
