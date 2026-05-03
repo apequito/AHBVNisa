@@ -2193,7 +2193,10 @@ def aprovar_troca(id):
         flash('A troca precisa de ser aceite pelo colega primeiro.', 'warning')
         return redirect(url_for('trocas'))
 
-    # Lógica de troca de escalas (funciona para assalariados e ECINs)
+    # Determinar o tipo da troca para saber se é ECIN/ELAC
+    tipo = determinar_tipo_troca(troca)
+
+    # Atualizar as escalas de serviço (Escala)
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
         func.date(Escala.data_inicio) == troca.data_origem,
@@ -2206,18 +2209,37 @@ def aprovar_troca(id):
         Escala.turno == troca.turno_destino
     ).all()
 
+    # Trocar os bombeiros nas escalas
     for escala in escalas_origem:
         escala.bombeiro_id = troca.bombeiro_destino_id
     for escala in escalas_destino:
         escala.bombeiro_id = troca.bombeiro_origem_id
 
+    # Se for ECIN, atualizar também os registos na tabela Ecin
+    if tipo == 'ecin':
+        # Para cada registo Ecin do bombeiro original na data/turno da origem,
+        # mudar o bombeiro para o destino e manter o estado
+        ecins_origem = Ecin.query.filter(
+            Ecin.bombeiro_id == troca.bombeiro_origem_id,
+            Ecin.data == troca.data_origem,
+            Ecin.turno == troca.turno_origem
+        ).all()
+
+        ecins_destino = Ecin.query.filter(
+            Ecin.bombeiro_id == troca.bombeiro_destino_id,
+            Ecin.data == troca.data_destino,
+            Ecin.turno == troca.turno_destino
+        ).all()
+
+        for ec in ecins_origem:
+            ec.bombeiro_id = troca.bombeiro_destino_id
+        for ec in ecins_destino:
+            ec.bombeiro_id = troca.bombeiro_origem_id
+
     troca.estado = 'aprovada'
     db.session.commit()
     flash('Troca aprovada e escalas atualizadas.', 'success')
-
-    tipo = determinar_tipo_troca(troca)
     return redirect(url_for('trocas', tipo=tipo))
-
 
 
 
