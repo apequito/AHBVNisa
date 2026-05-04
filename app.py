@@ -3883,6 +3883,27 @@ def fardamento_atribuido():
                            bombeiros=bombeiros,
                            bombeiro_id=bombeiro_id)
 
+#------------------Imprimir Fardamento
+
+
+@app.route('/fardamento/imprimir-bombeiro')
+@login_required
+def imprimir_fardamento_bombeiro():
+    bombeiro_id = request.args.get('bombeiro_id', type=int)
+    if bombeiro_id:
+        atribuicoes = FardamentoAtribuido.query.filter_by(
+            bombeiro_id=bombeiro_id,
+            estado='Entregue'
+        ).order_by(FardamentoAtribuido.data_entrega.desc()).all()
+        bombeiro = Bombeiro.query.get(bombeiro_id)
+    else:
+        atribuicoes = []
+        bombeiro = None
+
+    return render_template('imprimir_fardamento_bombeiro.html',
+                           atribuicoes=atribuicoes,
+                           bombeiro=bombeiro)
+
 
 
 #----------- Stock Farmácia--------------
