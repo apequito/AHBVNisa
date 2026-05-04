@@ -302,7 +302,7 @@
             <label>Tamanho</label>
             <input type="text" id="atribTamanho" class="form-control mb-2" readonly>
             <!-- data_entrega é automática, mas o campo no modelo espera receber o valor; vamos enviar um hidden com a data de hoje -->
-            <input type="hidden" name="data_entrega" value="{{ date.today().strftime('%Y-%m-%d') }}">
+            <input type="hidden" name="data_entrega" value="{{ hoje.strftime('%Y-%m-%d') }}">
         </div>
         <div class="modal-footer">
             <button type="submit" class="btn btn-success">Atribuir</button>

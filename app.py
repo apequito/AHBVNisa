@@ -3384,7 +3384,8 @@ def fardamento():
                            atribuicoes=atribuicoes,
                            bombeiros=bombeiros,
                            aba=aba,
-                           bombeiro_id_filtro=bombeiro_id_filtro)
+                           bombeiro_id_filtro=bombeiro_id_filtro,
+                           hoje=date.today())  # ← adicionar esta linha
 
 @app.route('/fardamento/pedidos-analise/<int:bombeiro_id>')
 @login_required
