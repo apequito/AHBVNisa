@@ -5947,6 +5947,87 @@ def imprimir_deslocacoes_administrativo():
     return render_template('imprimir_deslocacoes.html', deslocacoes=desl)
 
 
+#-----------------exportar ecins administrativo----------------
+@app.route('/administrativo/exportar-ecins')
+@login_required
+def exportar_ecins_administrativo():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo'))
+
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
+    cat = request.args.get('cat_ecin', 'todas')
+
+    query = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    )
+    if cat == 'ECIN':
+        query = query.filter(Ecin.categoria == 'ECIN')
+    elif cat == 'ELAC':
+        query = query.filter(Ecin.categoria == 'ELAC')
+
+    ecins = query.order_by(Ecin.data).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "ECINs"
+    cabecalhos = ['Data', 'Turno', 'Categoria', 'Bombeiro', 'Função', 'Estado', 'Valor']
+    ws.append(cabecalhos)
+    for ec in ecins:
+        ws.append([ec.data.strftime('%d/%m/%Y') if ec.data else '',
+                   ec.turno, ec.categoria or '',
+                   ec.bombeiro.nome if ec.bombeiro else '',
+                   ec.funcao or '', ec.estado,
+                   ec.valor or 0.0])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='ecins.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/ecins/imprimir')
+@login_required
+def imprimir_ecins():
+    # Reaproveitar a lógica de impressão que já existe, mas apenas para ECINs
+    mes = request.args.get('mes', type=int)
+    ano = request.args.get('ano', type=int)
+    if not mes or not ano:
+        hoje = date.today()
+        mes = hoje.month
+        ano = hoje.year
+
+    ecins = Ecin.query.filter(
+        Ecin.categoria == 'ECIN',
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    ).order_by(Ecin.data).all()
+
+    # Estrutura de dados semelhante à que usamos no imprimir_ecin_escala
+    from collections import defaultdict
+    escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for ec in ecins:
+        dia_str = ec.data.strftime('%d/%m/%Y')
+        turno_str = ec.turno
+        if turno_str in ['07h/19h', '19h/07h']:
+            funcao = ec.funcao if ec.funcao else 'Outro'
+            escala[dia_str][turno_str][funcao].append({
+                'nome': ec.bombeiro.nome,
+                'mecanografico': ec.bombeiro.mecanografico,
+                'posto': ec.bombeiro.posto
+            })
+
+    dias_ordenados = sorted(escala.keys(), key=lambda d: datetime.strptime(d, '%d/%m/%Y'))
+    meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+    return render_template('imprimir_ecin_escala.html',
+                           escala=escala,
+                           dias=dias_ordenados,
+                           mes=mes,
+                           ano=ano,
+                           meses=meses,
+                           date=date)
 
 
 

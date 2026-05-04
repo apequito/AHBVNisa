@@ -176,9 +176,17 @@
                 <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
-                <a href="{{ url_for('imprimir_ecins', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir Escala</a>
-            </div>
+    <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
+    {% if cat_ecin == 'ECIN' %}
+        <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
+    {% elif cat_ecin == 'ELAC' %}
+        <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
+    {% else %}
+        <!-- Opcional: dois botões ou nenhum quando "todas" -->
+        <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
+        <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
+    {% endif %}
+</div>
         </form>
 
         <!-- Tabela -->
