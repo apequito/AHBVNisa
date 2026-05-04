@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
 
-from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando
+from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial
 
 app = Flask(__name__)
 
@@ -5973,15 +5973,13 @@ def deslocacoes():
         flash('Deslocação registada.', 'success')
         return redirect(url_for('deslocacoes'))
 
-    # GET – listagem
     query = Deslocacao.query.order_by(Deslocacao.data.desc())
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
         query = query.filter_by(bombeiro_id=current_user.id)
 
-    deslocacoes = query.all()
+    deslocacoes_lista = query.all()
     viaturas = Viatura.query.order_by(Viatura.matricula).all()
-    return render_template('deslocacoes.html', deslocacoes=deslocacoes, viaturas=viaturas)
-
+    return render_template('deslocacoes.html', deslocacoes=deslocacoes_lista, viaturas=viaturas)
 
 
 #if __name__ == '__main__':
