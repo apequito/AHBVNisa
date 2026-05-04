@@ -6288,5 +6288,95 @@ def exportar_ecins_administrativo():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
+@app.route('/administrativo/valor-global', methods=['POST'])
+@login_required
+def administrativo_valor_global():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo'))
+
+    valor = request.form.get('valor', type=float)
+    mes = request.form.get('mes', type=int)
+    ano = request.form.get('ano', type=int)
+    cat = request.form.get('cat', 'todas')
+
+    if not valor or not mes or not ano:
+        flash('Parâmetros insuficientes.', 'warning')
+        return redirect(url_for('administrativo'))
+
+    query = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    )
+    if cat == 'ECIN':
+        query = query.filter(Ecin.categoria == 'ECIN')
+    elif cat == 'ELAC':
+        query = query.filter(Ecin.categoria == 'ELAC')
+
+    query.update({Ecin.valor: valor}, synchronize_session='fetch')
+    db.session.commit()
+    flash(f'Valor {valor:.2f} € atribuído a todos os registos visíveis.', 'success')
+    return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
+
+@app.route('/administrativo/enviar-contagem', methods=['POST'])
+@login_required
+def administrativo_enviar_contagem():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo'))
+
+    mes = request.form.get('mes', type=int)
+    ano = request.form.get('ano', type=int)
+    cat = request.form.get('cat', 'todas')
+
+    if not mes or not ano:
+        flash('Parâmetros insuficientes.', 'warning')
+        return redirect(url_for('administrativo'))
+
+    query = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    )
+    if cat == 'ECIN':
+        query = query.filter(Ecin.categoria == 'ECIN')
+    elif cat == 'ELAC':
+        query = query.filter(Ecin.categoria == 'ELAC')
+
+    ecins = query.all()
+
+    # Agrupar por bombeiro
+    from collections import defaultdict
+    bombeiros = defaultdict(lambda: {'count': 0, 'total': 0.0})
+    for ec in ecins:
+        if ec.bombeiro_id:
+            bombeiros[ec.bombeiro_id]['count'] += 1
+            if ec.valor:
+                bombeiros[ec.bombeiro_id]['total'] += ec.valor
+
+    for bid, dados in bombeiros.items():
+        bombeiro = Bombeiro.query.get(bid)
+        if not bombeiro:
+            continue
+        corpo = f"Contagem de turnos ECIN/ELAC para {mes}/{ano}:\n"
+        corpo += f"Total de registos: {dados['count']}\n"
+        corpo += f"Valor a receber: {dados['total']:.2f} €"
+        msg = MensagemCorreio(
+            remetente_id=current_user.id,
+            destinatario_id=bid,
+            departamento=None,
+            assunto=f'Contagem de turnos {mes}/{ano}',
+            corpo=corpo,
+            data_envio=datetime.utcnow(),
+            lida=False,
+            apagada_remetente=False,
+            apagada_destinatario=False
+        )
+        db.session.add(msg)
+
+    db.session.commit()
+    flash(f'Contagem enviada para {len(bombeiros)} bombeiros.', 'success')
+    return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
+
+
 #if __name__ == '__main__':
     #app.run(debug=True)

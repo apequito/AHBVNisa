@@ -2,7 +2,6 @@
 {% block content %}
 <h2><i class="bi bi-building me-2"></i>Painel Administrativo</h2>
 
-<!-- Abas -->
 <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="deslocacoes-tab" data-bs-toggle="tab" data-bs-target="#deslocacoes" type="button" role="tab">
@@ -176,17 +175,28 @@
                 <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-    <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
-    {% if cat_ecin == 'ECIN' %}
-        <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
-    {% elif cat_ecin == 'ELAC' %}
-        <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
-    {% else %}
-        <!-- Opcional: dois botões ou nenhum quando "todas" -->
-        <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
-        <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
-    {% endif %}
-</div>
+                <!-- Botões novos -->
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalValorGlobal">
+                    <i class="bi bi-cash-stack me-1"></i> Valor Global
+                </button>
+                <form method="POST" action="{{ url_for('administrativo_enviar_contagem') }}" style="display:inline;">
+                    <input type="hidden" name="mes" value="{{ mes_ecin }}">
+                    <input type="hidden" name="ano" value="{{ ano_ecin }}">
+                    <input type="hidden" name="cat" value="{{ cat_ecin }}">
+                    <button type="submit" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-envelope me-1"></i> Enviar Contagem
+                    </button>
+                </form>
+                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
+                {% if cat_ecin == 'ECIN' %}
+                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
+                {% elif cat_ecin == 'ELAC' %}
+                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
+                {% else %}
+                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
+                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
+                {% endif %}
+            </div>
         </form>
 
         <!-- Tabela -->
@@ -231,6 +241,30 @@
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Valor Global -->
+<div class="modal fade" id="modalValorGlobal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form method="POST" action="{{ url_for('administrativo_valor_global') }}">
+            <input type="hidden" name="mes" value="{{ mes_ecin }}">
+            <input type="hidden" name="ano" value="{{ ano_ecin }}">
+            <input type="hidden" name="cat" value="{{ cat_ecin }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Valor Global</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label>Valor a aplicar a todos os registos visíveis</label>
+                    <input type="number" step="0.01" name="valor" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Aplicar</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
