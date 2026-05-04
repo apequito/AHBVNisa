@@ -45,6 +45,9 @@
                     <a href="{{ url_for('meus_creditos') }}" class="btn btn-outline-warning btn-sm rounded-pill">
                         <i class="bi bi-clock-history me-1"></i>Crédito Horas
                     </a>
+                    <a href="{{ url_for('deslocacoes') }}" class="btn btn-outline-info btn-sm rounded-pill">
+                        <i class="bi bi-car-front me-1"></i>Deslocações
+                    </a>
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                         <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-outline-danger btn-sm rounded-pill">
                             <i class="bi bi-people-fill me-1"></i>Gerir Bombeiros

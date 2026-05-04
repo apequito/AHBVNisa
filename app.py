@@ -3316,6 +3316,41 @@ def fardamento():
                            todos_itens_stock=todos_itens_stock)
 
 
+@app.route('/tipos-farda-material/adicionar', methods=['POST'])
+@login_required
+def adicionar_tipo_farda_material():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+
+    nome = request.form['nome'].strip()
+    categoria = request.form.get('categoria', 'Farda')
+    if nome:
+        if not TipoFardaMaterial.query.filter_by(nome=nome, categoria=categoria).first():
+            novo = TipoFardaMaterial(nome=nome, categoria=categoria)
+            db.session.add(novo)
+            db.session.commit()
+            flash('Tipo adicionado.', 'success')
+        else:
+            flash('Tipo já existe.', 'warning')
+    return redirect(url_for('stock_fardamento'))
+
+
+@app.route('/tipos-farda-material/apagar/<int:id>')
+@login_required
+def apagar_tipo_farda_material(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    tipo = TipoFardaMaterial.query.get_or_404(id)
+    db.session.delete(tipo)
+    db.session.commit()
+    flash('Tipo removido.', 'info')
+    return redirect(url_for('stock_fardamento'))
+
+
+
+
 # ---------- Fardamento p/tipo ----------
 @app.route('/fardamento/nomes-por-tipo/<tipo>')
 @login_required
@@ -3548,7 +3583,9 @@ def stock_fardamento():
         return redirect(url_for('stock_fardamento'))
 
     itens = StockFardamento.query.order_by(StockFardamento.nome).all()
-    return render_template('stock_fardamento.html', itens=itens)
+    # NOVA LINHA: obter todos os tipos de farda/material
+    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
+    return render_template('stock_fardamento.html', itens=itens, tipos=tipos)
 
 #-----------Editar Stock Fardamento--------------
 
@@ -5889,6 +5926,62 @@ def inject_pendencias():
 
         pendencias['total'] = total
     return dict(pendencias=pendencias)
+
+
+#---------------------------Deslocações----------------
+@app.route('/deslocacoes', methods=['GET', 'POST'])
+@login_required
+def deslocacoes():
+    if request.method == 'POST':
+        data_str = request.form['data']
+        hora_inicio = request.form['hora_inicio']
+        servico = request.form['servico']
+        local_origem = request.form.get('local_origem', '')
+        local_destino = request.form.get('local_destino', '')
+        valor_str = request.form.get('valor', '')
+        viatura_id = request.form.get('viatura_id', type=int)
+        n_servico = request.form.get('n_servico', '')
+
+        try:
+            data = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Data inválida.', 'danger')
+            return redirect(url_for('deslocacoes'))
+
+        # Valor só pode ser guardado por admin/comando/secretaria
+        valor = None
+        if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria']:
+            if valor_str:
+                try:
+                    valor = float(valor_str)
+                except ValueError:
+                    pass
+
+        nova = Deslocacao(
+            bombeiro_id=current_user.id,
+            data=data,
+            hora_inicio=hora_inicio,
+            servico=servico,
+            local_origem=local_origem,
+            local_destino=local_destino,
+            valor=valor,
+            viatura_id=viatura_id if viatura_id else None,
+            n_servico=n_servico if n_servico else None
+        )
+        db.session.add(nova)
+        db.session.commit()
+        flash('Deslocação registada.', 'success')
+        return redirect(url_for('deslocacoes'))
+
+    # GET – listagem
+    query = Deslocacao.query.order_by(Deslocacao.data.desc())
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+        query = query.filter_by(bombeiro_id=current_user.id)
+
+    deslocacoes = query.all()
+    viaturas = Viatura.query.order_by(Viatura.matricula).all()
+    return render_template('deslocacoes.html', deslocacoes=deslocacoes, viaturas=viaturas)
+
 
 
 #if __name__ == '__main__':

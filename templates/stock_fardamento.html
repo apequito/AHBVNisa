@@ -1,118 +1,247 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Stock de Fardamento</h2>
+<h2><i class="bi bi-box-seam me-2"></i>Stock de Fardamento</h2>
 
-<div class="mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoItem">+ Novo Item</button>
-    <a href="{{ url_for('exportar_stock_fardamento') }}" class="btn btn-success ms-2">📥 Exportar Excel</a>
-    <button class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarStock">📤 Importar Excel</button>
-    <a href="{{ url_for('imprimir_stock_fardamento') }}" target="_blank" class="btn btn-secondary ms-2">🖨️ Imprimir Stock</a>
+<!-- Cartões de resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-white bg-primary">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ itens|length }}</h4>
+                <small>Itens no Stock</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-white bg-success">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ itens|sum(attribute='stock') }}</h4>
+                <small>Unidades Totais</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-white bg-warning">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ itens|selectattr('stock', 'equalto', 0)|list|length }}</h4>
+                <small>Itens Esgotados</small>
+            </div>
+        </div>
+    </div>
 </div>
 
-<table class="table table-bordered table-sm">
-    <thead class="table-light">
-        <tr>
-            <th>ID</th>
-            <th>Tipo</th>
-            <th>Nome</th>
-            <th>Descrição</th>
-            <th>Tamanho</th>
-            <th>Stock</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in itens %}
-        <tr>
-            <td>{{ item.id }}</td>
-            <td>{{ item.tipo }}</td>
-            <td>{{ item.nome }}</td>
-            <td>{{ item.descricao or '-' }}</td>
-            <td>{{ item.tamanho or '-' }}</td>
-            <td>{{ item.stock }}</td>
-            <td>
-                <button class="btn btn-sm btn-warning btn-editar-stock"
-                        data-id="{{ item.id }}"
-                        data-tipo="{{ item.tipo }}"
-                        data-nome="{{ item.nome }}"
-                        data-descricao="{{ item.descricao or '' }}"
-                        data-tamanho="{{ item.tamanho or '' }}"
-                        data-stock="{{ item.stock }}"
-                        data-bs-toggle="modal" data-bs-target="#modalEditarStock"
-                        title="Editar">✏️</button>
-                <a href="{{ url_for('apagar_stock_fardamento', id=item.id) }}"
-                   class="btn btn-sm btn-danger"
-                   onclick="return confirm('Apagar este item?')"
-                   title="Apagar">🗑️</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- Botões de ação -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoItem">
+        <i class="bi bi-plus-circle me-1"></i> Novo Item
+    </button>
+    <a href="{{ url_for('exportar_stock_fardamento') }}" class="btn btn-outline-success">
+        <i class="bi bi-download me-1"></i> Exportar Excel
+    </a>
+    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalImportarStock">
+        <i class="bi bi-upload me-1"></i> Importar Excel
+    </button>
+    <a href="{{ url_for('imprimir_stock_fardamento') }}" target="_blank" class="btn btn-outline-secondary">
+        <i class="bi bi-printer me-1"></i> Imprimir Stock
+    </a>
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalGerirTipos">
+        <i class="bi bi-gear me-1"></i> Gerir Tipos
+    </button>
+</div>
 
-<!-- Modal Novo -->
+<!-- Tabela de itens -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-bordered mb-0">
+            <thead class="table-light">
+                <tr class="text-center">
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Tamanho</th>
+                    <th>Stock</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in itens %}
+                <tr class="{% if item.stock == 0 %}table-danger{% endif %}">
+                    <td class="text-center fw-bold">{{ item.id }}</td>
+                    <td>{{ item.tipo }}</td>
+                    <td>{{ item.nome }}</td>
+                    <td>{{ item.descricao or '-' }}</td>
+                    <td class="text-center">{{ item.tamanho or '-' }}</td>
+                    <td class="text-center">
+                        {% if item.stock == 0 %}
+                            <span class="badge bg-danger">0</span>
+                        {% else %}
+                            {{ item.stock }}
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-sm btn-outline-warning btn-editar-stock"
+                                    data-id="{{ item.id }}"
+                                    data-tipo="{{ item.tipo }}"
+                                    data-nome="{{ item.nome }}"
+                                    data-descricao="{{ item.descricao or '' }}"
+                                    data-tamanho="{{ item.tamanho or '' }}"
+                                    data-stock="{{ item.stock }}"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarStock"
+                                    title="Editar"><i class="bi bi-pencil"></i></button>
+                            <a href="{{ url_for('apagar_stock_fardamento', id=item.id) }}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Apagar este item?')"
+                               title="Apagar"><i class="bi bi-trash"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-3">Nenhum item no stock.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ========== MODAL NOVO ITEM ========== -->
 <div class="modal fade" id="modalNovoItem" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST">
             <div class="modal-content">
-                <div class="modal-header"><h5>Novo Item de Fardamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Item de Fardamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
-                    <select name="tipo" class="form-select mb-2">
-                        <option>Fato de Incêndio</option>
-                        <option>Uniforme de Cerimónia</option>
-                        <option>Fato de Treino</option>
-                        <option>Outro</option>
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select mb-3">
+                        <option value="">-- Selecione --</option>
+                        {% for t in tipos %}
+                        <option value="{{ t.nome }}">{{ t.nome }}</option>
+                        {% endfor %}
                     </select>
                     <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do item" required>
                     <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
                     <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
-                    <label>Tipo</label>
-                    <input type="number" name="stock" class="form-control mb-2" placeholder="Quantidade em stock" value="0" min="0" required>
+                    <label class="form-label">Stock</label>
+                    <input type="number" name="stock" class="form-control" placeholder="Quantidade em stock" value="0" min="0" required>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-primary">Adicionar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Adicionar</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Editar -->
+<!-- ========== MODAL EDITAR ITEM ========== -->
 <div class="modal fade" id="modalEditarStock" tabindex="-1">
     <div class="modal-dialog">
         <form id="formEditarStock" method="POST" action="">
             <div class="modal-content">
-                <div class="modal-header"><h5>Editar Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-warning">
+                    <h5><i class="bi bi-pencil me-1"></i> Editar Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
-                    <select name="tipo" id="edit_tipo" class="form-select mb-2">
-                        <option>Fato de Incêndio</option>
-                        <option>Uniforme de Cerimónia</option>
-                        <option>Fato de Treino</option>
-                        <option>Outro</option>
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" id="edit_tipo" class="form-select mb-3">
+                        {% for t in tipos %}
+                        <option value="{{ t.nome }}">{{ t.nome }}</option>
+                        {% endfor %}
                     </select>
                     <input type="text" name="nome" id="edit_nome" class="form-control mb-2" required>
                     <textarea name="descricao" id="edit_descricao" class="form-control mb-2"></textarea>
                     <input type="text" name="tamanho" id="edit_tamanho" class="form-control mb-2">
-                    <label>Tipo</label>
-                    <input type="number" name="stock" id="edit_stock" class="form-control mb-2" min="0" required>
+                    <label class="form-label">Stock</label>
+                    <input type="number" name="stock" id="edit_stock" class="form-control" min="0" required>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i> Guardar</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Importar -->
+<!-- ========== MODAL IMPORTAR ========== -->
 <div class="modal fade" id="modalImportarStock" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('importar_stock_fardamento') }}" enctype="multipart/form-data">
             <div class="modal-content">
-                <div class="modal-header"><h5>Importar Stock (Excel)</h5></div>
+                <div class="modal-header bg-success text-white">
+                    <h5><i class="bi bi-upload me-1"></i> Importar Stock (Excel)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
                     <small class="text-muted mt-2 d-block">Colunas: Tipo, Nome, Descrição, Tamanho, Stock</small>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Importar</button>
+                </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- ========== MODAL GERIR TIPOS ========== -->
+<div class="modal fade" id="modalGerirTipos" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5><i class="bi bi-gear me-1"></i> Gerir Tipos de Farda / Material</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="bi bi-vest me-1"></i> Fardas</h6>
+                        <ul class="list-group mb-3">
+                            {% for t in tipos if t.categoria == 'Farda' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ t.nome }}
+                                <a href="{{ url_for('apagar_tipo_farda_material', id=t.id) }}"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Apagar este tipo?')">🗑️</a>
+                            </li>
+                            {% else %}
+                            <li class="list-group-item text-muted">Nenhum tipo de farda definido.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="bi bi-tools me-1"></i> Materiais</h6>
+                        <ul class="list-group mb-3">
+                            {% for t in tipos if t.categoria == 'Material' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ t.nome }}
+                                <a href="{{ url_for('apagar_tipo_farda_material', id=t.id) }}"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Apagar este tipo?')">🗑️</a>
+                            </li>
+                            {% else %}
+                            <li class="list-group-item text-muted">Nenhum tipo de material definido.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <h6>Adicionar Novo Tipo</h6>
+                <form method="POST" action="{{ url_for('adicionar_tipo_farda_material') }}">
+                    <div class="input-group">
+                        <input type="text" name="nome" class="form-control" placeholder="Nome do tipo" required>
+                        <select name="categoria" class="form-select" style="max-width: 150px;">
+                            <option value="Farda">Farda</option>
+                            <option value="Material">Material</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -122,10 +251,10 @@ modalEditarStock.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const id = button.getAttribute('data-id');
     document.getElementById('formEditarStock').action = '/stock-fardamento/editar/' + id;
-    document.getElementById('edit_tipo').value = button.getAttribute('data-tipo');
+    document.getElementById('edit_tipo').value = button.getAttribute('data-tipo') || '';
     document.getElementById('edit_nome').value = button.getAttribute('data-nome');
-    document.getElementById('edit_descricao').value = button.getAttribute('data-descricao');
-    document.getElementById('edit_tamanho').value = button.getAttribute('data-tamanho');
+    document.getElementById('edit_descricao').value = button.getAttribute('data-descricao') || '';
+    document.getElementById('edit_tamanho').value = button.getAttribute('data-tamanho') || '';
     document.getElementById('edit_stock').value = button.getAttribute('data-stock');
 });
 </script>

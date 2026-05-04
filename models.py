@@ -257,6 +257,7 @@ class CategoriaFarmacia(db.Model):
     checklist = db.Column(db.Boolean, default=False)   # novo campo
 
 
+
     # ---------- Stock Ambulancia ----------
 class StockAmbulancia(db.Model):
     __tablename__ = 'stock_ambulancia'
@@ -345,6 +346,13 @@ class FardamentoAtribuido(db.Model):
 
         bombeiro = db.relationship('Bombeiro', backref='fardamentos_atribuidos')
 
+class TipoFardaMaterial(db.Model):
+    __tablename__ = 'tipos_farda_material'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)
+    categoria = db.Column(db.String(20), nullable=False, default='Farda')  # 'Farda' ou 'Material'
+
+
 class Reuniao(db.Model):
     __tablename__ = 'reunioes'
     id = db.Column(db.Integer, primary_key=True)
@@ -365,3 +373,20 @@ class NotaComando(db.Model):
     data_evento = db.Column(db.Date, nullable=True)
 
     criador = db.relationship('Bombeiro', backref='notas_comando_criadas')
+
+
+class Deslocacao(db.Model):
+    __tablename__ = 'deslocacoes'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    data = db.Column(db.Date, nullable=False)
+    hora_inicio = db.Column(db.String(10), nullable=False)  # HH:MM
+    servico = db.Column(db.String(50), nullable=False)  # "C. Doentes", "Evacuação", "Retorno", "Urgência"
+    local_origem = db.Column(db.String(200))
+    local_destino = db.Column(db.String(200))
+    valor = db.Column(db.Float, nullable=True)  # visível apenas a Admin/Comando/Secretaria
+    viatura_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    n_servico = db.Column(db.String(20), nullable=True)
+
+    bombeiro = db.relationship('Bombeiro', backref='deslocacoes')
+    viatura = db.relationship('Viatura', backref='deslocacoes')
