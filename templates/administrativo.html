@@ -2,22 +2,26 @@
 {% block content %}
 <h2><i class="bi bi-building me-2"></i>Painel Administrativo</h2>
 
+<!-- Abas -->
 <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="deslocacoes-tab" data-bs-toggle="tab" data-bs-target="#deslocacoes" type="button" role="tab">
+        <a class="nav-link {{ 'active' if request.args.get('tab', 'deslocacoes') == 'deslocacoes' }}"
+           href="{{ url_for('administrativo', tab='deslocacoes') }}">
             <i class="bi bi-car-front me-1"></i> Deslocações
-        </button>
+        </a>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="ecins-tab" data-bs-toggle="tab" data-bs-target="#ecins" type="button" role="tab">
+        <a class="nav-link {{ 'active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
+           href="{{ url_for('administrativo', tab='ecins') }}">
             <i class="bi bi-clipboard-check me-1"></i> ECINs / ELACs
-        </button>
+        </a>
     </li>
 </ul>
 
 <div class="tab-content" id="adminTabContent">
     <!-- Aba Deslocações -->
-    <div class="tab-pane fade show active" id="deslocacoes" role="tabpanel">
+    <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'deslocacoes' }}"
+         id="deslocacoes" role="tabpanel">
         <!-- Cartões resumo -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
@@ -71,9 +75,16 @@
                 <a href="{{ url_for('administrativo', tab='deslocacoes') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-                <a href="{{ url_for('exportar_deslocacoes_administrativo') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Lista</a>
-                <a href="{{ url_for('exportar_resumo_deslocacoes') }}" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-bar-graph me-1"></i> Resumo Contab.</a>
-                <a href="{{ url_for('imprimir_deslocacoes_administrativo', data_inicio=data_inicio, data_fim=data_fim, bombeiro_id=bombeiro_id_desl) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir</a>
+                <a href="{{ url_for('exportar_deslocacoes_administrativo') }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download me-1"></i> Exportar Lista
+                </a>
+                <a href="{{ url_for('exportar_resumo_deslocacoes') }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-file-earmark-bar-graph me-1"></i> Resumo Contab.
+                </a>
+                <a href="{{ url_for('imprimir_deslocacoes_administrativo', data_inicio=data_inicio, data_fim=data_fim, bombeiro_id=bombeiro_id_desl) }}"
+                   target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </a>
             </div>
         </form>
 
@@ -117,7 +128,8 @@
     </div>
 
     <!-- Aba ECINs / ELACs -->
-    <div class="tab-pane fade" id="ecins" role="tabpanel">
+    <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
+         id="ecins" role="tabpanel">
         <!-- Cartões resumo -->
         <div class="row g-3 mb-4">
             <div class="col-md-6">
@@ -145,7 +157,9 @@
                 <label class="form-label">Mês</label>
                 <select name="mes_ecin" class="form-select form-select-sm">
                     {% for i in range(1,13) %}
-                    <option value="{{ i }}" {% if mes_ecin == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
+                    <option value="{{ i }}" {% if mes_ecin == i %}selected{% endif %}>
+                        {{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
@@ -175,26 +189,33 @@
                 <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-                <!-- Botões novos -->
-                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalValorGlobal">
-                    <i class="bi bi-cash-stack me-1"></i> Valor Global
-                </button>
-                <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
-    <input type="hidden" name="mes" value="{{ mes_ecin }}">
-    <input type="hidden" name="ano" value="{{ ano_ecin }}">
-    <button type="submit" class="btn btn-sm btn-outline-info">
-        <i class="bi bi-send me-1"></i> Enviar Contagem
-    </button>
-</form>
-                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
+                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download me-1"></i> Exportar Excel
+                </a>
                 {% if cat_ecin == 'ECIN' %}
-                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
+                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}"
+                       target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-printer me-1"></i> Imprimir ECIN
+                    </a>
                 {% elif cat_ecin == 'ELAC' %}
-                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
-                {% else %}
-                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ECIN</a>
-                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir ELAC</a>
+                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}"
+                       target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-printer me-1"></i> Imprimir ELAC
+                    </a>
                 {% endif %}
+                <!-- Botão Valor Global -->
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalValorGlobal">
+                    <i class="bi bi-cash-coin me-1"></i> Valor Global
+                </button>
+                <!-- Formulário Enviar Contagem -->
+                <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
+                    <input type="hidden" name="mes" value="{{ mes_ecin }}">
+                    <input type="hidden" name="ano" value="{{ ano_ecin }}">
+                    <button type="submit" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-send me-1"></i> Enviar Contagem
+                    </button>
+                </form>
             </div>
         </form>
 
@@ -204,8 +225,8 @@
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th><th>Função</th><th>Estado</th>
-                            <th>Valor</th><th>Atualizar</th>
+                            <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th>
+                            <th>Função</th><th>Estado</th><th>Valor</th><th>Atualizar</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -219,9 +240,12 @@
                             <td>{{ ec.estado }}</td>
                             <td>
                                 <form method="POST" action="{{ url_for('atualizar_valor_ecin') }}" class="d-flex gap-1">
-                                    <input type="hidden" name="ecin_id" value="{{ ec.id }}">
                                     <input type="hidden" name="tab" value="ecins">
-                                    <input type="number" step="0.01" name="valor" class="form-control form-control-sm" value="{{ ec.valor if ec.valor else '' }}" style="width:80px;">
+                                    <input type="hidden" name="ecin_id" value="{{ ec.id }}">
+                                    <input type="number" step="0.01" name="valor"
+                                           class="form-control form-control-sm"
+                                           value="{{ ec.valor if ec.valor else '' }}"
+                                           style="width:80px;" placeholder="0.00">
                                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check"></i></button>
                                 </form>
                             </td>
@@ -247,19 +271,22 @@
 <!-- Modal Valor Global -->
 <div class="modal fade" id="modalValorGlobal" tabindex="-1">
     <div class="modal-dialog modal-sm">
-        <form method="POST" action="{{ url_for('administrativo_valor_global') }}">
-            <input type="hidden" name="tab" value="ecins">
-            <input type="hidden" name="mes" value="{{ mes_ecin }}">
-            <input type="hidden" name="ano" value="{{ ano_ecin }}">
-            <input type="hidden" name="cat" value="{{ cat_ecin }}">
+        <form method="POST" action="{{ url_for('atribuir_valor_global') }}">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5>Valor Global</h5>
+                    <h5 class="modal-title">Valor Global</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label>Valor a aplicar a todos os registos visíveis</label>
-                    <input type="number" step="0.01" name="valor" class="form-control" required>
+                    <div class="alert alert-info">
+                        Este valor será aplicado a todos os registos ECIN/ELAC do mês selecionado.
+                    </div>
+                    <input type="hidden" name="tab" value="ecins">
+                    <input type="hidden" name="mes" value="{{ mes_ecin }}">
+                    <input type="hidden" name="ano" value="{{ ano_ecin }}">
+                    <label class="form-label">Valor (€)</label>
+                    <input type="number" step="0.01" name="valor_global" class="form-control"
+                           placeholder="0.00" required>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Aplicar</button>
@@ -268,4 +295,5 @@
         </form>
     </div>
 </div>
+
 {% endblock %}

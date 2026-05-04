@@ -6161,7 +6161,9 @@ def atualizar_valor_ecin():
     ec.valor = novo_valor if novo_valor else None
     db.session.commit()
     flash('Valor atualizado.', 'success')
-    return redirect(url_for('administrativo'))
+    return redirect(url_for('administrativo', tab='ecins'))
+
+
 
 @app.route('/administrativo/exportar-deslocacoes')
 @login_required
@@ -6317,6 +6319,32 @@ def administrativo_valor_global():
     db.session.commit()
     flash(f'Valor {valor:.2f} € atribuído a todos os registos visíveis.', 'success')
     return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
+
+
+@app.route('/administrativo/valor-global', methods=['POST'])
+@login_required
+def atribuir_valor_global():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo', tab='ecins'))
+
+    mes = request.form.get('mes', type=int)
+    ano = request.form.get('ano', type=int)
+    valor = request.form.get('valor_global', type=float)
+
+    ecins = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    ).all()
+
+    for ec in ecins:
+        ec.valor = valor
+
+    db.session.commit()
+    flash(f'Valor {valor:.2f} € aplicado a {len(ecins)} registos.', 'success')
+    return redirect(url_for('administrativo', tab='ecins'))
+
+
 
 @app.route('/administrativo/enviar-contagem', methods=['POST'])
 @login_required
