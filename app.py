@@ -3329,7 +3329,7 @@ def fardamento():
             db.session.add(nova_atrib)
 
             # Atualizar o pedido original
-            pedido.estado = 'Concluido'
+            pedido.estado = 'Entregue'
             pedido.entregue = True
             pedido.data_entrega = datetime.utcnow()
 
@@ -3454,10 +3454,15 @@ def editar_fardamento_atribuido(id):
 @app.route('/fardamento-atribuido/apagar/<int:id>')
 @login_required
 def apagar_fardamento_atribuido(id):
-    item = FardamentoAtribuido.query.get_or_404(id)
-    db.session.delete(item)
+    atribuicao = FardamentoAtribuido.query.get_or_404(id)
+    idpedido = atribuicao.idpedido
+    db.session.delete(atribuicao)
+    if idpedido:
+        pedido = Fardamento.query.get(idpedido)
+        if pedido:
+            db.session.delete(pedido)
     db.session.commit()
-    flash('Registo removido.', 'info')
+    flash('Registo(s) removido(s).', 'info')
     return redirect(url_for('fardamento', tab='atribuido'))
 
 @app.route('/fardamento-atribuido/devolver/<int:id>')

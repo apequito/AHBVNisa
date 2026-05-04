@@ -57,62 +57,53 @@
                                 <span class="badge bg-warning text-dark">Pedido</span>
                             {% elif p.estado == 'Análise' %}
                                 <span class="badge bg-info">Análise</span>
-                            {% elif p.estado == 'Concluido' %}
-                                <span class="badge bg-success">Concluído</span>
+                            {% elif p.estado == 'Entregue' %}
+                                <span class="badge bg-success">Entregue</span>
                             {% elif p.estado == 'Rejeitado' %}
                                 <span class="badge bg-danger">Rejeitado</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ p.estado }}</span>
                             {% endif %}
                         </td>
-                        <td>
-                        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
-                        <button class="btn btn-sm btn-outline-primary btn-resposta"
-                        data-id="{{ p.id }}"
-                        data-bs-toggle="modal" data-bs-target="#modalResposta">
-                            Resposta
-                        </button>
-                        {% endif %}
+                        <td class="text-center">
+                            {% if p.estado not in ('Entregue', 'Rejeitado') %}
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
+                                    <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='responsavel') }}"
+                                       class="text-decoration-none {{ 'text-success' if p.responsavel else 'text-danger' }}">
+                                        {{ '✔️' if p.responsavel else '❌' }}
+                                    </a>
+                                {% else %}
+                                    {{ '✔️' if p.responsavel else '❌' }}
+                                {% endif %}
+                            {% else %}
+                                {{ '✔️' if p.responsavel else '❌' }}
+                            {% endif %}
                         </td>
                         <td class="text-center">
-    {% if p.estado not in ('Concluido', 'Rejeitado') %}
-        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
-            <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='responsavel') }}"
-               class="text-decoration-none {{ 'text-success' if p.responsavel else 'text-danger' }}">
-                {{ '✔️' if p.responsavel else '❌' }}
-            </a>
-        {% else %}
-            {{ '✔️' if p.responsavel else '❌' }}
-        {% endif %}
-    {% else %}
-        {{ '✔️' if p.responsavel else '❌' }}
-    {% endif %}
-</td>
-<td class="text-center">
-    {% if p.estado not in ('Concluido', 'Rejeitado') %}
-        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-            <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='comando') }}"
-               class="text-decoration-none {{ 'text-success' if p.comando else 'text-danger' }}">
-                {{ '✔️' if p.comando else '❌' }}
-            </a>
-        {% else %}
-            {{ '✔️' if p.comando else '❌' }}
-        {% endif %}
-    {% else %}
-        {{ '✔️' if p.comando else '❌' }}
-    {% endif %}
-</td>
-<td>
-    {% if p.estado not in ('Concluido', 'Rejeitado') %}
-        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
-            <button class="btn btn-sm btn-outline-primary btn-resposta"
-                    data-id="{{ p.id }}"
-                    data-bs-toggle="modal" data-bs-target="#modalResposta">
-                Resposta
-            </button>
-        {% endif %}
-    {% endif %}
-</td>
+                            {% if p.estado not in ('Entregue', 'Rejeitado') %}
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                    <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='comando') }}"
+                                       class="text-decoration-none {{ 'text-success' if p.comando else 'text-danger' }}">
+                                        {{ '✔️' if p.comando else '❌' }}
+                                    </a>
+                                {% else %}
+                                    {{ '✔️' if p.comando else '❌' }}
+                                {% endif %}
+                            {% else %}
+                                {{ '✔️' if p.comando else '❌' }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.estado not in ('Entregue', 'Rejeitado') %}
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
+                                    <button class="btn btn-sm btn-outline-primary btn-resposta"
+                                            data-id="{{ p.id }}"
+                                            data-bs-toggle="modal" data-bs-target="#modalResposta">
+                                        Resposta
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr><td colspan="11" class="text-center text-muted py-3">Nenhum pedido de fardamento.</td></tr>
@@ -185,7 +176,7 @@
                             </button>
                             <a href="{{ url_for('apagar_fardamento_atribuido', id=a.id) }}"
                                class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Apagar?')"><i class="bi bi-trash"></i></a>
+                               onclick="return confirm('Apagar? Isto também removerá o pedido associado.')"><i class="bi bi-trash"></i></a>
                             {% if a.estado == 'Entregue' %}
                             <a href="{{ url_for('devolver_fardamento_atribuido', id=a.id) }}"
                                class="btn btn-sm btn-outline-warning"
@@ -260,55 +251,52 @@
 <div class="modal fade" id="modalAtribuir" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ url_for('fardamento') }}">
-    <input type="hidden" name="form_type" value="atribuicao">
-    <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-            <h5><i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <label>Bombeiro</label>
-                    <select name="bombeiro_id" id="bombeiroAtribSelect" class="form-select mb-2" required onchange="carregarPedidosAnalise()">
-                        <option value="">-- Selecione --</option>
-                        {% for b in bombeiros %}
-                        <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
-                        {% endfor %}
-                    </select>
+            <input type="hidden" name="form_type" value="atribuicao">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5><i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="col-md-6">
-                    <label>Pedido de Origem <span class="text-danger">*</span></label>
-                    <select name="idpedido" id="pedidoOrigemSelect" class="form-select mb-2" required onchange="preencherAtribuicaoPedido()">
-                        <option value="">-- Selecione um pedido (obrigatório) --</option>
-                    </select>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Bombeiro</label>
+                            <select name="bombeiro_id" id="bombeiroAtribSelect" class="form-select mb-2" required onchange="carregarPedidosAnalise()">
+                                <option value="">-- Selecione --</option>
+                                {% for b in bombeiros %}
+                                <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Pedido de Origem <span class="text-danger">*</span></label>
+                            <select name="idpedido" id="pedidoOrigemSelect" class="form-select mb-2" required onchange="preencherAtribuicaoPedido()">
+                                <option value="">-- Selecione um pedido (obrigatório) --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tabelaPedidosPendentes" class="mb-2" style="display: none;">
+                        <h6>Pedidos disponíveis (Análise ou Rejeitados)</h6>
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Tamanho</th><th>Selecionar</th></tr></thead>
+                                <tbody id="tabelaAnaliseBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <label>Tipo</label>
+                    <input type="text" id="atribTipo" class="form-control mb-2" readonly>
+                    <label>Nome</label>
+                    <input type="text" id="atribNome" class="form-control mb-2" readonly>
+                    <label>Tamanho</label>
+                    <input type="text" id="atribTamanho" class="form-control mb-2" readonly>
+                    <input type="hidden" name="data_entrega" value="{{ hoje.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Atribuir</button>
                 </div>
             </div>
-            <div id="tabelaPedidosPendentes" class="mb-2" style="display: none;">
-                <h6>Pedidos disponíveis (Análise ou Rejeitados)</h6>
-                <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                    <table class="table table-sm table-bordered">
-                        <thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Tamanho</th><th>Selecionar</th></tr></thead>
-                        <tbody id="tabelaAnaliseBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Campos preenchidos automaticamente (readonly) -->
-            <label>Tipo</label>
-            <input type="text" id="atribTipo" class="form-control mb-2" readonly>
-            <label>Nome</label>
-            <input type="text" id="atribNome" class="form-control mb-2" readonly>
-            <label>Tamanho</label>
-            <input type="text" id="atribTamanho" class="form-control mb-2" readonly>
-            <!-- data_entrega é automática, mas o campo no modelo espera receber o valor; vamos enviar um hidden com a data de hoje -->
-            <input type="hidden" name="data_entrega" value="{{ hoje.strftime('%Y-%m-%d') }}">
-        </div>
-        <div class="modal-footer">
-            <button type="submit" class="btn btn-success">Atribuir</button>
-        </div>
-    </div>
-</form>
+        </form>
     </div>
 </div>
 
@@ -395,7 +383,6 @@
 {% endif %}
 
 <script>
-// ---------- Partilhado (carregar nomes do stock) ----------
 function carregarNomes() {
     const tipo = document.getElementById('tipoSelect').value;
     const nomeSelect = document.getElementById('nomeSelect');
@@ -445,20 +432,19 @@ function toggleDescricaoMotivo() {
     descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
 }
 
-// ---------- Atribuição (pedidos pendentes) ----------
 async function carregarPedidosAnalise() {
     const bombeiroId = document.getElementById('bombeiroAtribSelect').value;
     const tabelaBody = document.getElementById('tabelaAnaliseBody');
     const selectPedido = document.getElementById('pedidoOrigemSelect');
     if (!bombeiroId) {
         document.getElementById('tabelaPedidosPendentes').style.display = 'none';
-        selectPedido.innerHTML = '<option value="">-- Nenhum --</option>';
+        selectPedido.innerHTML = '<option value="">-- Selecione um pedido (obrigatório) --</option>';
         return;
     }
     fetch(`/fardamento/pedidos-analise/${bombeiroId}`)
         .then(res => res.json())
         .then(pedidos => {
-            selectPedido.innerHTML = '<option value="">-- Nenhum --</option>';
+            selectPedido.innerHTML = '<option value="">-- Selecione um pedido (obrigatório) --</option>';
             tabelaBody.innerHTML = '';
             if (pedidos.length > 0) {
                 document.getElementById('tabelaPedidosPendentes').style.display = 'block';
@@ -468,6 +454,7 @@ async function carregarPedidosAnalise() {
                     opt.textContent = `#${p.id} - ${p.tipo} - ${p.nome}`;
                     selectPedido.appendChild(opt);
                     const row = tabelaBody.insertRow();
+                    if (p.estado === 'Rejeitado') row.classList.add('table-warning');
                     row.insertCell().textContent = p.data;
                     row.insertCell().textContent = p.tipo;
                     row.insertCell().textContent = p.nome;
@@ -499,7 +486,6 @@ function preencherAtribuicaoPedido() {
         const nome = partes[2] || '';
         document.getElementById('atribTipo').value = tipo;
         document.getElementById('atribNome').value = nome;
-        // Procurar o tamanho na tabela de pedidos (mesmo que já tenha sido preenchido pelo radio)
         const radios = document.querySelectorAll('input[name="idpedido"]');
         radios.forEach(r => {
             if (r.checked) {
@@ -517,7 +503,6 @@ function preencherAtribuicaoPedido() {
     }
 }
 
-// A função carregarPedidosAnalise já está correta; apenas garanta que ao carregar o modal, os campos readonly são limpos:
 document.getElementById('modalAtribuir').addEventListener('show.bs.modal', function () {
     document.getElementById('atribTipo').value = '';
     document.getElementById('atribNome').value = '';
@@ -526,7 +511,6 @@ document.getElementById('modalAtribuir').addEventListener('show.bs.modal', funct
     document.getElementById('tabelaPedidosPendentes').style.display = 'none';
 });
 
-// ---------- Editar Atribuição ----------
 document.getElementById('modalEditarAtribuido').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const id = button.getAttribute('data-id');
@@ -537,7 +521,6 @@ document.getElementById('modalEditarAtribuido').addEventListener('show.bs.modal'
     document.getElementById('edit_atrib_data').value = button.getAttribute('data-data_entrega') || '';
 });
 
-// ---------- Resposta ----------
 document.getElementById('modalResposta').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const id = button.getAttribute('data-id');
