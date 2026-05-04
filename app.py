@@ -3309,23 +3309,33 @@ def fardamento():
                 flash('Acesso restrito.', 'danger')
                 return redirect(url_for('fardamento', tab='atribuido'))
 
-            bombeiro_id = request.form['bombeiro_id']
-            tipo = request.form['tipo']
-            nome = request.form['nome']
-            tamanho = request.form['tamanho']
-            data_entrega = datetime.strptime(request.form['data_entrega'], '%Y-%m-%d').date()
-            idpedido = request.form.get('idpedido', type=int)   # opcional
+            idpedido = request.form.get('idpedido', type=int)
+            if not idpedido:
+                flash('É obrigatório selecionar um pedido de origem.', 'warning')
+                return redirect(url_for('fardamento', tab='atribuido'))
 
+            pedido = Fardamento.query.get_or_404(idpedido)
+
+            # Criar a atribuição usando os dados do pedido
             nova_atrib = FardamentoAtribuido(
-                bombeiro_id=bombeiro_id,
-                tipo=tipo,
-                nome=nome,
-                tamanho=tamanho,
-                data_entrega=data_entrega,
+                bombeiro_id=pedido.bombeiro_id,
+                tipo=pedido.tipo,
+                nome=pedido.nome,
+                tamanho=pedido.tamanho,
+                data_entrega=date.today(),
                 estado='Entregue',
-                idpedido=idpedido
+                idpedido=pedido.id
             )
             db.session.add(nova_atrib)
+
+            # Atualizar o pedido original
+            pedido.estado = 'Concluido'
+            pedido.entregue = True
+            pedido.data_entrega = datetime.utcnow()
+
+            db.session.commit()
+            flash('Fardamento atribuído com sucesso.', 'success')
+            return redirect(url_for('fardamento', tab='atribuido'))
 
             # Se veio de um pedido, atualiza o estado e data de entrega do pedido
             if idpedido:
@@ -3915,7 +3925,7 @@ def toggle_aprovacao_fardamento(id, campo):
 
     pedido = Fardamento.query.get_or_404(id)
 
-    # Permissões: apenas Admin/Comando podem mexer no "comando"
+    # Permissões
     if campo == 'comando':
         if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
             flash('Apenas Admin/Comando podem alterar este campo.', 'danger')
@@ -3926,6 +3936,10 @@ def toggle_aprovacao_fardamento(id, campo):
             flash('Sem permissão.', 'danger')
             return redirect(url_for('fardamento', tab='pedidos'))
         pedido.responsavel = not pedido.responsavel
+
+    # Se ambos os vistos estão verdes, o pedido passa para "Análise"
+    if pedido.responsavel and pedido.comando:
+        pedido.estado = 'Análise'
 
     db.session.commit()
     return redirect(url_for('fardamento', tab='pedidos'))
@@ -3945,12 +3959,27 @@ def resposta_fardamento(id):
     motivo = request.form.get('motivo', '')
 
     if acao == 'aguardar_stock':
-        pedido.estado = 'Análise'   # ou um estado que indique "Aguardar Stock"
+        pedido.estado = 'Análise'
         flash('Pedido marcado como "Aguardar Stock".', 'info')
     elif acao == 'rejeitar':
         pedido.estado = 'Rejeitado'
-        pedido.descricao_motivo = motivo   # guarda o motivo no campo descricao_motivo (ou noutro)
-        flash('Pedido rejeitado.', 'warning')
+        pedido.descricao_motivo = motivo
+        db.session.flush()  # para ter a certeza que o pedido fica gravado antes de criar a mensagem
+
+        # Enviar mensagem automática para o bombeiro
+        msg = MensagemCorreio(
+            remetente_id=current_user.id,
+            destinatario_id=pedido.bombeiro_id,
+            departamento=None,
+            assunto='Pedido de fardamento rejeitado',
+            corpo=f'O seu pedido de fardamento (ID {pedido.id}) foi rejeitado.\n\nMotivo: {motivo}',
+            data_envio=datetime.utcnow(),
+            lida=False,
+            apagada_remetente=False,
+            apagada_destinatario=False
+        )
+        db.session.add(msg)
+        flash('Pedido rejeitado e mensagem enviada ao bombeiro.', 'warning')
     else:
         flash('Ação inválida.', 'danger')
         return redirect(url_for('fardamento', tab='pedidos'))
