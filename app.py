@@ -4840,8 +4840,9 @@ def backup_importar():
         StockAmbulancia, StockFarmacia, CategoriaFarmacia,
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
-        Avaria, Disponibilidade, Viatura, Bombeiro,
-        Deslocacao, TipoFardaMaterial, Reuniao, NotaComando
+        Avaria, Disponibilidade, Deslocacao,  # <-- Deslocacao antes de Viatura
+        Viatura, Bombeiro,
+        TipoFardaMaterial, Reuniao, NotaComando
     ]
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
