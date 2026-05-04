@@ -3264,6 +3264,7 @@ def checklist():
 
 
 # ---------- Fardamento ----------
+# ---------- Fardamento ----------
 @app.route('/fardamento', methods=['GET', 'POST'])
 @login_required
 def fardamento():
@@ -3351,6 +3352,46 @@ def fardamento():
             db.session.commit()
             flash('Fardamento atribuído com sucesso.', 'success')
             return redirect(url_for('fardamento', tab='atribuido'))
+
+    # =====================================================
+    # TUDO O QUE ESTÁ FORA DO IF POST É EXECUTADO NO GET
+    # =====================================================
+
+    # 1. Tipos (da tabela partilhada com o Stock Fardamento)
+    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
+
+    # 2. Pedidos (separador "Pedidos")
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento']:
+        pedidos = Fardamento.query.order_by(Fardamento.data_registo.desc()).all()
+    else:
+        pedidos = Fardamento.query.filter_by(bombeiro_id=current_user.id)\
+                                  .order_by(Fardamento.data_registo.desc()).all()
+
+    # 3. Atribuições (separador "Atribuído")
+    bombeiro_id_filtro = request.args.get('bombeiro_id', type=int)
+    query_atrib = FardamentoAtribuido.query
+    if bombeiro_id_filtro:
+        query_atrib = query_atrib.filter_by(bombeiro_id=bombeiro_id_filtro)
+    atribuicoes = query_atrib.order_by(FardamentoAtribuido.data_entrega.desc()).all()
+
+    # Lista de bombeiros para filtro e dropdowns
+    bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+
+    # Lista de tipos de stock para os dropdowns dinâmicos (do pedido)
+    tipos_stock = db.session.query(StockFardamento.tipo).distinct().all()
+    tipos_stock = [t[0] for t in tipos_stock if t[0]]
+    todos_itens_stock = StockFardamento.query.order_by(StockFardamento.nome).all()
+
+    return render_template('fardamento.html',
+                           pedidos=pedidos,
+                           tipos=tipos,
+                           tipos_stock=tipos_stock,
+                           todos_itens_stock=todos_itens_stock,
+                           atribuicoes=atribuicoes,
+                           bombeiros=bombeiros,
+                           aba=aba,
+                           bombeiro_id_filtro=bombeiro_id_filtro,
+                           hoje=date.today())
 
 @app.route('/fardamento/pedidos-analise/<int:bombeiro_id>')
 @login_required
