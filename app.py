@@ -3316,7 +3316,22 @@ def fardamento():
 
             pedido = Fardamento.query.get_or_404(idpedido)
 
-            # Criar a atribuição usando os dados do pedido
+            # ---------- VERIFICAR STOCK ----------
+            item_stock = StockFardamento.query.filter_by(
+                tipo=pedido.tipo,
+                nome=pedido.nome,
+                tamanho=pedido.tamanho
+            ).first()
+
+            if not item_stock or item_stock.stock <= 0:
+                flash('Não existe stock disponível para este item. O pedido permanece em análise.', 'warning')
+                return redirect(url_for('fardamento', tab='atribuido'))
+
+            # Decrementar stock
+            item_stock.stock -= 1
+            db.session.add(item_stock)  # será gravado no commit único
+
+            # ---------- CRIAR ATRIBUIÇÃO ----------
             nova_atrib = FardamentoAtribuido(
                 bombeiro_id=pedido.bombeiro_id,
                 tipo=pedido.tipo,
@@ -3336,56 +3351,6 @@ def fardamento():
             db.session.commit()
             flash('Fardamento atribuído com sucesso.', 'success')
             return redirect(url_for('fardamento', tab='atribuido'))
-
-            # Se veio de um pedido, atualiza o estado e data de entrega do pedido
-            if idpedido:
-                pedido = Fardamento.query.get(idpedido)
-                if pedido:
-                    pedido.estado = 'Concluido'
-                    pedido.data_entrega = datetime.utcnow()
-                    pedido.entregue = True
-
-            db.session.commit()
-            flash('Fardamento atribuído com sucesso.', 'success')
-            return redirect(url_for('fardamento', tab='atribuido'))
-
-    # ----- GET: carregar dados para ambos os separadores -----
-    # 1. Tipos (da tabela partilhada com o Stock Fardamento)
-    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
-
-    # 2. Pedidos (separador "Pedidos")
-    if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento']:
-        pedidos = Fardamento.query.order_by(Fardamento.data_registo.desc()).all()
-    else:
-        pedidos = Fardamento.query.filter_by(bombeiro_id=current_user.id)\
-                                  .order_by(Fardamento.data_registo.desc()).all()
-
-    # 3. Atribuições (separador "Atribuído")
-    bombeiro_id_filtro = request.args.get('bombeiro_id', type=int)
-    query_atrib = FardamentoAtribuido.query
-    if bombeiro_id_filtro:
-        query_atrib = query_atrib.filter_by(bombeiro_id=bombeiro_id_filtro)
-    atribuicoes = query_atrib.order_by(FardamentoAtribuido.data_entrega.desc()).all()
-
-    # Lista de bombeiros para filtro e dropdowns
-    bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
-
-    # Lista de tipos de stock para os dropdowns dinâmicos (do pedido)
-    tipos_stock = db.session.query(StockFardamento.tipo).distinct().all()
-    tipos_stock = [t[0] for t in tipos_stock if t[0]]
-    todos_itens_stock = StockFardamento.query.order_by(StockFardamento.nome).all()
-    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
-
-    return render_template('fardamento.html',
-                           pedidos=pedidos,
-                           tipos=tipos,
-                           tipos_stock=tipos_stock,
-                           todos_itens_stock=todos_itens_stock,
-                           atribuicoes=atribuicoes,
-                           bombeiros=bombeiros,
-                           aba=aba,
-                           bombeiro_id_filtro=bombeiro_id_filtro,
-                           hoje=date.today())  # ← adicionar esta linha
 
 @app.route('/fardamento/pedidos-analise/<int:bombeiro_id>')
 @login_required
