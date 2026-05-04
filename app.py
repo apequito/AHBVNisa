@@ -6378,5 +6378,56 @@ def administrativo_enviar_contagem():
     return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
 
 
+@app.route('/administrativo/enviar-contagem', methods=['POST'])
+@login_required
+def enviar_contagem_ecins():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo', tab='ecins'))
+
+    mes = request.form.get('mes', type=int, default=date.today().month)
+    ano = request.form.get('ano', type=int, default=date.today().year)
+
+    ecins = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    ).order_by(Ecin.bombeiro_id).all()
+
+    # Agrupar por bombeiro
+    from collections import defaultdict
+    dados_por_bombeiro = defaultdict(lambda: {'registos': [], 'total': 0.0})
+    for ec in ecins:
+        bombeiro = ec.bombeiro
+        dados_por_bombeiro[bombeiro.id]['registos'].append(ec)
+        dados_por_bombeiro[bombeiro.id]['total'] += ec.valor or 0.0
+        dados_por_bombeiro[bombeiro.id]['nome'] = bombeiro.nome
+
+    for bombeiro_id, info in dados_por_bombeiro.items():
+        nome = info['nome']
+        total = info['total']
+        corpo = f"Contagem de ECINs/ELACs – {mes}/{ano}\n\n"
+        corpo += f"Olá {nome},\n\nSegue a contagem dos seus ECINs/ELACs do mês:\n"
+        for ec in info['registos']:
+            corpo += f"- {ec.data.strftime('%d/%m/%Y')} | {ec.turno} | {ec.categoria} | Valor: {ec.valor if ec.valor else 0.0} €\n"
+        corpo += f"\nValor total: {total:.2f} €\n\nObrigado."
+
+        msg = MensagemCorreio(
+            remetente_id=current_user.id,
+            destinatario_id=bombeiro_id,
+            assunto=f'Contagem ECINs/ELACs {mes}/{ano}',
+            corpo=corpo,
+            data_envio=datetime.utcnow(),
+            lida=False,
+            apagada_remetente=False,
+            apagada_destinatario=False
+        )
+        db.session.add(msg)
+
+    db.session.commit()
+    flash(f'Contagens enviadas para {len(dados_por_bombeiro)} bombeiros.', 'success')
+    return redirect(url_for('administrativo', tab='ecins'))
+
+
+
 #if __name__ == '__main__':
     #app.run(debug=True)
