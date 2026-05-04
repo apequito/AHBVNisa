@@ -75,7 +75,8 @@
                 <a href="{{ url_for('administrativo', tab='deslocacoes') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-                <a href="{{ url_for('exportar_deslocacoes_administrativo') }}" class="btn btn-sm btn-outline-success">
+                <a href="{{ url_for('exportar_deslocacoes_administrativo', data_inicio=data_inicio, data_fim=data_fim, bombeiro_id=bombeiro_id_desl) }}"
+                   class="btn btn-sm btn-outline-success">
                     <i class="bi bi-download me-1"></i> Exportar Lista
                 </a>
                 <a href="{{ url_for('exportar_resumo_deslocacoes') }}" class="btn btn-sm btn-outline-info">
@@ -189,7 +190,7 @@
                 <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
-                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}"
+                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin, bombeiro_id_ecin=bombeiro_id_ecin) }}"
                    class="btn btn-sm btn-outline-success">
                     <i class="bi bi-download me-1"></i> Exportar Excel
                 </a>
@@ -210,8 +211,9 @@
                 </button>
                 <!-- Formulário Enviar Contagem -->
                 <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
-                    <input type="hidden" name="mes" value="{{ mes_ecin }}">
-                    <input type="hidden" name="ano" value="{{ ano_ecin }}">
+                    <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
+                    <input type="hidden" name="ano_ecin" value="{{ ano_ecin }}">
+                    <input type="hidden" name="cat_ecin" value="{{ cat_ecin }}">
                     <input type="hidden" name="tab" value="ecins">
                     <button type="submit" class="btn btn-sm btn-outline-info">
                         <i class="bi bi-send me-1"></i> Enviar Contagem
@@ -243,6 +245,11 @@
                                 <form method="POST" action="{{ url_for('atualizar_valor_ecin') }}" class="d-flex gap-1">
                                     <input type="hidden" name="tab" value="ecins">
                                     <input type="hidden" name="ecin_id" value="{{ ec.id }}">
+                                    <!-- Manter os filtros ao submeter -->
+                                    <input type="hidden" name="mes_atual" value="{{ mes_ecin }}">
+                                    <input type="hidden" name="ano_atual" value="{{ ano_ecin }}">
+                                    <input type="hidden" name="cat_atual" value="{{ cat_ecin }}">
+                                    <input type="hidden" name="bombeiro_atual" value="{{ bombeiro_id_ecin }}">
                                     <input type="number" step="0.01" name="valor"
                                            class="form-control form-control-sm"
                                            value="{{ ec.valor if ec.valor else '' }}"
@@ -269,13 +276,14 @@
     </div>
 </div>
 
-<!-- Modal Valor Global -->
-<div class="modal fade" id="modalValorGlobal" tabindex="-1">
+<!-- Modal Valor Global (funcional) -->
+<div class="modal fade" id="modalValorGlobal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm">
         <form method="POST" action="{{ url_for('atribuir_valor_global') }}">
             <input type="hidden" name="tab" value="ecins">
-            <input type="hidden" name="mes" value="{{ mes_ecin }}">
-            <input type="hidden" name="ano" value="{{ ano_ecin }}">
+            <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
+            <input type="hidden" name="ano_ecin" value="{{ ano_ecin }}">
+            <input type="hidden" name="cat_ecin" value="{{ cat_ecin }}">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Valor Global</h5>
@@ -287,7 +295,7 @@
                     </div>
                     <label class="form-label">Valor (€)</label>
                     <input type="number" step="0.01" name="valor_global" class="form-control"
-                           placeholder="0.00" required autofocus>
+                           placeholder="0.00" required>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Aplicar</button>
@@ -297,4 +305,21 @@
     </div>
 </div>
 
+<!-- Script para garantir que o modal abre -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnValorGlobal = document.querySelector('[data-bs-target="#modalValorGlobal"]');
+        if (btnValorGlobal) {
+            btnValorGlobal.addEventListener('click', function(e) {
+                // Não impede o comportamento padrão, apenas tranquiliza
+                // O Bootstrap já deve abrir o modal, mas se falhar, forçamos:
+                const modalEl = document.getElementById('modalValorGlobal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

@@ -6160,8 +6160,16 @@ def atualizar_valor_ecin():
     ec = Ecin.query.get_or_404(ec_id)
     ec.valor = novo_valor if novo_valor else None
     db.session.commit()
+
+    # Preservar os filtros que o utilizador tinha
+    mes = request.form.get('mes_atual', type=int)
+    ano = request.form.get('ano_atual', type=int)
+    cat = request.form.get('cat_atual', 'todas')
+    bombeiro = request.form.get('bombeiro_atual', type=int)
     flash('Valor atualizado.', 'success')
-    return redirect(url_for('administrativo', tab='ecins'))
+    return redirect(url_for('administrativo', tab='ecins',
+                            mes_ecin=mes, ano_ecin=ano, cat_ecin=cat,
+                            bombeiro_id_ecin=bombeiro))
 
 
 
@@ -6172,26 +6180,68 @@ def exportar_deslocacoes_administrativo():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('administrativo'))
 
-    # aplicar os mesmos filtros? Vamos exportar tudo por enquanto
-    desl = Deslocacao.query.order_by(Deslocacao.data.desc()).all()
+    # Aplicar os mesmos filtros que a página usa
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    bombeiro_id = request.args.get('bombeiro_id', type=int)
+
+    query = Deslocacao.query
+    if data_inicio:
+        try:
+            d = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            query = query.filter(Deslocacao.data >= d)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            d = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            query = query.filter(Deslocacao.data <= d)
+        except ValueError:
+            pass
+    if bombeiro_id:
+        query = query.filter_by(bombeiro_id=bombeiro_id)
+
+    desl = query.order_by(Deslocacao.data.desc()).all()
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Deslocacoes"
+
     cabecalhos = ['Data', 'Hora', 'Serviço', 'Origem', 'Destino', 'Valor', 'Viatura', 'Nº Serviço', 'Bombeiro']
     ws.append(cabecalhos)
+
+    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
+    header_font = Font(bold=True)
+    for col in range(1, len(cabecalhos)+1):
+        cell = ws.cell(row=1, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+
     for d in desl:
-        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
-                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
-                   d.valor or 0.0,
-                   d.viatura.matricula if d.viatura else '',
-                   d.n_servico or '',
-                   d.bombeiro.nome if d.bombeiro else ''])
+        ws.append([
+            d.data.strftime('%d/%m/%Y') if d.data else '',
+            d.hora_inicio,
+            d.servico,
+            d.local_origem or '',
+            d.local_destino or '',
+            d.valor or 0.0,
+            d.viatura.matricula if d.viatura else '',
+            d.n_servico or '',
+            d.bombeiro.nome if d.bombeiro else ''
+        ])
+
+    # Ajustar largura das colunas
+    col_widths = [12, 8, 18, 20, 20, 10, 15, 12, 25]
+    for i, width in enumerate(col_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = width
 
     output = BytesIO()
     wb.save(output)
     output.seek(0)
     return send_file(output, as_attachment=True, download_name='deslocacoes.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
 
 @app.route('/administrativo/exportar-resumo-deslocacoes')
 @login_required
@@ -6289,38 +6339,6 @@ def exportar_ecins_administrativo():
     return send_file(output, as_attachment=True, download_name='ecins.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-
-@app.route('/administrativo/valor-global', methods=['POST'])
-@login_required
-def administrativo_valor_global():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('administrativo'))
-
-    valor = request.form.get('valor', type=float)
-    mes = request.form.get('mes', type=int)
-    ano = request.form.get('ano', type=int)
-    cat = request.form.get('cat', 'todas')
-
-    if not valor or not mes or not ano:
-        flash('Parâmetros insuficientes.', 'warning')
-        return redirect(url_for('administrativo'))
-
-    query = Ecin.query.filter(
-        db.extract('month', Ecin.data) == mes,
-        db.extract('year', Ecin.data) == ano
-    )
-    if cat == 'ECIN':
-        query = query.filter(Ecin.categoria == 'ECIN')
-    elif cat == 'ELAC':
-        query = query.filter(Ecin.categoria == 'ELAC')
-
-    query.update({Ecin.valor: valor}, synchronize_session='fetch')
-    db.session.commit()
-    flash(f'Valor {valor:.2f} € atribuído a todos os registos visíveis.', 'success')
-    return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
-
-
 @app.route('/administrativo/valor-global', methods=['POST'])
 @login_required
 def atribuir_valor_global():
@@ -6328,38 +6346,14 @@ def atribuir_valor_global():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('administrativo', tab='ecins'))
 
-    mes = request.form.get('mes', type=int)
-    ano = request.form.get('ano', type=int)
+    mes = request.form.get('mes_ecin', type=int)
+    ano = request.form.get('ano_ecin', type=int)
+    cat = request.form.get('cat_ecin', 'todas')
     valor = request.form.get('valor_global', type=float)
 
-    ecins = Ecin.query.filter(
-        db.extract('month', Ecin.data) == mes,
-        db.extract('year', Ecin.data) == ano
-    ).all()
-
-    for ec in ecins:
-        ec.valor = valor
-
-    db.session.commit()
-    flash(f'Valor {valor:.2f} € aplicado a {len(ecins)} registos.', 'success')
-    return redirect(url_for('administrativo', tab='ecins'))
-
-
-
-@app.route('/administrativo/enviar-contagem', methods=['POST'])
-@login_required
-def administrativo_enviar_contagem():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('administrativo'))
-
-    mes = request.form.get('mes', type=int)
-    ano = request.form.get('ano', type=int)
-    cat = request.form.get('cat', 'todas')
-
-    if not mes or not ano:
-        flash('Parâmetros insuficientes.', 'warning')
-        return redirect(url_for('administrativo'))
+    if not mes or not ano or not valor:
+        flash('Parâmetros incompletos.', 'warning')
+        return redirect(url_for('administrativo', tab='ecins'))
 
     query = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes,
@@ -6370,41 +6364,12 @@ def administrativo_enviar_contagem():
     elif cat == 'ELAC':
         query = query.filter(Ecin.categoria == 'ELAC')
 
-    ecins = query.all()
-
-    # Agrupar por bombeiro
-    from collections import defaultdict
-    bombeiros = defaultdict(lambda: {'count': 0, 'total': 0.0})
-    for ec in ecins:
-        if ec.bombeiro_id:
-            bombeiros[ec.bombeiro_id]['count'] += 1
-            if ec.valor:
-                bombeiros[ec.bombeiro_id]['total'] += ec.valor
-
-    for bid, dados in bombeiros.items():
-        bombeiro = Bombeiro.query.get(bid)
-        if not bombeiro:
-            continue
-        corpo = f"Contagem de turnos ECIN/ELAC para {mes}/{ano}:\n"
-        corpo += f"Total de registos: {dados['count']}\n"
-        corpo += f"Valor a receber: {dados['total']:.2f} €"
-        msg = MensagemCorreio(
-            remetente_id=current_user.id,
-            destinatario_id=bid,
-            departamento=None,
-            assunto=f'Contagem de turnos {mes}/{ano}',
-            corpo=corpo,
-            data_envio=datetime.utcnow(),
-            lida=False,
-            apagada_remetente=False,
-            apagada_destinatario=False
-        )
-        db.session.add(msg)
-
+    # Atualizar todos os registos que correspondem ao filtro
+    query.update({Ecin.valor: valor}, synchronize_session='fetch')
     db.session.commit()
-    flash(f'Contagem enviada para {len(bombeiros)} bombeiros.', 'success')
-    return redirect(url_for('administrativo', tab='ecins', mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
-
+    flash(f'Valor {valor:.2f} € aplicado aos registos filtrados.', 'success')
+    return redirect(url_for('administrativo', tab='ecins',
+                            mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
 
 @app.route('/administrativo/enviar-contagem', methods=['POST'])
 @login_required
@@ -6413,13 +6378,20 @@ def enviar_contagem_ecins():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('administrativo', tab='ecins'))
 
-    mes = request.form.get('mes', type=int, default=date.today().month)
-    ano = request.form.get('ano', type=int, default=date.today().year)
+    mes = request.form.get('mes_ecin', type=int, default=date.today().month)
+    ano = request.form.get('ano_ecin', type=int, default=date.today().year)
+    cat = request.form.get('cat_ecin', 'todas')
 
-    ecins = Ecin.query.filter(
+    query = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes,
         db.extract('year', Ecin.data) == ano
-    ).order_by(Ecin.bombeiro_id).all()
+    )
+    if cat == 'ECIN':
+        query = query.filter(Ecin.categoria == 'ECIN')
+    elif cat == 'ELAC':
+        query = query.filter(Ecin.categoria == 'ELAC')
+
+    ecins = query.order_by(Ecin.bombeiro_id).all()
 
     from collections import defaultdict
     dados_por_bombeiro = defaultdict(lambda: {'registos': [], 'total': 0.0})
@@ -6454,7 +6426,15 @@ def enviar_contagem_ecins():
 
     db.session.commit()
     flash(f'Contagens enviadas para {enviadas} bombeiros.', 'success')
-    return redirect(url_for('administrativo', tab='ecins'))
+    return redirect(url_for('administrativo', tab='ecins',
+                            mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
+
+
+
+
+
+
+
 
 
 
