@@ -3461,12 +3461,26 @@ def editar_fardamento_atribuido(id):
 @login_required
 def apagar_fardamento_atribuido(id):
     atribuicao = FardamentoAtribuido.query.get_or_404(id)
-    idpedido = atribuicao.idpedido
-    db.session.delete(atribuicao)
-    if idpedido:
-        pedido = Fardamento.query.get(idpedido)
+    devolver_stock = request.args.get('devolver_stock', '0') == '1'
+
+    # Devolver ao stock apenas se o estado for 'Entregue' e o utilizador confirmou
+    if devolver_stock and atribuicao.estado == 'Entregue':
+        item = StockFardamento.query.filter_by(
+            tipo=atribuicao.tipo,
+            nome=atribuicao.nome,
+            tamanho=atribuicao.tamanho
+        ).first()
+        if item:
+            item.stock += 1
+            db.session.add(item)
+
+    # Se houver pedido associado, removê‑lo também
+    if atribuicao.idpedido:
+        pedido = Fardamento.query.get(atribuicao.idpedido)
         if pedido:
             db.session.delete(pedido)
+
+    db.session.delete(atribuicao)
     db.session.commit()
     flash('Registo(s) removido(s).', 'info')
     return redirect(url_for('fardamento', tab='atribuido'))
@@ -3474,13 +3488,25 @@ def apagar_fardamento_atribuido(id):
 @app.route('/fardamento-atribuido/devolver/<int:id>')
 @login_required
 def devolver_fardamento_atribuido(id):
-    item = FardamentoAtribuido.query.get_or_404(id)
-    item.data_devolucao = date.today()
-    item.estado = 'Devolvido'
-    db.session.commit()
-    flash('Devolução registada.', 'success')
-    return redirect(url_for('fardamento', tab='atribuido'))
+    atribuicao = FardamentoAtribuido.query.get_or_404(id)
+    if atribuicao.estado == 'Entregue':
+        # Devolver ao stock
+        item = StockFardamento.query.filter_by(
+            tipo=atribuicao.tipo,
+            nome=atribuicao.nome,
+            tamanho=atribuicao.tamanho
+        ).first()
+        if item:
+            item.stock += 1
+            db.session.add(item)
 
+        atribuicao.estado = 'Devolvido'
+        atribuicao.data_devolucao = date.today()
+        db.session.commit()
+        flash('Devolução registada e stock atualizado.', 'success')
+    else:
+        flash('Esta atribuição já foi devolvida.', 'warning')
+    return redirect(url_for('fardamento', tab='atribuido'))
 
 # ---------- Fardamento p/tipo ----------
 @app.route('/fardamento/nomes-por-tipo/<tipo>')

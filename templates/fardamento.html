@@ -165,22 +165,26 @@
                             {% endif %}
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-warning btn-editar-atrib"
-                                    data-id="{{ a.id }}"
-                                    data-tipo="{{ a.tipo }}"
-                                    data-nome="{{ a.nome }}"
-                                    data-tamanho="{{ a.tamanho }}"
-                                    data-data_entrega="{{ a.data_entrega.strftime('%Y-%m-%d') }}"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarAtribuido">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <a href="{{ url_for('apagar_fardamento_atribuido', id=a.id) }}"
-                               class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Apagar? Isto também removerá o pedido associado.')"><i class="bi bi-trash"></i></a>
                             {% if a.estado == 'Entregue' %}
-                            <a href="{{ url_for('devolver_fardamento_atribuido', id=a.id) }}"
-                               class="btn btn-sm btn-outline-warning"
-                               onclick="return confirm('Registar devolução?')">Devolver</a>
+                                <button class="btn btn-sm btn-outline-warning btn-editar-atrib"
+                                        data-id="{{ a.id }}"
+                                        data-tipo="{{ a.tipo }}"
+                                        data-nome="{{ a.nome }}"
+                                        data-tamanho="{{ a.tamanho }}"
+                                        data-data_entrega="{{ a.data_entrega.strftime('%Y-%m-%d') }}"
+                                        data-bs-toggle="modal" data-bs-target="#modalEditarAtribuido">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            {% endif %}
+                            <a href="{{ url_for('apagar_fardamento_atribuido', id=a.id, devolver_stock=1) }}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Deseja devolver o produto ao stock antes de remover?\\n\\nOK = Devolver ao stock\\nCancelar = Remover sem devolver')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% if a.estado == 'Entregue' %}
+                                <a href="{{ url_for('devolver_fardamento_atribuido', id=a.id) }}"
+                                   class="btn btn-sm btn-outline-warning"
+                                   onclick="return confirm('Registar devolução e atualizar stock?')">Devolver</a>
                             {% endif %}
                         </td>
                     </tr>
@@ -195,7 +199,7 @@
 
 <!-- ========== MODAIS ========== -->
 
-<!-- Modal Novo Pedido -->
+<!-- Modal Novo Pedido (com campo tamanho livre) -->
 <div class="modal fade" id="modalNovoPedido" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ url_for('fardamento') }}">
@@ -227,10 +231,7 @@
                     <label>Descrição</label>
                     <input type="text" id="descricaoDisplay" class="form-control mb-2" readonly>
                     <label>Tamanho</label>
-                    <select name="tamanho" class="form-select mb-2" required>
-                        <option>S</option><option>M</option><option>L</option>
-                        <option>XL</option><option>XXL</option><option>XXXL</option>
-                    </select>
+                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (ex: M, L, 42...)" required>
                     <label>Motivo</label>
                     <select name="motivo" id="motivoSelect" class="form-select mb-2" required onchange="toggleDescricaoMotivo()">
                         <option value="Novo">Novo</option>
@@ -247,7 +248,7 @@
     </div>
 </div>
 
-<!-- Modal Atribuir Fardamento -->
+<!-- Modal Atribuir Fardamento (igual) -->
 <div class="modal fade" id="modalAtribuir" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ url_for('fardamento') }}">
@@ -383,6 +384,7 @@
 {% endif %}
 
 <script>
+// ---------- Partilhado (carregar nomes do stock) ----------
 function carregarNomes() {
     const tipo = document.getElementById('tipoSelect').value;
     const nomeSelect = document.getElementById('nomeSelect');
@@ -413,16 +415,7 @@ function preencherDetalhes() {
     if (selected && selected.value) {
         document.getElementById('descricaoDisplay').value = selected.getAttribute('data-descricao') || '';
         document.getElementById('stockIdHidden').value = selected.getAttribute('data-id') || '';
-        const tamanhoSugerido = selected.getAttribute('data-tamanho');
-        if (tamanhoSugerido) {
-            const tamanhoSelect = document.querySelector('select[name="tamanho"]');
-            for (let opt of tamanhoSelect.options) {
-                if (opt.value === tamanhoSugerido) {
-                    opt.selected = true;
-                    break;
-                }
-            }
-        }
+        // Já não preenchemos o tamanho automaticamente, pois o campo é livre
     }
 }
 
@@ -432,6 +425,7 @@ function toggleDescricaoMotivo() {
     descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
 }
 
+// ---------- Atribuição ----------
 async function carregarPedidosAnalise() {
     const bombeiroId = document.getElementById('bombeiroAtribSelect').value;
     const tabelaBody = document.getElementById('tabelaAnaliseBody');
