@@ -212,6 +212,7 @@
                 <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
                     <input type="hidden" name="mes" value="{{ mes_ecin }}">
                     <input type="hidden" name="ano" value="{{ ano_ecin }}">
+                    <input type="hidden" name="tab" value="ecins">
                     <button type="submit" class="btn btn-sm btn-outline-info">
                         <i class="bi bi-send me-1"></i> Enviar Contagem
                     </button>
@@ -272,6 +273,9 @@
 <div class="modal fade" id="modalValorGlobal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <form method="POST" action="{{ url_for('atribuir_valor_global') }}">
+            <input type="hidden" name="tab" value="ecins">
+            <input type="hidden" name="mes" value="{{ mes_ecin }}">
+            <input type="hidden" name="ano" value="{{ ano_ecin }}">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Valor Global</h5>
@@ -281,12 +285,9 @@
                     <div class="alert alert-info">
                         Este valor será aplicado a todos os registos ECIN/ELAC do mês selecionado.
                     </div>
-                    <input type="hidden" name="tab" value="ecins">
-                    <input type="hidden" name="mes" value="{{ mes_ecin }}">
-                    <input type="hidden" name="ano" value="{{ ano_ecin }}">
                     <label class="form-label">Valor (€)</label>
                     <input type="number" step="0.01" name="valor_global" class="form-control"
-                           placeholder="0.00" required>
+                           placeholder="0.00" required autofocus>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Aplicar</button>

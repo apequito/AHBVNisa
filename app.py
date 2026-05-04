@@ -6421,15 +6421,15 @@ def enviar_contagem_ecins():
         db.extract('year', Ecin.data) == ano
     ).order_by(Ecin.bombeiro_id).all()
 
-    # Agrupar por bombeiro
     from collections import defaultdict
     dados_por_bombeiro = defaultdict(lambda: {'registos': [], 'total': 0.0})
     for ec in ecins:
-        bombeiro = ec.bombeiro
-        dados_por_bombeiro[bombeiro.id]['registos'].append(ec)
-        dados_por_bombeiro[bombeiro.id]['total'] += ec.valor or 0.0
-        dados_por_bombeiro[bombeiro.id]['nome'] = bombeiro.nome
+        b = ec.bombeiro
+        dados_por_bombeiro[b.id]['registos'].append(ec)
+        dados_por_bombeiro[b.id]['total'] += ec.valor or 0.0
+        dados_por_bombeiro[b.id]['nome'] = b.nome
 
+    enviadas = 0
     for bombeiro_id, info in dados_por_bombeiro.items():
         nome = info['nome']
         total = info['total']
@@ -6450,9 +6450,10 @@ def enviar_contagem_ecins():
             apagada_destinatario=False
         )
         db.session.add(msg)
+        enviadas += 1
 
     db.session.commit()
-    flash(f'Contagens enviadas para {len(dados_por_bombeiro)} bombeiros.', 'success')
+    flash(f'Contagens enviadas para {enviadas} bombeiros.', 'success')
     return redirect(url_for('administrativo', tab='ecins'))
 
 
