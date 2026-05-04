@@ -3395,6 +3395,7 @@ def pedidos_analise_bombeiro(bombeiro_id):
     } for p in pedidos]
     return jsonify(result)
 
+
 @app.route('/tipos-farda-material/adicionar', methods=['POST'])
 @login_required
 def adicionar_tipo_farda_material():

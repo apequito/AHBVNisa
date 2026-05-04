@@ -175,6 +175,7 @@ class Checklist(db.Model):
     bombeiro = db.relationship('Bombeiro', backref='checklists')
 
 
+
 # ---------- Fardamento ----------
 class Fardamento(db.Model):
     __tablename__ = 'fardamentos'
