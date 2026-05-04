@@ -234,6 +234,7 @@ class Ecin(db.Model):
     estado = db.Column(db.String(20), default='Pendente')   # agora guarda a legenda após escalamento
     funcao = db.Column(db.String(20), nullable=True)        # Motorista, Chefe, Guarnição
     categoria = db.Column(db.String(30), nullable=True)     # ECIN, ELAC
+    valor = db.Column(db.Float, nullable=True)  # novo campo
 
     bombeiro = db.relationship('Bombeiro', backref='ecins')
 

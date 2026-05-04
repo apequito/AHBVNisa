@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-building me-2"></i>Painel Administrativo</h2>
+
+<!-- Abas -->
+<ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="deslocacoes-tab" data-bs-toggle="tab" data-bs-target="#deslocacoes" type="button" role="tab">
+            <i class="bi bi-car-front me-1"></i> Deslocações
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ecins-tab" data-bs-toggle="tab" data-bs-target="#ecins" type="button" role="tab">
+            <i class="bi bi-clipboard-check me-1"></i> ECINs / ELACs
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="adminTabContent">
+    <!-- Aba Deslocações -->
+    <div class="tab-pane fade show active" id="deslocacoes" role="tabpanel">
+        <!-- Cartões resumo -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary shadow-sm">
+                    <div class="card-body text-center py-3">
+                        <h4 class="mb-0">{{ deslocacoes|length }}</h4>
+                        <small>Total Serviços</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success shadow-sm">
+                    <div class="card-body text-center py-3">
+                        <h4 class="mb-0">{{ "%.2f"|format(total_valor_desl) }} €</h4>
+                        <small>Valor Acumulado</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info shadow-sm">
+                    <div class="card-body text-center py-3">
+                        <h5 class="mb-0">Serviços / Viatura</h5>
+                        <small>Resumo exportável</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <form method="GET" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="tab" value="deslocacoes">
+            <div class="col-auto">
+                <label class="form-label">Início</label>
+                <input type="date" name="data_inicio" class="form-control form-control-sm" value="{{ data_inicio or '' }}">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Fim</label>
+                <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ data_fim or '' }}">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Bombeiro</label>
+                <select name="bombeiro_id" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for b in bombeiros_ativos %}
+                    <option value="{{ b.id }}" {% if bombeiro_id_desl == b.id %}selected{% endif %}>{{ b.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                <a href="{{ url_for('administrativo', tab='deslocacoes') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+            <div class="col-auto ms-auto">
+                <a href="{{ url_for('exportar_deslocacoes_administrativo') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Lista</a>
+                <a href="{{ url_for('exportar_resumo_deslocacoes') }}" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-bar-graph me-1"></i> Resumo Contab.</a>
+                <a href="{{ url_for('imprimir_deslocacoes_administrativo', data_inicio=data_inicio, data_fim=data_fim, bombeiro_id=bombeiro_id_desl) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir</a>
+            </div>
+        </form>
+
+        <!-- Tabela -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th><th>Hora</th><th>Serviço</th><th>Origem</th><th>Destino</th>
+                            <th>Valor</th><th>Viatura</th><th>Nº Serviço</th><th>Bombeiro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in deslocacoes %}
+                        <tr>
+                            <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ d.hora_inicio }}</td>
+                            <td>{{ d.servico }}</td>
+                            <td>{{ d.local_origem or '-' }}</td>
+                            <td>{{ d.local_destino or '-' }}</td>
+                            <td>{{ "%.2f"|format(d.valor) if d.valor else '-' }}</td>
+                            <td>{{ d.viatura.matricula if d.viatura else '-' }}</td>
+                            <td>{{ d.n_servico or '-' }}</td>
+                            <td>{{ d.bombeiro.nome if d.bombeiro else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="9" class="text-center text-muted">Nenhuma deslocação encontrada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold bg-light">
+                            <td colspan="5" class="text-end">Total:</td>
+                            <td>{{ "%.2f"|format(total_valor_desl) }} €</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aba ECINs / ELACs -->
+    <div class="tab-pane fade" id="ecins" role="tabpanel">
+        <!-- Cartões resumo -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card text-white bg-warning shadow-sm">
+                    <div class="card-body text-center py-3">
+                        <h4 class="mb-0">{{ turnos_ecin }}</h4>
+                        <small>Turnos ECIN (mês)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-white bg-secondary shadow-sm">
+                    <div class="card-body text-center py-3">
+                        <h4 class="mb-0">{{ turnos_elac }}</h4>
+                        <small>Turnos ELAC (mês)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <form method="GET" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="tab" value="ecins">
+            <div class="col-auto">
+                <label class="form-label">Mês</label>
+                <select name="mes_ecin" class="form-select form-select-sm">
+                    {% for i in range(1,13) %}
+                    <option value="{{ i }}" {% if mes_ecin == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Ano</label>
+                <input type="number" name="ano_ecin" class="form-control form-control-sm" value="{{ ano_ecin }}" style="width:80px;">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Categoria</label>
+                <select name="cat_ecin" class="form-select form-select-sm">
+                    <option value="todas" {% if cat_ecin == 'todas' %}selected{% endif %}>Todas</option>
+                    <option value="ECIN" {% if cat_ecin == 'ECIN' %}selected{% endif %}>ECIN</option>
+                    <option value="ELAC" {% if cat_ecin == 'ELAC' %}selected{% endif %}>ELAC</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Bombeiro</label>
+                <select name="bombeiro_id_ecin" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for b in bombeiros_ativos_ecin %}
+                    <option value="{{ b.id }}" {% if bombeiro_id_ecin == b.id %}selected{% endif %}>{{ b.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+            <div class="col-auto ms-auto">
+                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i> Exportar Excel</a>
+                <a href="{{ url_for('imprimir_ecins', mes=mes_ecin, ano=ano_ecin) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i> Imprimir Escala</a>
+            </div>
+        </form>
+
+        <!-- Tabela -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th><th>Função</th><th>Estado</th>
+                            <th>Valor</th><th>Atualizar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ec in ecins %}
+                        <tr>
+                            <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ ec.turno }}</td>
+                            <td>{{ ec.categoria or '-' }}</td>
+                            <td>{{ ec.bombeiro.nome }}</td>
+                            <td>{{ ec.funcao or '-' }}</td>
+                            <td>{{ ec.estado }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('atualizar_valor_ecin') }}" class="d-flex gap-1">
+                                    <input type="hidden" name="ecin_id" value="{{ ec.id }}">
+                                    <input type="number" step="0.01" name="valor" class="form-control form-control-sm" value="{{ ec.valor if ec.valor else '' }}" style="width:80px;">
+                                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check"></i></button>
+                                </form>
+                            </td>
+                            <td></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="text-center text-muted">Nenhum registo encontrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold bg-light">
+                            <td colspan="6" class="text-end">Total:</td>
+                            <td>{{ "%.2f"|format(total_valor_ecin) }} €</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

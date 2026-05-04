@@ -5981,6 +5981,184 @@ def deslocacoes():
     viaturas = Viatura.query.order_by(Viatura.matricula).all()
     return render_template('deslocacoes.html', deslocacoes=deslocacoes_lista, viaturas=viaturas)
 
+@app.route('/administrativo')
+@login_required
+def administrativo():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # ---------- Filtros Deslocações ----------
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    bombeiro_id_desl = request.args.get('bombeiro_id', type=int)
+
+    query_desl = Deslocacao.query
+    if data_inicio:
+        try:
+            d = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            query_desl = query_desl.filter(Deslocacao.data >= d)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            d = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            query_desl = query_desl.filter(Deslocacao.data <= d)
+        except ValueError:
+            pass
+    if bombeiro_id_desl:
+        query_desl = query_desl.filter_by(bombeiro_id=bombeiro_id_desl)
+
+    deslocacoes = query_desl.order_by(Deslocacao.data.desc()).all()
+    total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
+    bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+
+    # ---------- Filtros ECIN/ELAC ----------
+    mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
+    ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
+    cat_ecin = request.args.get('cat_ecin', 'todas')
+    bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
+
+    query_ecin = Ecin.query.filter(
+        db.extract('month', Ecin.data) == mes_ecin,
+        db.extract('year', Ecin.data) == ano_ecin
+    )
+    if cat_ecin == 'ECIN':
+        query_ecin = query_ecin.filter(Ecin.categoria == 'ECIN')
+    elif cat_ecin == 'ELAC':
+        query_ecin = query_ecin.filter(Ecin.categoria == 'ELAC')
+    if bombeiro_id_ecin:
+        query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
+
+    ecins = query_ecin.order_by(Ecin.data.desc()).all()
+    total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
+    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN').count()
+    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC').count()
+
+    bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
+        Ecin.bombeiro_id == Bombeiro.id,
+        db.extract('month', Ecin.data) == mes_ecin,
+        db.extract('year', Ecin.data) == ano_ecin
+    ).distinct().order_by(Bombeiro.nome).all()
+
+    return render_template('administrativo.html',
+                           deslocacoes=deslocacoes,
+                           total_valor_desl=total_valor_desl,
+                           ecins=ecins,
+                           total_valor_ecin=total_valor_ecin,
+                           turnos_ecin=turnos_ecin,
+                           turnos_elac=turnos_elac,
+                           bombeiros_ativos=bombeiros_ativos,
+                           bombeiros_ativos_ecin=bombeiros_ativos_ecin,
+                           data_inicio=data_inicio,
+                           data_fim=data_fim,
+                           bombeiro_id_desl=bombeiro_id_desl,
+                           mes_ecin=mes_ecin,
+                           ano_ecin=ano_ecin,
+                           cat_ecin=cat_ecin,
+                           bombeiro_id_ecin=bombeiro_id_ecin,
+                           now=date.today())
+
+@app.route('/administrativo/atualizar-valor-ecin', methods=['POST'])
+@login_required
+def atualizar_valor_ecin():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo'))
+
+    ec_id = request.form.get('ecin_id', type=int)
+    novo_valor = request.form.get('valor', type=float)
+    ec = Ecin.query.get_or_404(ec_id)
+    ec.valor = novo_valor if novo_valor else None
+    db.session.commit()
+    flash('Valor atualizado.', 'success')
+    return redirect(url_for('administrativo'))
+
+@app.route('/administrativo/exportar-deslocacoes')
+@login_required
+def exportar_deslocacoes_administrativo():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo'))
+
+    # aplicar os mesmos filtros? Vamos exportar tudo por enquanto
+    desl = Deslocacao.query.order_by(Deslocacao.data.desc()).all()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deslocacoes"
+    cabecalhos = ['Data', 'Hora', 'Serviço', 'Origem', 'Destino', 'Valor', 'Viatura', 'Nº Serviço', 'Bombeiro']
+    ws.append(cabecalhos)
+    for d in desl:
+        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
+                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
+                   d.valor or 0.0,
+                   d.viatura.matricula if d.viatura else '',
+                   d.n_servico or '',
+                   d.bombeiro.nome if d.bombeiro else ''])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='deslocacoes.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/administrativo/exportar-resumo-deslocacoes')
+@login_required
+def exportar_resumo_deslocacoes():
+    # totais por serviço e por viatura
+    desl = Deslocacao.query.all()
+    from collections import defaultdict
+    por_servico = defaultdict(float)
+    por_viatura = defaultdict(float)
+    for d in desl:
+        if d.valor:
+            por_servico[d.servico] += d.valor
+            mat = d.viatura.matricula if d.viatura else 'N/A'
+            por_viatura[mat] += d.valor
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Resumo Contabilistico"
+    ws.append(['Serviço', 'Total (€)'])
+    for serv, val in por_servico.items():
+        ws.append([serv, val])
+    ws.append([])
+    ws.append(['Viatura', 'Total (€)'])
+    for mat, val in por_viatura.items():
+        ws.append([mat, val])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='resumo_contabilistico.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/administrativo/imprimir-deslocacoes')
+@login_required
+def imprimir_deslocacoes_administrativo():
+    # aplicar filtros se passados
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    bombeiro_id = request.args.get('bombeiro_id', type=int)
+    query = Deslocacao.query
+    if data_inicio:
+        try:
+            d = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            query = query.filter(Deslocacao.data >= d)
+        except ValueError: pass
+    if data_fim:
+        try:
+            d = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            query = query.filter(Deslocacao.data <= d)
+        except ValueError: pass
+    if bombeiro_id:
+        query = query.filter_by(bombeiro_id=bombeiro_id)
+    desl = query.order_by(Deslocacao.data.desc()).all()
+    return render_template('imprimir_deslocacoes.html', deslocacoes=desl)
+
+
+
+
 
 #if __name__ == '__main__':
     #app.run(debug=True)

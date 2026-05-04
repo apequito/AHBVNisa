@@ -43,7 +43,7 @@
                 <div class="modal-body">
                     <input type="date" name="data" class="form-control mb-2" required>
                     <input type="text" name="hora_inicio" class="form-control mb-2" placeholder="Hora início (HH:MM)" required>
-                    <select name="servico" class="form-select mb-2" required>
+                    <select name="servico" id="servicoSelect" class="form-select mb-2" required>
                         <option value="">-- Serviço --</option>
                         <option>C. Doentes</option>
                         <option>Evacuação</option>
@@ -51,9 +51,12 @@
                         <option>Urgência</option>
                     </select>
                     <input type="text" name="local_origem" class="form-control mb-2" placeholder="Local Origem">
-                    <input type="text" name="local_destino" class="form-control mb-2" placeholder="Local Destino">
+                    <input type="text" name="local_destino" id="localDestino" class="form-control mb-2" placeholder="Local Destino">
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-                    <input type="number" step="0.01" name="valor" class="form-control mb-2" placeholder="Valor (€)">
+                    <label class="form-label">Valor (€)</label>
+                    <input type="number" step="0.01" name="valor" id="valorDeslocacao" class="form-control mb-2" value="0.00">
+                    {% else %}
+                    <input type="hidden" name="valor" id="valorDeslocacao" value="0.00">
                     {% endif %}
                     <select name="viatura_id" class="form-select mb-2">
                         <option value="">-- Viatura --</option>
@@ -68,4 +71,49 @@
         </form>
     </div>
 </div>
+
+<script>
+// Tabela de preços: serviço -> destino -> valor
+const precos = {
+    'C. Doentes': {
+        'Portalegre': 10.00,
+        'Évora': 35.00,
+        'Lisboa': 35.00,
+        'Coimbra': 35.00,
+        'Elvas': 20.00
+    },
+    'Evacuação': {
+        'Portalegre': 10.00,
+        'Évora': 35.00,
+        'Lisboa': 35.00,
+        'Coimbra': 35.00,
+        'Elvas': 20.00
+    },
+    'Retorno': {
+        'Nisa': 10.00,
+        'Alpalhão': 10.00,
+        'Tolosa': 10.00,
+        'Arez': 10.00,
+        'Santana': 10.00,
+        'Pé da Serra': 10.00,
+        'São Matias': 10.00,
+        'Amieira Tejo': 10.00
+    }
+};
+
+function atualizarValor() {
+    const servico = document.getElementById('servicoSelect').value;
+    const destino = document.getElementById('localDestino').value.trim();
+    const campoValor = document.getElementById('valorDeslocacao');
+    let novoValor = 0.00;
+
+    if (servico && destino && precos[servico] && precos[servico][destino] !== undefined) {
+        novoValor = precos[servico][destino];
+    }
+    campoValor.value = novoValor.toFixed(2);
+}
+
+document.getElementById('servicoSelect').addEventListener('change', atualizarValor);
+document.getElementById('localDestino').addEventListener('input', atualizarValor);
+</script>
 {% endblock %}

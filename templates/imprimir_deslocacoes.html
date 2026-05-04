@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Deslocações</title>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        .cabecalho { text-align: center; margin-bottom: 10px; }
+        h2 { margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="cabecalho">
+        <h2>Associação Humanitária de Bombeiros Voluntários de Nisa</h2>
+        <p>Rua Dr. Cruz Malpique - 6050-341 Nisa</p>
+    </div>
+    <h3>Registo de Deslocações</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th><th>Hora</th><th>Serviço</th><th>Origem</th><th>Destino</th>
+                <th>Valor</th><th>Viatura</th><th>Nº Serviço</th><th>Bombeiro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in deslocacoes %}
+            <tr>
+                <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ d.hora_inicio }}</td>
+                <td>{{ d.servico }}</td>
+                <td>{{ d.local_origem or '-' }}</td>
+                <td>{{ d.local_destino or '-' }}</td>
+                <td>{{ "%.2f"|format(d.valor) if d.valor else '-' }}</td>
+                <td>{{ d.viatura.matricula if d.viatura else '-' }}</td>
+                <td>{{ d.n_servico or '-' }}</td>
+                <td>{{ d.bombeiro.nome if d.bombeiro else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>window.print();</script>
+</body>
+</html>
