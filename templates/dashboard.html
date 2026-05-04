@@ -267,9 +267,9 @@
                             <i class="bi bi-broadcast me-1"></i>Central
                         </a>
                     {% endif %}
-                    {% if current_user.tipo_user == 'Admin' %}
-                        <a href="#" class="btn btn-outline-primary btn-sm rounded-pill disabled" title="Brevemente">
-                            <i class="bi bi-building me-1"></i>Administrativo
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Secretaria' %}
+                        <a href="{{ url_for('administrativo') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                             <i class="bi bi-building me-1"></i>Administrativo
                         </a>
                     {% endif %}
                     <!-- Backup e Restauro (apenas Admin/Comando) -->
