@@ -5113,18 +5113,24 @@ def _importar_linha_deslocacoes(row, row_num):
         origem = str(row[3]).strip() if len(row) > 3 else ''
         destino = str(row[4]).strip() if len(row) > 4 else ''
         valor = float(row[5]) if len(row) > 5 and row[5] else None
-        mec = str(row[6]).strip() if len(row) > 6 else None
-        matricula = str(row[7]).strip() if len(row) > 7 else None
-        n_servico = str(row[8]).strip() if len(row) > 8 else None
+        mec = str(row[6]).strip() if len(row) > 6 and row[6] else None
+        matricula = str(row[7]).strip() if len(row) > 7 and row[7] else None
+        n_servico = str(row[8]).strip() if len(row) > 8 and row[8] else None
 
         data = _parse_data(data_str) if data_str else None
         if not data or not servico:
-            return None
+            return None  # sem data ou serviço, saltar
+
+        # Procurar bombeiro pelo mecanográfico
         bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
+        if not bombeiro:
+            return None  # sem bombeiro válido, saltar esta linha
+
+        # Procurar viatura pela matrícula (pode ser None)
         viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
 
         d = Deslocacao(
-            bombeiro_id=bombeiro.id if bombeiro else 1,
+            bombeiro_id=bombeiro.id,
             data=data,
             hora_inicio=hora,
             servico=servico,
@@ -5188,6 +5194,23 @@ def backup_exportar():
                    a.reportador.mecanografico if a.reportador else '', a.kms or '',
                    'Sim' if a.responsavel_oficina else 'Não', 'Sim' if a.comando_verificado else 'Não',
                    a.estado, a.data_reporte.strftime('%d/%m/%Y %H:%M') if a.data_reporte else ''])
+
+
+    # ---- 21. Deslocações ----
+    ws = wb.create_sheet("Deslocacoes")
+    cab = ['Data', 'Hora Início', 'Serviço', 'Origem', 'Destino', 'Valor',
+           'Viatura Matrícula', 'Nº Serviço', 'Bombeiro (mec.)']
+    ws.append(cab)
+    for col in range(1, len(cab)+1):
+        ws.cell(row=1, column=col).fill = header_fill
+        ws.cell(row=1, column=col).font = header_font
+    for d in Deslocacao.query.order_by(Deslocacao.data.asc()).all():
+        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
+                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
+                   d.valor if d.valor else '',
+                   d.viatura.matricula if d.viatura else '',
+                   d.n_servico or '',
+                   d.bombeiro.mecanografico if d.bombeiro else ''])
 
     # ---- 4. Escalas ----
     ws = wb.create_sheet("Escalas")
@@ -5402,22 +5425,6 @@ def backup_exportar():
         ws.cell(row=1, column=col).font = header_font
     for tf in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
         ws.append([tf.nome, tf.categoria])
-
-    # ---- 21. Deslocações ----
-    ws = wb.create_sheet("Deslocacoes")
-    cab = ['Data', 'Hora Início', 'Serviço', 'Origem', 'Destino', 'Valor',
-           'Viatura Matrícula', 'Nº Serviço', 'Bombeiro (mec.)']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for d in Deslocacao.query.order_by(Deslocacao.data.asc()).all():
-        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
-                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
-                   d.valor if d.valor else '',
-                   d.viatura.matricula if d.viatura else '',
-                   d.n_servico or '',
-                   d.bombeiro.mecanografico if d.bombeiro else ''])
 
     # ---- 22. Reuniões ----
     ws = wb.create_sheet("Reunioes")
