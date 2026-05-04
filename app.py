@@ -5137,6 +5137,7 @@ def backup_importar():
         flash(f'{total} registos importados com sucesso!', 'success')
     return redirect(url_for('dashboard'))
 
+
 #-----------------Backup-----------------------
 @app.route('/backup/exportar')
 @login_required
