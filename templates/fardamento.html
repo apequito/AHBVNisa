@@ -39,7 +39,7 @@
                     <tr>
                         <th>ID</th><th>Data</th><th>Bombeiro</th><th>Tipo</th><th>Nome</th>
                         <th>Tam.</th><th>Motivo</th><th>Estado</th>
-                        <th>Resp</th><th>Cmd</th><th>Entregue</th>
+                        <th>Resp</th><th>Cmd</th><th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,11 +59,41 @@
                                 <span class="badge bg-info">Análise</span>
                             {% elif p.estado == 'Concluido' %}
                                 <span class="badge bg-success">Concluído</span>
+                            {% elif p.estado == 'Rejeitado' %}
+                                <span class="badge bg-danger">Rejeitado</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ p.estado }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ '✔️' if p.responsavel else '❌' }}</td>
-                        <td>{{ '✔️' if p.comando else '❌' }}</td>
-                        <td>{{ '✔️' if p.entregue else '❌' }}</td>
+                        <td class="text-center">
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
+                                <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='responsavel') }}"
+                                   class="text-decoration-none {{ 'text-success' if p.responsavel else 'text-danger' }}">
+                                    {{ '✔️' if p.responsavel else '❌' }}
+                                </a>
+                            {% else %}
+                                {{ '✔️' if p.responsavel else '❌' }}
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                <a href="{{ url_for('toggle_aprovacao_fardamento', id=p.id, campo='comando') }}"
+                                   class="text-decoration-none {{ 'text-success' if p.comando else 'text-danger' }}">
+                                    {{ '✔️' if p.comando else '❌' }}
+                                </a>
+                            {% else %}
+                                {{ '✔️' if p.comando else '❌' }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'Fardamento') %}
+                                <button class="btn btn-sm btn-outline-primary btn-resposta"
+                                        data-id="{{ p.id }}"
+                                        data-bs-toggle="modal" data-bs-target="#modalResposta">
+                                    Resposta
+                                </button>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr><td colspan="11" class="text-center text-muted py-3">Nenhum pedido de fardamento.</td></tr>
@@ -299,7 +329,36 @@
     </div>
 </div>
 
-<!-- Modal Importar (exemplo simplificado) -->
+<!-- Modal Resposta -->
+<div class="modal fade" id="modalResposta" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formResposta" action="">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Resposta ao Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" name="pedido_id" id="respostaPedidoId">
+                    <div class="mb-3">
+                        <label class="form-label">Ação</label>
+                        <select name="acao" id="acaoSelect" class="form-select" required onchange="toggleMotivo()">
+                            <option value="">-- Selecione --</option>
+                            <option value="aguardar_stock">Aguardar Stock</option>
+                            <option value="rejeitar">Rejeitar</option>
+                        </select>
+                    </div>
+                    <div id="divMotivo" style="display: none;">
+                        <label class="form-label">Motivo da Rejeição</label>
+                        <textarea name="motivo" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar (Admin/Comando) -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
 <div class="modal fade" id="modalImportarFardamento" tabindex="-1">
     <div class="modal-dialog">
@@ -322,7 +381,7 @@
 {% endif %}
 
 <script>
-// ---------- Funções partilhadas ----------
+// ---------- Partilhado (carregar nomes do stock) ----------
 function carregarNomes() {
     const tipo = document.getElementById('tipoSelect').value;
     const nomeSelect = document.getElementById('nomeSelect');
@@ -348,8 +407,6 @@ function carregarNomes() {
         });
 }
 
-
-
 function preencherDetalhes() {
     const selected = document.getElementById('nomeSelect').selectedOptions[0];
     if (selected && selected.value) {
@@ -374,7 +431,7 @@ function toggleDescricaoMotivo() {
     descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
 }
 
-// ---------- Atribuição ----------
+// ---------- Atribuição (pedidos pendentes) ----------
 async function carregarPedidosAnalise() {
     const bombeiroId = document.getElementById('bombeiroAtribSelect').value;
     const tabelaBody = document.getElementById('tabelaAnaliseBody');
@@ -396,7 +453,6 @@ async function carregarPedidosAnalise() {
                     opt.value = p.id;
                     opt.textContent = `#${p.id} - ${p.tipo} - ${p.nome}`;
                     selectPedido.appendChild(opt);
-
                     const row = tabelaBody.insertRow();
                     row.insertCell().textContent = p.data;
                     row.insertCell().textContent = p.tipo;
@@ -456,5 +512,20 @@ document.getElementById('modalEditarAtribuido').addEventListener('show.bs.modal'
     document.getElementById('edit_atrib_tamanho').value = button.getAttribute('data-tamanho') || '';
     document.getElementById('edit_atrib_data').value = button.getAttribute('data-data_entrega') || '';
 });
+
+// ---------- Resposta ----------
+document.getElementById('modalResposta').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formResposta').action = '/fardamento/resposta/' + id;
+    document.getElementById('respostaPedidoId').value = id;
+    document.getElementById('acaoSelect').value = '';
+    document.getElementById('divMotivo').style.display = 'none';
+});
+
+function toggleMotivo() {
+    const acao = document.getElementById('acaoSelect').value;
+    document.getElementById('divMotivo').style.display = (acao === 'rejeitar') ? 'block' : 'none';
+}
 </script>
 {% endblock %}

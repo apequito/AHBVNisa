@@ -190,9 +190,6 @@
                             <i class="bi bi-box-seam me-1"></i>Stock Fardamento
                         </a>
                     {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                        <a href="{{ url_for('fardamento_atribuido') }}" class="btn btn-outline-dark btn-sm mt-1">Fardamento Atribuído</a>
-                    {% endif %}
                     <a href="{{ url_for('disponibilidades') }}" class="btn btn-outline-info btn-sm rounded-pill">
                         <i class="bi bi-person-check me-1"></i>Disponibilidade
                     </a>

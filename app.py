@@ -3904,6 +3904,60 @@ def imprimir_fardamento_bombeiro():
                            atribuicoes=atribuicoes,
                            bombeiro=bombeiro)
 
+#------------------toggle de aprovação--------------
+
+@app.route('/fardamento/toggle/<int:id>/<campo>')
+@login_required
+def toggle_aprovacao_fardamento(id, campo):
+    if campo not in ('responsavel', 'comando'):
+        flash('Campo inválido.', 'danger')
+        return redirect(url_for('fardamento', tab='pedidos'))
+
+    pedido = Fardamento.query.get_or_404(id)
+
+    # Permissões: apenas Admin/Comando podem mexer no "comando"
+    if campo == 'comando':
+        if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+            flash('Apenas Admin/Comando podem alterar este campo.', 'danger')
+            return redirect(url_for('fardamento', tab='pedidos'))
+        pedido.comando = not pedido.comando
+    elif campo == 'responsavel':
+        if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ('Comando', 'Fardamento'):
+            flash('Sem permissão.', 'danger')
+            return redirect(url_for('fardamento', tab='pedidos'))
+        pedido.responsavel = not pedido.responsavel
+
+    db.session.commit()
+    return redirect(url_for('fardamento', tab='pedidos'))
+
+
+# -----------------Resposta Fardamento--------
+
+@app.route('/fardamento/resposta/<int:id>', methods=['POST'])
+@login_required
+def resposta_fardamento(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ('Comando', 'Fardamento'):
+        flash('Sem permissão.', 'danger')
+        return redirect(url_for('fardamento', tab='pedidos'))
+
+    pedido = Fardamento.query.get_or_404(id)
+    acao = request.form.get('acao')
+    motivo = request.form.get('motivo', '')
+
+    if acao == 'aguardar_stock':
+        pedido.estado = 'Análise'   # ou um estado que indique "Aguardar Stock"
+        flash('Pedido marcado como "Aguardar Stock".', 'info')
+    elif acao == 'rejeitar':
+        pedido.estado = 'Rejeitado'
+        pedido.descricao_motivo = motivo   # guarda o motivo no campo descricao_motivo (ou noutro)
+        flash('Pedido rejeitado.', 'warning')
+    else:
+        flash('Ação inválida.', 'danger')
+        return redirect(url_for('fardamento', tab='pedidos'))
+
+    db.session.commit()
+    return redirect(url_for('fardamento', tab='pedidos'))
+
 
 
 #----------- Stock Farmácia--------------
