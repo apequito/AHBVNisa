@@ -4496,17 +4496,31 @@ def _importar_linha_categorias_farmacia(row, row_num):
 
 
 def _importar_linha_stock_farmacia(row, row_num):
-    categoria = str(row[0]).strip() if row[0] else ''
-    nome = str(row[1]).strip() if len(row) > 1 else ''
-    if not nome:
-        return "Nome do produto obrigatório"
-    tamanho = str(row[2]).strip() if len(row) > 2 else ''
-    stock = int(row[3]) if len(row) > 3 and row[3] else 0
-    s = StockFarmacia(categoria=categoria, nome=nome, tamanho=tamanho, stock=stock,
-                      data_atualizacao=datetime.utcnow())
-    db.session.add(s)
-    db.session.flush()
-    return None
+    try:
+        cat = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+        nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+        tamanho_val = str(row[3]).strip()[:100] if len(row) > 3 and row[3] else ''
+        # Tenta converter o stock, se falhar usa 0
+        stock_val = 0
+        if len(row) > 4 and row[4] is not None:
+            try:
+                stock_val = int(row[4])
+            except (ValueError, TypeError):
+                pass  # fica 0
+
+        if not nome:
+            return None
+
+        s = StockFarmacia(
+            categoria=cat,
+            nome=nome,
+            tamanho=tamanho_val if tamanho_val else None,
+            stock=stock_val,
+            data_atualizacao=datetime.utcnow()
+        )
+        return s
+    except Exception:
+        return None
 
 
 def _importar_linha_stock_fardamento(row, row_num):
