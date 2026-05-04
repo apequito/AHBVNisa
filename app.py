@@ -4817,17 +4817,45 @@ def _importar_linha_fardamentos(row, row_num):
     return None
 
 def _importar_linha_fardamento_atribuido(row, row_num):
-    # ler ID da coluna 0, etc.
-    id_original = int(row[0]) if row[0] else None
-    # ...
-    if id_original:
-        existente = FardamentoAtribuido.query.get(id_original)
+    try:
+        id_original = int(row[0]) if row[0] else None
+        bombeiro_id = int(row[1]) if len(row) > 1 and row[1] else None
+        tipo = str(row[2]).strip() if len(row) > 2 else ''
+        nome = str(row[3]).strip() if len(row) > 3 else ''
+        tamanho = str(row[4]).strip() if len(row) > 4 else ''
+        data_entrega_str = str(row[5]).strip() if len(row) > 5 else None
+        data_entrega = _parse_data(data_entrega_str) if data_entrega_str else None
+        estado = str(row[6]).strip() if len(row) > 6 else 'Entregue'
+        idpedido = int(row[7]) if len(row) > 7 and row[7] else None
+
+        if not bombeiro_id or not data_entrega:
+            return None
+
+        # Atualiza ou cria mantendo o ID
+        existente = FardamentoAtribuido.query.get(id_original) if id_original else None
         if existente:
-            # atualizar existente
-            pass
+            existente.bombeiro_id = bombeiro_id
+            existente.tipo = tipo
+            existente.nome = nome
+            existente.tamanho = tamanho
+            existente.data_entrega = data_entrega
+            existente.estado = estado
+            existente.idpedido = idpedido
+            return None  # já atualizado, não precisa adicionar novamente
         else:
-            novo = FardamentoAtribuido(id=id_original, ...)
-            db.session.add(novo)
+            novo = FardamentoAtribuido(
+                id=id_original,
+                bombeiro_id=bombeiro_id,
+                tipo=tipo,
+                nome=nome,
+                tamanho=tamanho,
+                data_entrega=data_entrega,
+                estado=estado,
+                idpedido=idpedido
+            )
+            return novo
+    except Exception:
+        return None
 
 
 def _importar_linha_oficina(row, row_num):

@@ -335,6 +335,7 @@ class MensagemCorreio(db.Model):
     destinatario = db.relationship('Bombeiro', foreign_keys=[destinatario_id], backref='mensagens_recebidas')
     # Sem a linha de relationship – o acesso a bombeiro será feito via backref da classe Bombeiro
 
+
 #-------------------Fardamento--------------
 class FardamentoAtribuido(db.Model):
     __tablename__ = 'fardamento_atribuido'
