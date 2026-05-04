@@ -3884,21 +3884,6 @@ def fardamento_atribuido():
                            bombeiro_id=bombeiro_id)
 
 
-#------------Devoluçã Farmaneto-------------
-
-@app.route('/fardamento-atribuido/devolver/<int:id>', methods=['POST'])
-@login_required
-def devolver_fardamento_atribuido(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('dashboard'))
-    item = FardamentoAtribuido.query.get_or_404(id)
-    item.data_devolucao = date.today()
-    item.estado = 'Devolvido'
-    db.session.commit()
-    flash('Devolução registada.', 'success')
-    return redirect(url_for('fardamento_atribuido'))
-
 
 #----------- Stock Farmácia--------------
 
