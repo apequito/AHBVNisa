@@ -3267,54 +3267,133 @@ def checklist():
 @app.route('/fardamento', methods=['GET', 'POST'])
 @login_required
 def fardamento():
+    aba = request.args.get('tab', 'pedidos')   # 'pedidos' ou 'atribuido'
+
     if request.method == 'POST':
-        tipo = request.form['tipo']
-        nome = request.form['nome']
-        tamanho = request.form['tamanho']
-        motivo = request.form['motivo']
-        descricao_motivo = request.form.get('descricao_motivo', '')
-        stock_id = request.form.get('stock_id', type=int)
+        form_type = request.form.get('form_type', '')
 
-        # Obter descrição automaticamente do stock
-        descricao = ''
-        if stock_id:
-            item_stock = StockFardamento.query.get(stock_id)
-            if item_stock:
-                descricao = item_stock.descricao or ''
+        # ----- Criação de Pedido (mantida igual) -----
+        if form_type == 'pedido':
+            tipo = request.form['tipo']
+            nome = request.form['nome']
+            tamanho = request.form['tamanho']
+            motivo = request.form['motivo']
+            descricao_motivo = request.form.get('descricao_motivo', '')
+            stock_id = request.form.get('stock_id', type=int)
 
-        novo = Fardamento(
-            bombeiro_id=current_user.id,
-            tipo=tipo,
-            nome=nome,
-            descricao=descricao,
-            tamanho=tamanho,
-            motivo=motivo,
-            descricao_motivo=descricao_motivo,
-            stock_id=stock_id,
-            estado='Pedido'
-        )
-        db.session.add(novo)
-        db.session.commit()
-        flash('Pedido de fardamento registado.', 'success')
-        return redirect(url_for('fardamento'))
+            descricao = ''
+            if stock_id:
+                item_stock = StockFardamento.query.get(stock_id)
+                if item_stock:
+                    descricao = item_stock.descricao or ''
 
-    # GET
+            novo = Fardamento(
+                bombeiro_id=current_user.id,
+                tipo=tipo,
+                nome=nome,
+                descricao=descricao,
+                tamanho=tamanho,
+                motivo=motivo,
+                descricao_motivo=descricao_motivo,
+                stock_id=stock_id,
+                estado='Pedido'
+            )
+            db.session.add(novo)
+            db.session.commit()
+            flash('Pedido de fardamento registado.', 'success')
+            return redirect(url_for('fardamento', tab='pedidos'))
+
+        # ----- Criação de Atribuição (NOVA) -----
+        elif form_type == 'atribuicao':
+            if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+                flash('Acesso restrito.', 'danger')
+                return redirect(url_for('fardamento', tab='atribuido'))
+
+            bombeiro_id = request.form['bombeiro_id']
+            tipo = request.form['tipo']
+            nome = request.form['nome']
+            tamanho = request.form['tamanho']
+            data_entrega = datetime.strptime(request.form['data_entrega'], '%Y-%m-%d').date()
+            idpedido = request.form.get('idpedido', type=int)   # opcional
+
+            nova_atrib = FardamentoAtribuido(
+                bombeiro_id=bombeiro_id,
+                tipo=tipo,
+                nome=nome,
+                tamanho=tamanho,
+                data_entrega=data_entrega,
+                estado='Entregue',
+                idpedido=idpedido
+            )
+            db.session.add(nova_atrib)
+
+            # Se veio de um pedido, atualiza o estado e data de entrega do pedido
+            if idpedido:
+                pedido = Fardamento.query.get(idpedido)
+                if pedido:
+                    pedido.estado = 'Concluido'
+                    pedido.data_entrega = datetime.utcnow()
+                    pedido.entregue = True
+
+            db.session.commit()
+            flash('Fardamento atribuído com sucesso.', 'success')
+            return redirect(url_for('fardamento', tab='atribuido'))
+
+    # ----- GET: carregar dados para ambos os separadores -----
+    # 1. Tipos (da tabela partilhada com o Stock Fardamento)
+    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
+
+    # 2. Pedidos (separador "Pedidos")
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento']:
         pedidos = Fardamento.query.order_by(Fardamento.data_registo.desc()).all()
     else:
         pedidos = Fardamento.query.filter_by(bombeiro_id=current_user.id)\
                                   .order_by(Fardamento.data_registo.desc()).all()
 
-    # Listas para dropdowns dinâmicos
+    # 3. Atribuições (separador "Atribuído")
+    bombeiro_id_filtro = request.args.get('bombeiro_id', type=int)
+    query_atrib = FardamentoAtribuido.query
+    if bombeiro_id_filtro:
+        query_atrib = query_atrib.filter_by(bombeiro_id=bombeiro_id_filtro)
+    atribuicoes = query_atrib.order_by(FardamentoAtribuido.data_entrega.desc()).all()
+
+    # Lista de bombeiros para filtro e dropdowns
+    bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+
+    # Lista de tipos de stock para os dropdowns dinâmicos (do pedido)
     tipos_stock = db.session.query(StockFardamento.tipo).distinct().all()
     tipos_stock = [t[0] for t in tipos_stock if t[0]]
     todos_itens_stock = StockFardamento.query.order_by(StockFardamento.nome).all()
+    tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
 
     return render_template('fardamento.html',
                            pedidos=pedidos,
+                           tipos=tipos,
                            tipos_stock=tipos_stock,
-                           todos_itens_stock=todos_itens_stock)
+                           todos_itens_stock=todos_itens_stock,
+                           atribuicoes=atribuicoes,
+                           bombeiros=bombeiros,
+                           aba=aba,
+                           bombeiro_id_filtro=bombeiro_id_filtro)
 
+@app.route('/fardamento/pedidos-analise/<int:bombeiro_id>')
+@login_required
+def pedidos_analise_bombeiro(bombeiro_id):
+    pedidos = Fardamento.query.filter_by(
+        bombeiro_id=bombeiro_id,
+        estado='Análise',
+        responsavel=True,
+        comando=True
+    ).order_by(Fardamento.data_registo.desc()).all()
+
+    result = [{
+        'id': p.id,
+        'tipo': p.tipo,
+        'nome': p.nome,
+        'tamanho': p.tamanho,
+        'data': p.data_registo.strftime('%d/%m/%Y') if p.data_registo else ''
+    } for p in pedidos]
+    return jsonify(result)
 
 @app.route('/tipos-farda-material/adicionar', methods=['POST'])
 @login_required
@@ -3348,7 +3427,36 @@ def apagar_tipo_farda_material(id):
     flash('Tipo removido.', 'info')
     return redirect(url_for('stock_fardamento'))
 
+@app.route('/fardamento-atribuido/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_fardamento_atribuido(id):
+    item = FardamentoAtribuido.query.get_or_404(id)
+    item.tipo = request.form['tipo']
+    item.nome = request.form['nome']
+    item.tamanho = request.form['tamanho']
+    item.data_entrega = datetime.strptime(request.form['data_entrega'], '%Y-%m-%d').date()
+    db.session.commit()
+    flash('Registo atualizado.', 'success')
+    return redirect(url_for('fardamento', tab='atribuido'))
 
+@app.route('/fardamento-atribuido/apagar/<int:id>')
+@login_required
+def apagar_fardamento_atribuido(id):
+    item = FardamentoAtribuido.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Registo removido.', 'info')
+    return redirect(url_for('fardamento', tab='atribuido'))
+
+@app.route('/fardamento-atribuido/devolver/<int:id>')
+@login_required
+def devolver_fardamento_atribuido(id):
+    item = FardamentoAtribuido.query.get_or_404(id)
+    item.data_devolucao = date.today()
+    item.estado = 'Devolvido'
+    db.session.commit()
+    flash('Devolução registada.', 'success')
+    return redirect(url_for('fardamento', tab='atribuido'))
 
 
 # ---------- Fardamento p/tipo ----------
@@ -4706,6 +4814,19 @@ def _importar_linha_fardamentos(row, row_num):
     db.session.add(f)
     db.session.flush()
     return None
+
+def _importar_linha_fardamento_atribuido(row, row_num):
+    # ler ID da coluna 0, etc.
+    id_original = int(row[0]) if row[0] else None
+    # ...
+    if id_original:
+        existente = FardamentoAtribuido.query.get(id_original)
+        if existente:
+            # atualizar existente
+            pass
+        else:
+            novo = FardamentoAtribuido(id=id_original, ...)
+            db.session.add(novo)
 
 
 def _importar_linha_oficina(row, row_num):

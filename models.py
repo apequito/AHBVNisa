@@ -196,6 +196,7 @@ class Fardamento(db.Model):
 
     bombeiro = db.relationship('Bombeiro', back_populates='fardamentos')
     stock = db.relationship('StockFardamento', back_populates='fardamentos')
+    atribuicao = db.relationship('FardamentoAtribuido', back_populates='pedido', uselist=False)
 
 # ---------- Stock Fardamento ----------
 class StockFardamento(db.Model):
@@ -335,17 +336,21 @@ class MensagemCorreio(db.Model):
 
 #-------------------Fardamento--------------
 class FardamentoAtribuido(db.Model):
-        __tablename__ = 'fardamento_atribuido'
-        id = db.Column(db.Integer, primary_key=True)
-        bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-        tipo = db.Column(db.String(50))
-        nome = db.Column(db.String(100))
-        tamanho = db.Column(db.String(20))
-        data_entrega = db.Column(db.Date, nullable=False)
-        data_devolucao = db.Column(db.Date, nullable=True)
-        estado = db.Column(db.String(20), default='Entregue')  # Entregue ou Devolvido
+    __tablename__ = 'fardamento_atribuido'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    tipo = db.Column(db.String(50))
+    nome = db.Column(db.String(100))
+    tamanho = db.Column(db.String(20))
+    data_entrega = db.Column(db.Date, nullable=False)
+    data_devolucao = db.Column(db.Date, nullable=True)
+    estado = db.Column(db.String(20), default='Entregue')
+    idpedido = db.Column(db.Integer, db.ForeignKey('fardamentos.id'), nullable=True)   # NOVO CAMPO
 
-        bombeiro = db.relationship('Bombeiro', backref='fardamentos_atribuidos')
+    bombeiro = db.relationship('Bombeiro', backref='fardamentos_atribuidos')
+    pedido = db.relationship('Fardamento', backref='atribuicao')   # relação com o pedido original
+    pedido = db.relationship('Fardamento', back_populates='atribuicao')
+
 
 class TipoFardaMaterial(db.Model):
     __tablename__ = 'tipos_farda_material'

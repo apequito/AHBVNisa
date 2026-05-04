@@ -1,78 +1,178 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Pedidos de Fardamento</h2>
+<h2><i class="bi bi-vest me-2"></i>Fardamento</h2>
 
-<div class="mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoPedido">+ Novo Pedido</button>
-    <a href="{{ url_for('exportar_fardamento') }}" class="btn btn-success ms-2">📥 Exportar Excel</a>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-    <button class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarFardamento">📤 Importar Excel</button>
-    {% endif %}
-</div>
+<!-- Abas -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if aba == 'pedidos' }}" href="{{ url_for('fardamento', tab='pedidos') }}">
+            <i class="bi bi-cart-plus me-1"></i> Pedidos
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if aba == 'atribuido' }}" href="{{ url_for('fardamento', tab='atribuido') }}">
+            <i class="bi bi-box-arrow-in-down me-1"></i> Atribuído
+        </a>
+    </li>
+</ul>
 
-<table class="table table-bordered table-sm">
-    <thead class="table-light">
-        <tr>
-            <th>ID</th><th>Data</th><th>Mec.</th><th>Bombeiro</th><th>Tipo</th><th>Nome</th>
-            <th>Tam.</th><th>Motivo</th><th>Estado</th>
-            <th>Resp</th><th>Cmd</th><th>Entregue</th><th>Data Entrega</th><th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in pedidos %}
-        <tr>
-            <td>{{ p.id }}</td>
-            <td>{{ p.data_registo.strftime('%d/%m/%Y') if p.data_registo else '' }}</td>
-            <td>{{ p.bombeiro.mecanografico }}</td>
-            <td>{{ p.bombeiro.nome }}</td>
-            <td>{{ p.tipo }}</td>
-            <td>{{ p.nome }}</td>
-            <td>{{ p.tamanho }}</td>
-            <td>{{ p.motivo }}</td>
-            <td><span class="badge bg-{{ 'warning' if p.estado=='Pedido' else ('info' if p.estado=='Análise' else 'success') }}">{{ p.estado }}</span></td>
-            <td>{{ '✔️' if p.responsavel else '❌' }}</td>
-            <td>{{ '✔️' if p.comando else '❌' }}</td>
-            <td>{{ '✔️' if p.entregue else '❌' }}</td>
-            <td>{{ p.data_entrega.strftime('%d/%m/%Y') if p.data_entrega else '' }}</td>
-            <td>
-                {% if current_user.id == p.bombeiro_id or current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                <button class="btn btn-sm btn-warning btn-editar-fardamento"
-                        data-id="{{ p.id }}"
-                        data-tipo="{{ p.tipo }}"
-                        data-nome="{{ p.nome }}"
-                        data-tamanho="{{ p.tamanho }}"
-                        data-motivo="{{ p.motivo }}"
-                        data-descricao_motivo="{{ p.descricao_motivo or '' }}"
-                        data-estado="{{ p.estado }}"
-                        data-responsavel="{{ 'on' if p.responsavel else '' }}"
-                        data-comando="{{ 'on' if p.comando else '' }}"
-                        data-entregue="{{ 'on' if p.entregue else '' }}"
-                        data-stock_id="{{ p.stock_id or '' }}"
-                        data-bs-toggle="modal" data-bs-target="#modalEditarFardamento"
-                        title="Editar">✏️</button>
-                <a href="{{ url_for('apagar_fardamento', id=p.id) }}" class="btn btn-sm btn-danger"
-                   onclick="return confirm('Apagar este pedido?')">🗑️</a>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if aba == 'pedidos' %}
+    <!-- ========== ABA PEDIDOS ========== -->
+    <div class="mb-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoPedido">
+            <i class="bi bi-plus-circle me-1"></i> Novo Pedido
+        </button>
+        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            <a href="{{ url_for('exportar_fardamento') }}" class="btn btn-outline-success ms-2">
+                <i class="bi bi-download me-1"></i> Exportar
+            </a>
+            <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarFardamento">
+                <i class="bi bi-upload me-1"></i> Importar
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th><th>Data</th><th>Bombeiro</th><th>Tipo</th><th>Nome</th>
+                        <th>Tam.</th><th>Motivo</th><th>Estado</th>
+                        <th>Resp</th><th>Cmd</th><th>Entregue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pedidos %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.data_registo.strftime('%d/%m/%Y') if p.data_registo else '' }}</td>
+                        <td>{{ p.bombeiro.nome }}</td>
+                        <td>{{ p.tipo }}</td>
+                        <td>{{ p.nome }}</td>
+                        <td>{{ p.tamanho }}</td>
+                        <td>{{ p.motivo }}</td>
+                        <td>
+                            {% if p.estado == 'Pedido' %}
+                                <span class="badge bg-warning text-dark">Pedido</span>
+                            {% elif p.estado == 'Análise' %}
+                                <span class="badge bg-info">Análise</span>
+                            {% elif p.estado == 'Concluido' %}
+                                <span class="badge bg-success">Concluído</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ '✔️' if p.responsavel else '❌' }}</td>
+                        <td>{{ '✔️' if p.comando else '❌' }}</td>
+                        <td>{{ '✔️' if p.entregue else '❌' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="11" class="text-center text-muted py-3">Nenhum pedido de fardamento.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <!-- ========== ABA ATRIBUÍDO ========== -->
+    <div class="mb-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAtribuir">
+            <i class="bi bi-plus-circle me-1"></i> Atribuir Fardamento
+        </button>
+        <form method="GET" class="row g-2 mt-2">
+            <input type="hidden" name="tab" value="atribuido">
+            <div class="col-auto">
+                <select name="bombeiro_id" class="form-select">
+                    <option value="">Todos os bombeiros</option>
+                    {% for b in bombeiros %}
+                    <option value="{{ b.id }}" {% if bombeiro_id_filtro == b.id %}selected{% endif %}>{{ b.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button>
+            </div>
+            <div class="col-auto ms-auto">
+                <a href="{{ url_for('imprimir_fardamento_bombeiro', bombeiro_id=bombeiro_id_filtro) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th><th>Bombeiro</th><th>Tipo</th><th>Nome</th><th>Tamanho</th>
+                        <th>Data Entrega</th><th>Estado</th><th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in atribuicoes %}
+                    <tr>
+                        <td>{{ a.id }}</td>
+                        <td>{{ a.bombeiro.nome }}</td>
+                        <td>{{ a.tipo }}</td>
+                        <td>{{ a.nome }}</td>
+                        <td>{{ a.tamanho }}</td>
+                        <td>{{ a.data_entrega.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if a.estado == 'Entregue' %}
+                                <span class="badge bg-success">Entregue</span>
+                            {% elif a.estado == 'Devolvido' %}
+                                <span class="badge bg-secondary">Devolvido</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-warning btn-editar-atrib"
+                                    data-id="{{ a.id }}"
+                                    data-tipo="{{ a.tipo }}"
+                                    data-nome="{{ a.nome }}"
+                                    data-tamanho="{{ a.tamanho }}"
+                                    data-data_entrega="{{ a.data_entrega.strftime('%Y-%m-%d') }}"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarAtribuido">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <a href="{{ url_for('apagar_fardamento_atribuido', id=a.id) }}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Apagar?')"><i class="bi bi-trash"></i></a>
+                            {% if a.estado == 'Entregue' %}
+                            <a href="{{ url_for('devolver_fardamento_atribuido', id=a.id) }}"
+                               class="btn btn-sm btn-outline-warning"
+                               onclick="return confirm('Registar devolução?')">Devolver</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-3">Nenhum fardamento atribuído.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+<!-- ========== MODAIS ========== -->
 
 <!-- Modal Novo Pedido -->
 <div class="modal fade" id="modalNovoPedido" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form method="POST">
+        <form method="POST" action="{{ url_for('fardamento') }}">
+            <input type="hidden" name="form_type" value="pedido">
             <div class="modal-content">
-                <div class="modal-header"><h5>Novo Pedido de Fardamento</h5></div>
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-cart-plus me-1"></i> Novo Pedido de Fardamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <label>Tipo</label>
                             <select name="tipo" id="tipoSelect" class="form-select mb-2" required onchange="carregarNomes()">
                                 <option value="">-- Selecione --</option>
-                                {% for t in tipos_stock %}
-                                <option value="{{ t }}">{{ t }}</option>
+                                {% for t in tipos %}
+                                <option value="{{ t.nome }}">{{ t.nome }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -86,13 +186,6 @@
                     </div>
                     <label>Descrição</label>
                     <input type="text" id="descricaoDisplay" class="form-control mb-2" readonly>
-
-                    <!-- Stock (visível apenas Admin/Comando/Fardamento) -->
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                    <label>Stock Disponível</label>
-                    <input type="text" id="stockDisplay" class="form-control mb-2" readonly>
-                    {% endif %}
-
                     <label>Tamanho</label>
                     <select name="tamanho" class="form-select mb-2" required>
                         <option>S</option><option>M</option><option>L</option>
@@ -106,98 +199,122 @@
                     </select>
                     <textarea name="descricao_motivo" id="descricaoMotivo" class="form-control mb-2" placeholder="Descreva o motivo" style="display:none;"></textarea>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-primary">Enviar Pedido</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enviar Pedido</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Editar Pedido -->
-<div class="modal fade" id="modalEditarFardamento" tabindex="-1">
+<!-- Modal Atribuir Fardamento -->
+<div class="modal fade" id="modalAtribuir" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form id="formEditarFardamento" method="POST" action="">
+        <form method="POST" action="{{ url_for('fardamento') }}">
+            <input type="hidden" name="form_type" value="atribuicao">
             <div class="modal-content">
-                <div class="modal-header"><h5>Editar Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-success text-white">
+                    <h5><i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <label>Tipo</label>
-                            <select name="tipo" id="edit_tipoSelect" class="form-select mb-2" onchange="carregarNomesEditar()">
+                            <label>Bombeiro</label>
+                            <select name="bombeiro_id" id="bombeiroAtribSelect" class="form-select mb-2" required onchange="carregarPedidosAnalise()">
                                 <option value="">-- Selecione --</option>
-                                {% for t in tipos_stock %}
-                                <option value="{{ t }}">{{ t }}</option>
+                                {% for b in bombeiros %}
+                                <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label>Nome</label>
-                            <select name="nome" id="edit_nomeSelect" class="form-select mb-2" onchange="preencherDetalhesEditar()">
-                                <option value="">-- Escolha --</option>
+                            <label>Pedido de Origem (opcional)</label>
+                            <select name="idpedido" id="pedidoOrigemSelect" class="form-select mb-2" onchange="preencherAtribuicaoPedido()">
+                                <option value="">-- Nenhum --</option>
                             </select>
-                            <input type="hidden" name="stock_id" id="edit_stockIdHidden">
                         </div>
                     </div>
-                    <label>Descrição</label>
-                    <input type="text" id="edit_descricaoDisplay" class="form-control mb-2" readonly>
-
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                    <label>Stock Disponível</label>
-                    <input type="text" id="edit_stockDisplay" class="form-control mb-2" readonly>
-                    {% endif %}
-
+                    <div id="tabelaPedidosPendentes" class="mb-2" style="display: none;">
+                        <h6>Pedidos em Análise (assinados pelo Responsável e Comando)</h6>
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Tamanho</th><th>Selecionar</th></tr>
+                                </thead>
+                                <tbody id="tabelaAnaliseBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <label>Tipo</label>
+                    <select name="tipo" id="atribTipo" class="form-select mb-2" required>
+                        <option value="">-- Selecione --</option>
+                        {% for t in tipos %}
+                        <option value="{{ t.nome }}">{{ t.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Nome / Descrição</label>
+                    <input type="text" name="nome" id="atribNome" class="form-control mb-2" placeholder="Ex: Casaco Ignífugo" required>
                     <label>Tamanho</label>
-                    <select name="tamanho" id="edit_tamanho" class="form-select mb-2" required>
-                        <option>S</option><option>M</option><option>L</option>
-                        <option>XL</option><option>XXL</option><option>XXXL</option>
-                    </select>
-                    <label>Motivo</label>
-                    <select name="motivo" id="edit_motivoSelect" class="form-select mb-2" onchange="toggleDescricaoMotivoEditar()">
-                        <option value="Novo">Novo</option>
-                        <option value="Troca">Troca</option>
-                        <option value="Abatido">Abatido</option>
-                    </select>
-                    <textarea name="descricao_motivo" id="edit_descricaoMotivo" class="form-control mb-2" placeholder="Descreva o motivo"></textarea>
-
-                    <!-- Campos administrativos -->
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                    <hr><h6>Gestão do Pedido</h6>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="responsavel" id="edit_responsavel">
-                        <label class="form-check-label" for="edit_responsavel">Responsável</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="comando" id="edit_comando">
-                        <label class="form-check-label" for="edit_comando">Comando</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="entregue" id="edit_entregue" disabled>
-                        <label class="form-check-label" for="edit_entregue">Entregue</label>
-                    </div>
-                    <label>Estado</label>
-                    <select name="estado" id="edit_estado" class="form-select mb-2">
-                        <option value="Pedido">Pedido</option>
-                        <option value="Análise">Análise</option>
-                        <option value="Concluido">Concluído</option>
-                    </select>
-                    {% endif %}
+                    <input type="text" name="tamanho" id="atribTamanho" class="form-control mb-2" placeholder="M, L, XL...">
+                    <label>Data de Entrega</label>
+                    <input type="date" name="data_entrega" class="form-control mb-2" required>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Atribuir</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Importar -->
-{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
+<!-- Modal Editar Atribuído -->
+<div class="modal fade" id="modalEditarAtribuido" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formEditarAtrib" action="">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5><i class="bi bi-pencil me-1"></i> Editar Atribuição</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label>Tipo</label>
+                    <select name="tipo" id="edit_atrib_tipo" class="form-select mb-2">
+                        {% for t in tipos %}
+                        <option value="{{ t.nome }}">{{ t.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Nome</label>
+                    <input type="text" name="nome" id="edit_atrib_nome" class="form-control mb-2" required>
+                    <label>Tamanho</label>
+                    <input type="text" name="tamanho" id="edit_atrib_tamanho" class="form-control mb-2">
+                    <label>Data de Entrega</label>
+                    <input type="date" name="data_entrega" id="edit_atrib_data" class="form-control mb-2" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar (exemplo simplificado) -->
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
 <div class="modal fade" id="modalImportarFardamento" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('importar_fardamento') }}" enctype="multipart/form-data">
             <div class="modal-content">
-                <div class="modal-header"><h5>Importar Fardamento (Excel)</h5></div>
+                <div class="modal-header bg-info text-white">
+                    <h5><i class="bi bi-upload me-1"></i> Importar Fardamento (Excel)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Importar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -205,7 +322,7 @@
 {% endif %}
 
 <script>
-// ---- Funções para o Modal Novo ----
+// ---------- Funções partilhadas ----------
 function carregarNomes() {
     const tipo = document.getElementById('tipoSelect').value;
     const nomeSelect = document.getElementById('nomeSelect');
@@ -236,10 +353,6 @@ function preencherDetalhes() {
     if (selected && selected.value) {
         document.getElementById('descricaoDisplay').value = selected.getAttribute('data-descricao') || '';
         document.getElementById('stockIdHidden').value = selected.getAttribute('data-id') || '';
-        const stockEl = document.getElementById('stockDisplay');
-        if (stockEl) {
-            stockEl.value = selected.getAttribute('data-stock') || '0';
-        }
         const tamanhoSugerido = selected.getAttribute('data-tamanho');
         if (tamanhoSugerido) {
             const tamanhoSelect = document.querySelector('select[name="tamanho"]');
@@ -259,121 +372,87 @@ function toggleDescricaoMotivo() {
     descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
 }
 
-// ---- Funções para o Modal Editar ----
-function carregarNomesEditar() {
-    const tipo = document.getElementById('edit_tipoSelect').value;
-    const nomeSelect = document.getElementById('edit_nomeSelect');
-    nomeSelect.innerHTML = '<option value="">-- Carregando... --</option>';
-    if (!tipo) {
-        nomeSelect.innerHTML = '<option value="">-- Escolha um tipo primeiro --</option>';
+// ---------- Atribuição ----------
+async function carregarPedidosAnalise() {
+    const bombeiroId = document.getElementById('bombeiroAtribSelect').value;
+    const tabelaBody = document.getElementById('tabelaAnaliseBody');
+    const selectPedido = document.getElementById('pedidoOrigemSelect');
+    if (!bombeiroId) {
+        document.getElementById('tabelaPedidosPendentes').style.display = 'none';
+        selectPedido.innerHTML = '<option value="">-- Nenhum --</option>';
         return;
     }
-    fetch('/fardamento/nomes-por-tipo/' + encodeURIComponent(tipo))
+    fetch(`/fardamento/pedidos-analise/${bombeiroId}`)
         .then(res => res.json())
-        .then(data => {
-            nomeSelect.innerHTML = '<option value="">-- Selecione --</option>';
-            data.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.nome;
-                opt.setAttribute('data-id', item.id);
-                opt.setAttribute('data-descricao', item.descricao);
-                opt.setAttribute('data-tamanho', item.tamanho);
-                opt.setAttribute('data-stock', item.stock);
-                opt.textContent = item.nome;
-                nomeSelect.appendChild(opt);
-            });
+        .then(pedidos => {
+            selectPedido.innerHTML = '<option value="">-- Nenhum --</option>';
+            tabelaBody.innerHTML = '';
+            if (pedidos.length > 0) {
+                document.getElementById('tabelaPedidosPendentes').style.display = 'block';
+                pedidos.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `#${p.id} - ${p.tipo} - ${p.nome}`;
+                    selectPedido.appendChild(opt);
+
+                    const row = tabelaBody.insertRow();
+                    row.insertCell().textContent = p.data;
+                    row.insertCell().textContent = p.tipo;
+                    row.insertCell().textContent = p.nome;
+                    row.insertCell().textContent = p.tamanho;
+                    const tdCheck = row.insertCell();
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'idpedido';
+                    radio.value = p.id;
+                    radio.addEventListener('change', function() {
+                        document.getElementById('pedidoOrigemSelect').value = p.id;
+                        preencherAtribuicaoPedido();
+                    });
+                    tdCheck.appendChild(radio);
+                });
+            } else {
+                document.getElementById('tabelaPedidosPendentes').style.display = 'none';
+            }
         });
 }
 
-function preencherDetalhesEditar() {
-    const selected = document.getElementById('edit_nomeSelect').selectedOptions[0];
-    if (selected && selected.value) {
-        document.getElementById('edit_descricaoDisplay').value = selected.getAttribute('data-descricao') || '';
-        document.getElementById('edit_stockIdHidden').value = selected.getAttribute('data-id') || '';
-        const stockEl = document.getElementById('edit_stockDisplay');
-        if (stockEl) {
-            stockEl.value = selected.getAttribute('data-stock') || '0';
-        }
-        const tamanhoSugerido = selected.getAttribute('data-tamanho');
-        if (tamanhoSugerido) {
-            const tamanhoSelect = document.getElementById('edit_tamanho');
-            for (let opt of tamanhoSelect.options) {
-                if (opt.value === tamanhoSugerido) {
-                    opt.selected = true;
-                    break;
+function preencherAtribuicaoPedido() {
+    const select = document.getElementById('pedidoOrigemSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption.value) {
+        const texto = selectedOption.textContent;
+        const partes = texto.split(' - ');
+        const tipo = partes[1] || '';
+        const nome = partes[2] || '';
+        document.getElementById('atribTipo').value = tipo;
+        document.getElementById('atribNome').value = nome;
+        const radios = document.querySelectorAll('input[name="idpedido"]');
+        radios.forEach(r => {
+            if (r.checked) {
+                const row = r.closest('tr');
+                if (row) {
+                    const tamanho = row.cells[3].textContent;
+                    document.getElementById('atribTamanho').value = tamanho;
                 }
             }
-        }
+        });
+    } else {
+        document.getElementById('atribTipo').value = '';
+        document.getElementById('atribNome').value = '';
+        document.getElementById('atribTamanho').value = '';
     }
 }
 
-function toggleDescricaoMotivoEditar() {
-    const motivo = document.getElementById('edit_motivoSelect').value;
-    const descricaoMotivo = document.getElementById('edit_descricaoMotivo');
-    descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
-}
-
-// Preencher modal de edição
-const modalEditarFardamento = document.getElementById('modalEditarFardamento');
-modalEditarFardamento.addEventListener('show.bs.modal', function (event) {
+// ---------- Editar Atribuição ----------
+document.getElementById('modalEditarAtribuido').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const id = button.getAttribute('data-id');
-    document.getElementById('formEditarFardamento').action = '/fardamento/editar/' + id;
-
-    document.getElementById('edit_tipoSelect').value = button.getAttribute('data-tipo') || '';
-    document.getElementById('edit_motivoSelect').value = button.getAttribute('data-motivo') || 'Novo';
-    document.getElementById('edit_tamanho').value = button.getAttribute('data-tamanho') || 'M';
-    document.getElementById('edit_descricaoMotivo').value = button.getAttribute('data-descricao_motivo') || '';
-    toggleDescricaoMotivoEditar();
-
-    // Carregar nomes e selecionar o correto
-    const tipo = button.getAttribute('data-tipo');
-    const nomeSelecionado = button.getAttribute('data-nome');
-    const editNomeSelect = document.getElementById('edit_nomeSelect');
-    if (tipo) {
-        fetch('/fardamento/nomes-por-tipo/' + encodeURIComponent(tipo))
-            .then(res => res.json())
-            .then(data => {
-                editNomeSelect.innerHTML = '<option value="">-- Selecione --</option>';
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.nome;
-                    opt.setAttribute('data-id', item.id);
-                    opt.setAttribute('data-descricao', item.descricao);
-                    opt.setAttribute('data-tamanho', item.tamanho);
-                    opt.setAttribute('data-stock', item.stock);
-                    opt.textContent = item.nome;
-                    if (item.nome === nomeSelecionado) opt.selected = true;
-                    editNomeSelect.appendChild(opt);
-                });
-                if (nomeSelecionado) {
-                    preencherDetalhesEditar();
-                }
-            });
-    }
-
-    // Checkboxes administrativas
-    if (document.getElementById('edit_responsavel')) {
-        document.getElementById('edit_responsavel').checked = (button.getAttribute('data-responsavel') === 'on');
-        document.getElementById('edit_comando').checked = (button.getAttribute('data-comando') === 'on');
-        const entregueCheck = document.getElementById('edit_entregue');
-        const respCheck = document.getElementById('edit_responsavel').checked;
-        const cmdCheck = document.getElementById('edit_comando').checked;
-        entregueCheck.disabled = !(respCheck && cmdCheck);
-        entregueCheck.checked = (button.getAttribute('data-entregue') === 'on' && !entregueCheck.disabled);
-        document.getElementById('edit_estado').value = button.getAttribute('data-estado') || 'Pedido';
-
-        document.getElementById('edit_responsavel').addEventListener('change', atualizarEntregueEditar);
-        document.getElementById('edit_comando').addEventListener('change', atualizarEntregueEditar);
-    }
+    document.getElementById('formEditarAtrib').action = '/fardamento-atribuido/editar/' + id;
+    document.getElementById('edit_atrib_tipo').value = button.getAttribute('data-tipo') || '';
+    document.getElementById('edit_atrib_nome').value = button.getAttribute('data-nome') || '';
+    document.getElementById('edit_atrib_tamanho').value = button.getAttribute('data-tamanho') || '';
+    document.getElementById('edit_atrib_data').value = button.getAttribute('data-data_entrega') || '';
 });
-
-function atualizarEntregueEditar() {
-    const resp = document.getElementById('edit_responsavel').checked;
-    const cmd = document.getElementById('edit_comando').checked;
-    const entregueCheck = document.getElementById('edit_entregue');
-    entregueCheck.disabled = !(resp && cmd);
-    if (entregueCheck.disabled) entregueCheck.checked = false;
-}
 </script>
 {% endblock %}
