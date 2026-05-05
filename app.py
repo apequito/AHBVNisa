@@ -6394,27 +6394,22 @@ def enviar_contagem_ecins():
     ecins = query.order_by(Ecin.bombeiro_id).all()
 
     from collections import defaultdict
-    dados_por_bombeiro = defaultdict(lambda: {'registos': [], 'total': 0.0})
+    contagem_por_bombeiro = defaultdict(int)
     for ec in ecins:
-        b = ec.bombeiro
-        dados_por_bombeiro[b.id]['registos'].append(ec)
-        dados_por_bombeiro[b.id]['total'] += ec.valor or 0.0
-        dados_por_bombeiro[b.id]['nome'] = b.nome
+        contagem_por_bombeiro[ec.bombeiro_id] += 1
 
     enviadas = 0
-    for bombeiro_id, info in dados_por_bombeiro.items():
-        nome = info['nome']
-        total = info['total']
-        corpo = f"Contagem de ECINs/ELACs – {mes}/{ano}\n\n"
-        corpo += f"Olá {nome},\n\nSegue a contagem dos seus ECINs/ELACs do mês:\n"
-        for ec in info['registos']:
-            corpo += f"- {ec.data.strftime('%d/%m/%Y')} | {ec.turno} | {ec.categoria} | Valor: {ec.valor if ec.valor else 0.0} €\n"
-        corpo += f"\nValor total: {total:.2f} €\n\nObrigado."
+    for bombeiro_id, total in contagem_por_bombeiro.items():
+        bombeiro = Bombeiro.query.get(bombeiro_id)
+        if not bombeiro:
+            continue
+
+        corpo = f"O(A) bombeiro(a) {bombeiro.nome} teve {total} turno(s) de {'ECIN' if cat == 'ECIN' else 'ELAC' if cat == 'ELAC' else 'ECIN/ELAC'} no mês de {mes}/{ano}."
 
         msg = MensagemCorreio(
             remetente_id=current_user.id,
             destinatario_id=bombeiro_id,
-            assunto=f'Contagem ECINs/ELACs {mes}/{ano}',
+            assunto=f'Contagem de turnos {mes}/{ano}',
             corpo=corpo,
             data_envio=datetime.utcnow(),
             lida=False,

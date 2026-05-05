@@ -206,9 +206,9 @@
                     </a>
                 {% endif %}
                 <!-- Botão Valor Global -->
-                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalValorGlobal">
-                    <i class="bi bi-cash-coin me-1"></i> Valor Global
-                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="definirValorGlobal()">
+    <i class="bi bi-cash-coin me-1"></i> Valor Global
+</button>
                 <!-- Formulário Enviar Contagem -->
                 <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
                     <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
@@ -307,19 +307,21 @@
 
 <!-- Script para garantir que o modal abre -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const btnValorGlobal = document.querySelector('[data-bs-target="#modalValorGlobal"]');
-        if (btnValorGlobal) {
-            btnValorGlobal.addEventListener('click', function(e) {
-                // Não impede o comportamento padrão, apenas tranquiliza
-                // O Bootstrap já deve abrir o modal, mas se falhar, forçamos:
-                const modalEl = document.getElementById('modalValorGlobal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                    modal.show();
-                }
-            });
-        }
-    });
+function definirValorGlobal() {
+    const valor = prompt("Insira o valor global para todos os registos ECIN/ELAC do mês:");
+    if (valor !== null && !isNaN(valor) && valor.trim() !== '') {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for('atribuir_valor_global') }}';
+        form.innerHTML = `
+            <input type="hidden" name="tab" value="ecins">
+            <input type="hidden" name="mes" value="{{ mes_ecin }}">
+            <input type="hidden" name="ano" value="{{ ano_ecin }}">
+            <input type="hidden" name="valor_global" value="${valor}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 </script>
 {% endblock %}
