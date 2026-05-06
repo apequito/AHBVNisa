@@ -5,7 +5,7 @@
 <ul class="nav nav-tabs mb-4" id="correioTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">
-            <i class="bi bi-inbox me-1"></i> Caixa de Entrada 
+            <i class="bi bi-inbox me-1"></i> Caixa de Entrada
             {% set naolidas = caixa_entrada|selectattr('lida', 'equalto', False)|list %}
             {% if naolidas %}<span class="badge bg-danger ms-1">{{ naolidas|length }}</span>{% endif %}
         </button>
@@ -20,17 +20,22 @@
 <div class="tab-content" id="correioTabContent">
     <!-- Caixa de Entrada -->
     <div class="tab-pane fade show active" id="entrada" role="tabpanel">
+        <!-- Filtro -->
+        <div class="btn-group mb-3">
+            <a href="{{ url_for('correio', filtro='todas') }}" class="btn btn-sm btn-outline-secondary {{ 'active' if filtro_atual == 'todas' }}">Todas</a>
+            <a href="{{ url_for('correio', filtro='naolidas') }}" class="btn btn-sm btn-outline-secondary {{ 'active' if filtro_atual == 'naolidas' }}">Não Lidas</a>
+            <a href="{{ url_for('correio', filtro='lidas') }}" class="btn btn-sm btn-outline-secondary {{ 'active' if filtro_atual == 'lidas' }}">Lidas</a>
+        </div>
+
         {% if caixa_entrada %}
             <div class="mb-2">
-                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas()">🗑️ Eliminar Correio</button>
+                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas('entrada')">🗑️ Eliminar Selecionadas</button>
             </div>
             <div class="list-group">
                 {% for msg in caixa_entrada %}
                 <div class="list-group-item p-0">
-                    <div class="d-flex justify-content-between align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}">
-                        <div class="form-check">
-                            <input class="form-check-input check-correio" type="checkbox" value="{{ msg.id }}">
-                        </div>
+                    <div class="d-flex align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}">
+                        <input type="checkbox" class="form-check-input check-correio" value="{{ msg.id }}">
                         <div class="flex-grow-1 ms-2" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}">
                             <div class="d-flex justify-content-between">
                                 <strong>{{ msg.assunto }}</strong>
@@ -72,15 +77,21 @@
             </button>
         </div>
         {% if enviadas %}
+            <div class="mb-2">
+                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas('enviar')">🗑️ Eliminar Selecionadas</button>
+            </div>
             <div class="list-group">
                 {% for msg in enviadas %}
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ msg.assunto }}</strong>
-                        <small class="text-muted">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                <div class="list-group-item d-flex align-items-center">
+                    <input type="checkbox" class="form-check-input check-correio" value="{{ msg.id }}">
+                    <div class="flex-grow-1 ms-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ msg.assunto }}</strong>
+                            <small class="text-muted">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
+                        <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
                     </div>
-                    <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
-                    <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
                 </div>
                 {% endfor %}
             </div>
@@ -145,8 +156,8 @@
 </div>
 
 <script>
-function eliminarSelecionadas() {
-    const checkboxes = document.querySelectorAll('.check-correio:checked');
+function eliminarSelecionadas(aba) {
+    const checkboxes = document.querySelectorAll('#' + aba + ' .check-correio:checked');
     if (checkboxes.length === 0) {
         alert('Selecione pelo menos uma mensagem para eliminar.');
         return;
@@ -168,7 +179,6 @@ function eliminarSelecionadas() {
     form.submit();
 }
 
-// --- Funções já existentes (nova mensagem, resposta, etc.) ---
 function novaMensagem() {
     document.getElementById('modalTitulo').textContent = 'Nova Mensagem';
     document.getElementById('modalAssunto').value = 'Sem assunto';

@@ -68,7 +68,22 @@ def create_tables():
             db.session.add_all([v1, v2])
         db.session.commit()
 
-
+    # Criar utilizador "Sistema" para mensagens automáticas
+    if not Bombeiro.query.filter_by(mecanografico='SISTEMA').first():
+        sistema = Bombeiro(
+            numero_interno='B999',
+            mecanografico='SISTEMA',
+            nome='Sistema de Alertas',
+            nomecompleto='Sistema de Alertas Automáticos',
+            email='sistema@quartel.pt',
+            password_hash=generate_password_hash('sistema'),
+            posto='Sistema',
+            tipo_bombeiro='Voluntário',
+            ativo=True,
+            tipo_user='User'
+        )
+        db.session.add(sistema)
+        db.session.commit()
 # ---------- Autenticação ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -774,28 +789,33 @@ def exportar_gestao_frota():
 
 
 def verificar_inspecao_proxima(viatura):
-    """Envia correio se faltar menos de 30 dias para a inspeção periódica."""
     if not viatura.gestao_frota or not viatura.gestao_frota.inspecao_periodica:
         return
     hoje = date.today()
-    dias_restantes = (viatura.gestao_frota.inspecao_periodica - hoje).days
-    if 0 < dias_restantes <= 30:
+    dias = (viatura.gestao_frota.inspecao_periodica - hoje).days
+    if 0 < dias <= 30:
+        # Destinatários: Comando e Oficina
+        destinatarios = Bombeiro.query.filter(
+            (Bombeiro.resp_departamento == 'Comando') |
+            (func.lower(Bombeiro.resp_departamento) == 'oficina'),
+            Bombeiro.ativo == True
+        ).all()
+
+        remetente = Bombeiro.query.filter_by(mecanografico='SISTEMA').first()
+        if not remetente:
+            return
+
         corpo = (
             f"⚠️ Alerta de Inspeção Periódica\n\n"
             f"A viatura {viatura.matricula} ({viatura.nomenclatura}) "
-            f"tem a inspeção periódica agendada para {viatura.gestao_frota.inspecao_periodica.strftime('%d/%m/%Y')}.\n"
-            f"Faltam {dias_restantes} dias.\n\n"
+            f"tem a inspeção agendada para {viatura.gestao_frota.inspecao_periodica.strftime('%d/%m/%Y')}.\n"
+            f"Faltam {dias} dias.\n\n"
             f"Por favor, tome as devidas providências."
         )
-        destinatarios = Bombeiro.query.filter(
-            (Bombeiro.tipo_user == 'Admin') |
-            (Bombeiro.resp_departamento == 'Comando') |
-            (Bombeiro.resp_departamento == 'Oficina'),
-            Bombeiro.ativo == True
-        ).all()
+
         for dest in destinatarios:
             msg = MensagemCorreio(
-                remetente_id=dest.id,
+                remetente_id=remetente.id,
                 destinatario_id=dest.id,
                 assunto=f'⚠️ Inspeção próxima – {viatura.matricula}',
                 corpo=corpo,
@@ -806,7 +826,6 @@ def verificar_inspecao_proxima(viatura):
             )
             db.session.add(msg)
         db.session.commit()
-
 
 # ---------- Importar Gestão Frota ----------
 
@@ -4167,16 +4186,22 @@ def categorias_farmacia():
 
 
 def verificar_stock_minimo(produto):
-    """Envia correio aos responsáveis se o stock estiver ≤ infstock."""
-    if produto.infstock is None or produto.stock > produto.infstock:
+    if produto.infstock is None or produto.infstock == 0:
+        return
+    if produto.stock > produto.infstock:
         return
 
+    # Destinatários: apenas Comando e responsáveis da Farmácia
     destinatarios = Bombeiro.query.filter(
-        (Bombeiro.tipo_user == 'Admin') |
         (Bombeiro.resp_departamento == 'Comando') |
-        (Bombeiro.resp_departamento == 'Farmacia'),
+        (func.lower(Bombeiro.resp_departamento) == 'farmacia'),
         Bombeiro.ativo == True
     ).all()
+
+    # Remetente: utilizador "Sistema"
+    remetente = Bombeiro.query.filter_by(mecanografico='SISTEMA').first()
+    if not remetente:
+        return
 
     corpo = (
         f"⚠️ Alerta de Stock Mínimo\n\n"
@@ -4188,9 +4213,8 @@ def verificar_stock_minimo(produto):
 
     for dest in destinatarios:
         msg = MensagemCorreio(
-            remetente_id=dest.id,
+            remetente_id=remetente.id,
             destinatario_id=dest.id,
-            departamento=None,
             assunto=f'⚠️ Stock mínimo atingido – {produto.nome}',
             corpo=corpo,
             data_envio=datetime.utcnow(),
@@ -4200,6 +4224,7 @@ def verificar_stock_minimo(produto):
         )
         db.session.add(msg)
     db.session.commit()
+
 
 #----------- Exportar Stock Farmácia--------------
 @app.route('/stock-farmacia/exportar')
@@ -4647,23 +4672,31 @@ def central_atividade_mes(ano, mes):
 @app.route('/correio')
 @login_required
 def correio():
-    # Caixa de entrada: mensagens onde o current_user é destinatário OU pertence ao departamento destino
-    caixa_entrada = MensagemCorreio.query.filter(
-        (
-                (MensagemCorreio.destinatario_id == current_user.id) |
-                (MensagemCorreio.departamento == current_user.resp_departamento)
-        ),
-        MensagemCorreio.remetente_id != current_user.id,  # ← exclui as enviadas pelo próprio
-        MensagemCorreio.apagada_destinatario == False
-    ).order_by(MensagemCorreio.data_envio.desc()).all()
+    filtro = request.args.get('filtro', 'todas')  # 'todas', 'lidas', 'naolidas'
 
-    # Mensagens enviadas pelo current_user (histórico)
+    # Caixa de entrada
+    query_entrada = MensagemCorreio.query.filter(
+        (
+            (MensagemCorreio.destinatario_id == current_user.id) |
+            (MensagemCorreio.departamento == current_user.resp_departamento)
+        ),
+        MensagemCorreio.remetente_id != current_user.id,
+        MensagemCorreio.apagada_destinatario == False
+    )
+
+    if filtro == 'lidas':
+        query_entrada = query_entrada.filter_by(lida=True)
+    elif filtro == 'naolidas':
+        query_entrada = query_entrada.filter_by(lida=False)
+
+    caixa_entrada = query_entrada.order_by(MensagemCorreio.data_envio.desc()).all()
+
+    # Enviadas
     enviadas = MensagemCorreio.query.filter(
         MensagemCorreio.remetente_id == current_user.id,
         MensagemCorreio.apagada_remetente == False
     ).order_by(MensagemCorreio.data_envio.desc()).all()
 
-    # Para o formulário de envio
     bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
     departamentos = list(set(b.resp_departamento for b in bombeiros if b.resp_departamento))
 
@@ -4671,7 +4704,8 @@ def correio():
                            caixa_entrada=caixa_entrada,
                            enviadas=enviadas,
                            bombeiros=bombeiros,
-                           departamentos=departamentos)
+                           departamentos=departamentos,
+                           filtro_atual=filtro)
 
 
 @app.route('/correio/enviar', methods=['POST'])
@@ -6625,7 +6659,7 @@ def imprimir_contabilidade_elac():
 @app.route('/correio/apagar-em-massa', methods=['POST'])
 @login_required
 def apagar_correio_massa():
-    ids = request.form.getlist('ids[]')  # lista de IDs enviados pelo formulário
+    ids = request.form.getlist('ids[]')
     for msg_id in ids:
         msg = MensagemCorreio.query.get(int(msg_id))
         if msg:
