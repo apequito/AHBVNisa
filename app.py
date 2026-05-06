@@ -6462,6 +6462,5 @@ def imprimir_contabilidade_elac():
 
 
 
-
 #if __name__ == '__main__':
     #app.run(debug=True)
