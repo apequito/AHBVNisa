@@ -41,6 +41,16 @@
 </div>
 {% endif %}
 
+<!-- Filtro por estado (Todos / Confirmadas / Não Confirmadas) -->
+<div class="btn-group mb-3">
+    <a href="{{ url_for('disponibilidades', filtro='todas', mes=mes, ano=ano, bombeiro_id=bombeiro_id) }}"
+       class="btn btn-sm btn-outline-secondary {{ 'active' if filtro_atual == 'todas' }}">Todos</a>
+    <a href="{{ url_for('disponibilidades', filtro='confirmadas', mes=mes, ano=ano, bombeiro_id=bombeiro_id) }}"
+       class="btn btn-sm btn-outline-success {{ 'active' if filtro_atual == 'confirmadas' }}">Confirmadas</a>
+    <a href="{{ url_for('disponibilidades', filtro='nao_confirmadas', mes=mes, ano=ano, bombeiro_id=bombeiro_id) }}"
+       class="btn btn-sm btn-outline-warning {{ 'active' if filtro_atual == 'nao_confirmadas' }}">Não Confirmadas</a>
+</div>
+
 <!-- Tabela de disponibilidades -->
 <table class="table table-sm">
     <thead>

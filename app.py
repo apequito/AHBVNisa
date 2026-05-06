@@ -728,7 +728,10 @@ def editar_gestao_frota(id):
     registo.outros_apontamentos = request.form.get('outros_apontamentos', '')
 
     db.session.commit()
-    verificar_inspecao_proxima(viatura)
+    v = registo.viatura  # ← obter a viatura associada
+    if v:
+        verificar_inspecao_proxima(v)
+
     flash('Registo atualizado.', 'success')
     return redirect(url_for('gestao_frota'))
 
@@ -2709,6 +2712,7 @@ def disponibilidades():
     bombeiro_id = request.args.get('bombeiro_id', type=int)
     mes = request.args.get('mes', type=int)
     ano = request.args.get('ano', type=int)
+    filtro = request.args.get('filtro', 'todas')   # NOVO
 
     query = Disponibilidade.query
 
@@ -2728,6 +2732,12 @@ def disponibilidades():
     elif ano:
         query = query.filter(db.extract('year', Disponibilidade.data) == ano)
 
+    # Filtro por estado
+    if filtro == 'confirmadas':
+        query = query.filter_by(confirmada=True)
+    elif filtro == 'nao_confirmadas':
+        query = query.filter_by(confirmada=False)
+
     lista = query.order_by(Disponibilidade.data.desc()).all()
 
     # Lista de bombeiros ativos (apenas para Admin/Comando)
@@ -2742,7 +2752,8 @@ def disponibilidades():
                            now=now,
                            bombeiro_id=bombeiro_id,
                            mes=mes,
-                           ano=ano)
+                           ano=ano,
+                           filtro_atual=filtro)   # NOVO
 
 @app.route('/disponibilidades/apagar', methods=['POST'])
 @login_required
