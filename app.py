@@ -921,7 +921,6 @@ def imprimir_gestao_frota(viatura_id):
 def avarias():
     tab = request.args.get('tab', 'registo')
 
-    # Se for POST, é criação de uma nova avaria (mantido como antes)
     if request.method == 'POST':
         viatura_id = request.form['viatura_id']
         descricao = request.form['descricao']
@@ -952,32 +951,36 @@ def avarias():
         return redirect(url_for('avarias', tab='registo'))
 
     # ---- GET ----
-    # Inicializar variáveis de filtro
     filtro_viatura_id = request.args.get('viatura_id', type=int)
     filtro_mes = request.args.get('mes', type=int)
     filtro_ano = request.args.get('ano', type=int)
     filtro_estado = request.args.get('estado', '')
 
-    # Lista de todas as viaturas para os filtros
     todas_viaturas = Viatura.query.order_by(Viatura.matricula).all()
 
-    # Dados para a aba Registo (sempre disponíveis para o formulário e tabela principal)
-    viaturas = Viatura.query.all()  # para o modal de criação
-    avarias_lista = Avaria.query.order_by(Avaria.data_reporte.desc()).limit(100).all()  # opcional: limite para não pesar
+    # --- Aba Registo ---
+    query_registo = Avaria.query
+    if current_user.tipo_user == 'User' and current_user.resp_departamento not in ['Oficina', 'Comando']:
+        query_registo = query_registo.filter(Avaria.reportado_por == current_user.id)
+    avarias_lista = query_registo.order_by(Avaria.data_reporte.desc()).limit(100).all()
 
-    # Dados para a aba Histórico (apenas quando a aba está ativa)
+    viaturas = Viatura.query.all()   # para o modal de criação (disponível para todos)
+
+    # --- Aba Histórico ---
     historico_avarias = []
     if tab == 'historico':
-        query = Avaria.query
+        query_hist = Avaria.query
         if filtro_viatura_id:
-            query = query.filter_by(viatura_id=filtro_viatura_id)
+            query_hist = query_hist.filter_by(viatura_id=filtro_viatura_id)
         if filtro_mes:
-            query = query.filter(db.extract('month', Avaria.data_reporte) == filtro_mes)
+            query_hist = query_hist.filter(db.extract('month', Avaria.data_reporte) == filtro_mes)
         if filtro_ano:
-            query = query.filter(db.extract('year', Avaria.data_reporte) == filtro_ano)
+            query_hist = query_hist.filter(db.extract('year', Avaria.data_reporte) == filtro_ano)
         if filtro_estado:
-            query = query.filter_by(estado=filtro_estado)
-        historico_avarias = query.order_by(Avaria.data_reporte.desc()).all()
+            query_hist = query_hist.filter_by(estado=filtro_estado)
+        if current_user.tipo_user == 'User' and current_user.resp_departamento not in ['Oficina', 'Comando']:
+            query_hist = query_hist.filter(Avaria.reportado_por == current_user.id)
+        historico_avarias = query_hist.order_by(Avaria.data_reporte.desc()).all()
 
     return render_template('avarias.html',
                            avarias=avarias_lista,
@@ -4359,43 +4362,50 @@ def checklist_ambulancia():
 
         # Produtos das categorias com checklist ativo
         categorias_check = CategoriaFarmacia.query.filter_by(checklist=True).all()
-        ids_categorias = [c.id for c in categorias_check]
-        produtos_disponiveis = StockFarmacia.query.filter(
-            db.func.lower(StockFarmacia.categoria).in_([c.nome.lower() for c in categorias_check])
-        ).all() if categorias_check else []
+        produtos_disponiveis = []
+        if categorias_check:
+            nomes_categorias = [c.nome.lower() for c in categorias_check]
+            produtos_disponiveis = StockFarmacia.query.filter(
+                func.lower(StockFarmacia.categoria).in_(nomes_categorias)
+            ).all()
 
         ids_selecionados = []
         for produto in produtos_disponiveis:
             if request.form.get(f'prod_{produto.id}') == 'on':
                 ids_selecionados.append(produto.id)
 
-        for pid in ids_selecionados:
-            item = ChecklistAmbulanciaItem(checklist_id=nova.id, produto_id=pid, quantidade=0)
-            db.session.add(item)
-
         if not ids_selecionados:
             db.session.rollback()
             flash('Selecione pelo menos um produto.', 'warning')
             return redirect(url_for('checklist_ambulancia'))
 
+        for pid in ids_selecionados:
+            item = ChecklistAmbulanciaItem(checklist_id=nova.id, produto_id=pid, quantidade=0)
+            db.session.add(item)
+
         db.session.commit()
         return redirect(url_for('preencher_quantidades', checklist_id=nova.id))
 
-    # GET – listagem com filtro opcional por viatura
-    viatura_id = request.args.get('viatura_id', type=int)
+    # ---------- GET ----------
+    viatura_id_filtro = request.args.get('viatura_id', type=int)
     query = ChecklistAmbulancia.query
-    if viatura_id:
-        query = query.filter_by(viatura_id=viatura_id)
+
+    # Utilizador normal só vê as suas próprias checklists
+    if current_user.tipo_user == 'User' and current_user.resp_departamento not in ['Comando', 'Farmacia', 'Socorrista']:
+        query = query.filter(ChecklistAmbulancia.bombeiro_id == current_user.id)
+
+    if viatura_id_filtro:
+        query = query.filter_by(viatura_id=viatura_id_filtro)
+
     checklists = query.order_by(ChecklistAmbulancia.data_hora.desc()).all()
+    viaturas = Viatura.query.order_by(Viatura.matricula).all()
 
-    viaturas = Viatura.query.filter(Viatura.tipo.in_(['ABSC', 'ABTD', 'ABTM'])).order_by(Viatura.matricula).all()
-
-    # Dados para o modal de criação
+    # Dados para o modal de criação (produtos das categorias com checklist ativo)
     categorias = CategoriaFarmacia.query.filter_by(checklist=True).order_by(CategoriaFarmacia.nome).all()
     produtos_por_categoria = []
     for cat in categorias:
         produtos = StockFarmacia.query.filter(
-            db.func.lower(StockFarmacia.categoria) == cat.nome.lower()
+            func.lower(StockFarmacia.categoria) == cat.nome.lower()
         ).order_by(StockFarmacia.nome).all()
         if produtos:
             produtos_por_categoria.append((cat, produtos))
@@ -4403,9 +4413,8 @@ def checklist_ambulancia():
     return render_template('checklist_ambulancia.html',
                            checklists=checklists,
                            viaturas=viaturas,
-                           viatura_selecionada=viatura_id,
-                           produtos_por_categoria=produtos_por_categoria)
-
+                           produtos_por_categoria=produtos_por_categoria,
+                           viatura_selecionada=viatura_id_filtro)
 
 
 @app.route('/checklist-ambulancia/quantidades/<int:checklist_id>', methods=['GET', 'POST'])
@@ -5141,32 +5150,39 @@ def _importar_linha_gestao_frota(row, row_num):
 
 
 def _importar_linha_stock_ambulancia(row, row_num):
-    data_str = str(row[0]).strip() if row[0] else None
-    matricula = str(row[1]).strip() if len(row) > 1 else None
-    nome_produto = str(row[2]).strip() if len(row) > 2 else ''
-    quantidade = int(row[3]) if len(row) > 3 and row[3] else 0
-    mec_solicitante = str(row[4]).strip() if len(row) > 4 else None
-    mec_responsavel = str(row[5]).strip() if len(row) > 5 else None
-    confirmado = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
+    try:
+        data_str = str(row[0]).strip() if row[0] else None
+        matricula = str(row[1]).strip() if len(row) > 1 and row[1] else None
+        nome_produto = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+        quantidade = int(row[3]) if len(row) > 3 and row[3] else 0
+        mec_solicitante = str(row[4]).strip() if len(row) > 4 and row[4] else None
+        mec_responsavel = str(row[5]).strip() if len(row) > 5 and row[5] else None
+        confirmado = str(row[6]).strip().lower() == 'sim' if len(row) > 6 else False
 
-    viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-    produto = StockFarmacia.query.filter_by(nome=nome_produto).first() if nome_produto else None
-    solicitante = Bombeiro.query.filter_by(mecanografico=mec_solicitante).first() if mec_solicitante else None
-    responsavel = Bombeiro.query.filter_by(mecanografico=mec_responsavel).first() if mec_responsavel else None
+        if not matricula or not nome_produto:
+            return None
 
-    sa = StockAmbulancia(
-        ambulancia_id=viatura.id if viatura else 1,
-        produto_id=produto.id if produto else 1,
-        quantidade=quantidade,
-        solicitante_id=solicitante.id if solicitante else 1,
-        responsavel_id=responsavel.id if responsavel else None,
-        checklist_id=None,
-        confirmado=confirmado,
-        data=_parse_datetime(data_str) or datetime.utcnow()
-    )
-    db.session.add(sa)
-    db.session.flush()
-    return None
+        viatura = Viatura.query.filter_by(matricula=matricula).first()
+        produto = StockFarmacia.query.filter_by(nome=nome_produto).first()
+        if not viatura or not produto:
+            return None   # saltar esta linha se a viatura ou o produto não existirem
+
+        solicitante = Bombeiro.query.filter_by(mecanografico=mec_solicitante).first() if mec_solicitante else None
+        responsavel = Bombeiro.query.filter_by(mecanografico=mec_responsavel).first() if mec_responsavel else None
+
+        sa = StockAmbulancia(
+            ambulancia_id=viatura.id,
+            produto_id=produto.id,
+            quantidade=quantidade,
+            solicitante_id=solicitante.id if solicitante else 1,
+            responsavel_id=responsavel.id if responsavel else None,
+            checklist_id=None,
+            confirmado=confirmado,
+            data=_parse_datetime(data_str) or datetime.utcnow()
+        )
+        return sa
+    except Exception:
+        return None
 
 
 def _importar_linha_notas_central(row, row_num):

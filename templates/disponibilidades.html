@@ -4,10 +4,17 @@
 
 <div class="mb-3">
     <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalNovaDisponibilidade">Indicar Disponibilidade</button>
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
     <a href="{{ url_for('exportar_disponibilidades') }}" class="btn btn-outline-success btn-sm ms-2">📥 Exportar</a>
+    {% endif %}
     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
     <button class="btn btn-outline-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImprimir">🖨️ Imprimir Disponibilidade</button>
     {% endif %}
+    {% if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' %}
+    <a href="{{ url_for('imprimir_disponibilidades') }}" target="_blank" class="btn btn-outline-secondary btn-sm ms-2">
+        🖨️ Imprimir as Minhas Disponibilidades
+    </a>
+{% endif %}
 </div>
 
 <!-- Filtros e ação de apagar (apenas Admin/Comando) -->
