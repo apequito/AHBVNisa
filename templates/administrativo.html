@@ -217,15 +217,24 @@
 
 
                 <!-- Formulário Enviar Contagem -->
-                <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
-                    <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
-                    <input type="hidden" name="ano_ecin" value="{{ ano_ecin }}">
-                    <input type="hidden" name="cat_ecin" value="{{ cat_ecin }}">
-                    <input type="hidden" name="tab" value="ecins">
-                    <button type="submit" class="btn btn-sm btn-outline-info">
-                        <i class="bi bi-send me-1"></i> Enviar Contagem
-                    </button>
-                </form>
+<button type="button" class="btn btn-sm btn-outline-info" onclick="enviarContagem()">
+    <i class="bi bi-send me-1"></i> Enviar Contagem
+</button>
+
+<script>
+function enviarContagem() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for('enviar_contagem_ecins') }}';
+    form.innerHTML = `
+        <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
+        <input type="hidden" name="ano_ecin" value="{{ ano_ecin }}">
+        <input type="hidden" name="cat_ecin" value="{{ cat_ecin }}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
             </div>
         </form>
 

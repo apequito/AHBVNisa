@@ -6384,7 +6384,8 @@ def enviar_contagem_ecins():
         msg = MensagemCorreio(
             remetente_id=current_user.id,
             destinatario_id=bombeiro_id,
-            assunto=f'Contagem de turnos {mes}/{ano}',
+            departamento=None,               # não é necessário para envio individual
+            assunto='Envio de Contagem de Turno',
             corpo=corpo,
             data_envio=datetime.utcnow(),
             lida=False,
