@@ -5,11 +5,18 @@
 
 <form method="POST">
     <table class="table table-sm">
-        <thead><tr><th>Produto</th><th>Quantidade Necessária</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Tamanho</th>
+                <th>Quantidade Necessária</th>
+            </tr>
+        </thead>
         <tbody>
             {% for item in checklist.itens %}
             <tr>
                 <td>{{ item.produto.nome }}</td>
+                <td>{{ item.produto.tamanho or '-' }}</td>
                 <td>
                     <input type="number" name="qtd_{{ item.id }}" class="form-control" value="{{ item.quantidade }}" min="0">
                 </td>
