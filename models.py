@@ -246,11 +246,13 @@ class StockFarmacia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categoria = db.Column(db.String(50), nullable=False)
     nome = db.Column(db.String(100), nullable=False)
-    tamanho = db.Column(db.String(100), nullable=True)   # aumentado para 100 caracteres
+    tamanho = db.Column(db.String(100), nullable=True)
     stock = db.Column(db.Integer, default=0)
+    infstock = db.Column(db.Integer, default=0)   # NOVO CAMPO – stock mínimo
     data_atualizacao = db.Column(db.DateTime, nullable=True)
 
     saidas = db.relationship('StockAmbulancia', back_populates='produto_stock', lazy=True)
+
 
 
 class CategoriaFarmacia(db.Model):

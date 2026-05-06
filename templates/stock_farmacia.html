@@ -1,50 +1,84 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Stock Farmácia</h2>
+<h2><i class="bi bi-capsule me-2"></i>Stock Farmácia</h2>
 
 <div class="mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoProduto">+ Novo Produto</button>
-    <a href="{{ url_for('categorias_farmacia') }}" class="btn btn-outline-secondary btn-sm ms-2">Gerir Categorias</a>
-    <a href="{{ url_for('exportar_stock_farmacia') }}" class="btn btn-success btn-sm ms-2">📥 Exportar</a>
-    <button class="btn btn-outline-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImportar">📤 Importar</button>
-    <a href="{{ url_for('imprimir_stock_farmacia') }}" target="_blank" class="btn btn-secondary btn-sm ms-2">🖨️ Imprimir</a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoProduto">
+        <i class="bi bi-plus-circle me-1"></i> Novo Produto
+    </button>
+    <a href="{{ url_for('categorias_farmacia') }}" class="btn btn-outline-secondary btn-sm ms-2">
+        <i class="bi bi-tags me-1"></i> Gerir Categorias
+    </a>
+    <a href="{{ url_for('exportar_stock_farmacia') }}" class="btn btn-success btn-sm ms-2">
+        <i class="bi bi-download me-1"></i> Exportar
+    </a>
+    <button class="btn btn-outline-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImportar">
+        <i class="bi bi-upload me-1"></i> Importar
+    </button>
+    <a href="{{ url_for('imprimir_stock_farmacia') }}" target="_blank" class="btn btn-secondary btn-sm ms-2">
+        <i class="bi bi-printer me-1"></i> Imprimir
+    </a>
 </div>
 
-<table class="table table-bordered table-sm">
-    <thead class="table-light">
-        <tr><th>ID</th><th>Categoria</th><th>Nome</th><th>Tamanho</th><th>Stock</th><th>Atualização</th><th>Ações</th></tr>
-    </thead>
-    <tbody>
-        {% for i in itens %}
-        <tr>
-            <td>{{ i.id }}</td>
-            <td>{{ i.categoria }}</td>
-            <td>{{ i.nome }}</td>
-            <td>{{ i.tamanho or '-' }}</td>
-            <td>{{ i.stock }}</td>
-            <td>{{ i.data_atualizacao.strftime('%d/%m/%Y %H:%M') if i.data_atualizacao else '-' }}</td>
-            <td>
-                <button class="btn btn-sm btn-warning btn-editar-farmacia"
-                        data-id="{{ i.id }}" data-categoria="{{ i.categoria }}" data-nome="{{ i.nome }}"
-                        data-tamanho="{{ i.tamanho or '' }}" data-stock="{{ i.stock }}"
-                        data-bs-toggle="modal" data-bs-target="#modalEditarProduto">✏️</button>
-                <a href="{{ url_for('apagar_stock_farmacia', id=i.id) }}" class="btn btn-sm btn-danger"
-                   onclick="return confirm('Apagar este produto?')">🗑️</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-bordered mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Categoria</th>
+                    <th>Nome</th>
+                    <th>Tamanho</th>
+                    <th>Stock</th>
+                    <th>Stock Mín.</th>
+                    <th>Atualização</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in itens %}
+                <tr>
+                    <td>{{ i.categoria }}</td>
+                    <td>{{ i.nome }}</td>
+                    <td>{{ i.tamanho or '-' }}</td>
+                    <td>{{ i.stock }}</td>
+                    <td>{{ i.infstock if i.infstock else '-' }}</td>
+                    <td>{{ i.data_atualizacao.strftime('%d/%m/%Y %H:%M') if i.data_atualizacao else '-' }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-warning btn-editar-farmacia"
+                                data-id="{{ i.id }}"
+                                data-categoria="{{ i.categoria }}"
+                                data-nome="{{ i.nome }}"
+                                data-tamanho="{{ i.tamanho or '' }}"
+                                data-stock="{{ i.stock }}"
+                                data-infstock="{{ i.infstock or 0 }}"
+                                data-bs-toggle="modal" data-bs-target="#modalEditarProduto">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <a href="{{ url_for('apagar_stock_farmacia', id=i.id) }}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Apagar este produto?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <!-- Modal Novo Produto -->
 <div class="modal fade" id="modalNovoProduto" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST">
             <div class="modal-content">
-                <div class="modal-header"><h5>Novo Produto</h5></div>
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Produto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <label>Categoria</label>
-                    <select name="categoria" class="form-select mb-2" required>
+                    <select name="categoria" class="form-select mb-3" required>
                         <option value="">-- Selecione --</option>
                         {% for cat in categorias %}
                         <option value="{{ cat.nome }}">{{ cat.nome }}</option>
@@ -52,9 +86,20 @@
                     </select>
                     <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do produto" required>
                     <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
-                    <input type="number" name="stock" class="form-control mb-2" placeholder="Stock inicial" value="0" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Stock Inicial</label>
+                            <input type="number" name="stock" class="form-control mb-2" value="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Stock Mínimo</label>
+                            <input type="number" name="infstock" class="form-control mb-2" value="0">
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-primary">Adicionar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -65,19 +110,33 @@
     <div class="modal-dialog">
         <form id="formEditarFarmacia" method="POST" action="">
             <div class="modal-content">
-                <div class="modal-header"><h5>Editar Produto</h5></div>
+                <div class="modal-header bg-warning">
+                    <h5><i class="bi bi-pencil me-1"></i> Editar Produto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <label>Categoria</label>
-                    <select name="categoria" id="edit_categoria" class="form-select mb-2" required>
+                    <select name="categoria" id="edit_categoria" class="form-select mb-3" required>
                         {% for cat in categorias %}
                         <option value="{{ cat.nome }}">{{ cat.nome }}</option>
                         {% endfor %}
                     </select>
                     <input type="text" name="nome" id="edit_nome" class="form-control mb-2" required>
                     <input type="text" name="tamanho" id="edit_tamanho" class="form-control mb-2">
-                    <input type="number" name="stock" id="edit_stock" class="form-control mb-2" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Stock</label>
+                            <input type="number" name="stock" id="edit_stock" class="form-control mb-2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Stock Mínimo</label>
+                            <input type="number" name="infstock" id="edit_infstock" class="form-control mb-2">
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-warning">Guardar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning">Guardar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -88,11 +147,16 @@
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('importar_stock_farmacia') }}" enctype="multipart/form-data">
             <div class="modal-content">
-                <div class="modal-header"><h5>Importar Stock Farmácia</h5></div>
+                <div class="modal-header bg-success text-white">
+                    <h5><i class="bi bi-upload me-1"></i> Importar Stock Farmácia</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Importar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -107,6 +171,7 @@ modalEditar.addEventListener('show.bs.modal', function (event) {
     document.getElementById('edit_nome').value = b.getAttribute('data-nome');
     document.getElementById('edit_tamanho').value = b.getAttribute('data-tamanho') || '';
     document.getElementById('edit_stock').value = b.getAttribute('data-stock');
+    document.getElementById('edit_infstock').value = b.getAttribute('data-infstock') || '0';
 });
 </script>
 {% endblock %}

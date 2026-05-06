@@ -713,6 +713,7 @@ def editar_gestao_frota(id):
     registo.outros_apontamentos = request.form.get('outros_apontamentos', '')
 
     db.session.commit()
+    verificar_inspecao_proxima(viatura)
     flash('Registo atualizado.', 'success')
     return redirect(url_for('gestao_frota'))
 
@@ -770,6 +771,42 @@ def exportar_gestao_frota():
     output.seek(0)
     return send_file(output, as_attachment=True, download_name='gestao_frota.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+def verificar_inspecao_proxima(viatura):
+    """Envia correio se faltar menos de 30 dias para a inspeção periódica."""
+    if not viatura.gestao_frota or not viatura.gestao_frota.inspecao_periodica:
+        return
+    hoje = date.today()
+    dias_restantes = (viatura.gestao_frota.inspecao_periodica - hoje).days
+    if 0 < dias_restantes <= 30:
+        corpo = (
+            f"⚠️ Alerta de Inspeção Periódica\n\n"
+            f"A viatura {viatura.matricula} ({viatura.nomenclatura}) "
+            f"tem a inspeção periódica agendada para {viatura.gestao_frota.inspecao_periodica.strftime('%d/%m/%Y')}.\n"
+            f"Faltam {dias_restantes} dias.\n\n"
+            f"Por favor, tome as devidas providências."
+        )
+        destinatarios = Bombeiro.query.filter(
+            (Bombeiro.tipo_user == 'Admin') |
+            (Bombeiro.resp_departamento == 'Comando') |
+            (Bombeiro.resp_departamento == 'Oficina'),
+            Bombeiro.ativo == True
+        ).all()
+        for dest in destinatarios:
+            msg = MensagemCorreio(
+                remetente_id=dest.id,
+                destinatario_id=dest.id,
+                assunto=f'⚠️ Inspeção próxima – {viatura.matricula}',
+                corpo=corpo,
+                data_envio=datetime.utcnow(),
+                lida=False,
+                apagada_remetente=False,
+                apagada_destinatario=False
+            )
+            db.session.add(msg)
+        db.session.commit()
+
 
 # ---------- Importar Gestão Frota ----------
 
@@ -4041,23 +4078,25 @@ def stock_farmacia():
         nome = request.form['nome']
         tamanho = request.form.get('tamanho', '')
         stock = request.form.get('stock', 0, type=int)
+        infstock = request.form.get('infstock', 0, type=int)        # NOVO
 
         novo = StockFarmacia(
             categoria=categoria,
             nome=nome,
             tamanho=tamanho,
             stock=stock,
+            infstock=infstock,            # NOVO
             data_atualizacao=datetime.utcnow()
         )
         db.session.add(novo)
         db.session.commit()
+        verificar_stock_minimo(novo)      # ALERTA
         flash('Produto de farmácia adicionado.', 'success')
         return redirect(url_for('stock_farmacia'))
 
     itens = StockFarmacia.query.order_by(StockFarmacia.categoria, StockFarmacia.nome).all()
     categorias = CategoriaFarmacia.query.order_by(CategoriaFarmacia.nome).all()
     return render_template('stock_farmacia.html', itens=itens, categorias=categorias)
-
 
 @app.route('/stock-farmacia/editar/<int:id>', methods=['POST'])
 @login_required
@@ -4071,12 +4110,19 @@ def editar_stock_farmacia(id):
     item.nome = request.form['nome']
     item.tamanho = request.form.get('tamanho', '')
     novo_stock = request.form.get('stock', 0, type=int)
-    if novo_stock != item.stock:
+    novo_infstock = request.form.get('infstock', 0, type=int)    # NOVO
+
+    if novo_stock != item.stock or novo_infstock != item.infstock:
         item.data_atualizacao = datetime.utcnow()
+
     item.stock = novo_stock
+    item.infstock = novo_infstock                                    # NOVO
     db.session.commit()
+    verificar_stock_minimo(item)                                     # ALERTA
     flash('Produto atualizado.', 'success')
     return redirect(url_for('stock_farmacia'))
+
+
 
 
 @app.route('/stock-farmacia/apagar/<int:id>')
@@ -4119,6 +4165,41 @@ def categorias_farmacia():
     categorias = CategoriaFarmacia.query.order_by(CategoriaFarmacia.nome).all()
     return render_template('categorias_farmacia.html', categorias=categorias)
 
+
+def verificar_stock_minimo(produto):
+    """Envia correio aos responsáveis se o stock estiver ≤ infstock."""
+    if produto.infstock is None or produto.stock > produto.infstock:
+        return
+
+    destinatarios = Bombeiro.query.filter(
+        (Bombeiro.tipo_user == 'Admin') |
+        (Bombeiro.resp_departamento == 'Comando') |
+        (Bombeiro.resp_departamento == 'Farmacia'),
+        Bombeiro.ativo == True
+    ).all()
+
+    corpo = (
+        f"⚠️ Alerta de Stock Mínimo\n\n"
+        f"O produto '{produto.nome}' (categoria: {produto.categoria}) "
+        f"atingiu o stock mínimo definido ({produto.infstock} unidades).\n"
+        f"Stock actual: {produto.stock} unidades.\n\n"
+        f"Por favor, verifique e reponha o stock com urgência."
+    )
+
+    for dest in destinatarios:
+        msg = MensagemCorreio(
+            remetente_id=dest.id,
+            destinatario_id=dest.id,
+            departamento=None,
+            assunto=f'⚠️ Stock mínimo atingido – {produto.nome}',
+            corpo=corpo,
+            data_envio=datetime.utcnow(),
+            lida=False,
+            apagada_remetente=False,
+            apagada_destinatario=False
+        )
+        db.session.add(msg)
+    db.session.commit()
 
 #----------- Exportar Stock Farmácia--------------
 @app.route('/stock-farmacia/exportar')
