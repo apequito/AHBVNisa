@@ -6112,6 +6112,13 @@ def inject_pendencias():
             pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
             pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
             pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
+            # NOVO: Stock Farmácia abaixo do mínimo
+            pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
+                StockFarmacia.infstock > 0,
+                StockFarmacia.stock <= StockFarmacia.infstock
+            ).count()
+            # NOVO: Reposições de ambulância pendentes
+            pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             total = sum(pendencias.values())
         else:
             if user.resp_departamento == 'Oficina':
@@ -6121,7 +6128,13 @@ def inject_pendencias():
             if user.resp_departamento == 'Secretaria':
                 pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
             if user.resp_departamento == 'Farmacia':
-                pendencias['stock_farmacia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+                # Responsável da Farmácia vê os produtos em falta
+                pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
+                    StockFarmacia.infstock > 0,
+                    StockFarmacia.stock <= StockFarmacia.infstock
+                ).count()
+                # E também as reposições de ambulância pendentes
+                pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             if user.resp_departamento == 'Socorrista':
                 pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             total = sum(pendencias.values())
