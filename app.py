@@ -4736,20 +4736,6 @@ def correio_marcar_lida(id):
         db.session.commit()
     return redirect(url_for('correio'))
 
-@app.route('/correio/apagar/<int:id>')
-@login_required
-def correio_apagar(id):
-    msg = MensagemCorreio.query.get_or_404(id)
-    if msg.remetente_id == current_user.id:
-        msg.apagada_remetente = True
-    elif msg.destinatario_id == current_user.id or msg.departamento == current_user.resp_departamento:
-        msg.apagada_destinatario = True
-    else:
-        flash('Acesso negado.', 'danger')
-        return redirect(url_for('correio'))
-    db.session.commit()
-    flash('Mensagem removida.', 'info')
-    return redirect(url_for('correio'))
 
 
 @app.context_processor
@@ -6705,23 +6691,6 @@ def apagar_correio_massa():
     db.session.commit()
     flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
     return redirect(url_for('correio'))
-
-
-@app.route('/correio/apagar-em-massa', methods=['POST'])
-@login_required
-def apagar_correio_massa():
-    ids = request.form.getlist('ids[]')
-    for msg_id in ids:
-        msg = MensagemCorreio.query.get(int(msg_id))
-        if msg:
-            if msg.destinatario_id == current_user.id:
-                msg.apagada_destinatario = True
-            elif msg.remetente_id == current_user.id:
-                msg.apagada_remetente = True
-    db.session.commit()
-    flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
-    return redirect(url_for('correio'))
-
 
 
 #if __name__ == '__main__':
