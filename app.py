@@ -6416,7 +6416,6 @@ def imprimir_contabilidade_ecin():
         db.extract('year', Ecin.data) == ano
     ).order_by(Ecin.bombeiro_id, Ecin.data).all()
 
-    # Agrupar por bombeiro
     from collections import defaultdict
     dados = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
     for ec in ecins:
@@ -6424,12 +6423,38 @@ def imprimir_contabilidade_ecin():
             dados[ec.bombeiro]['turnos'] += 1
             dados[ec.bombeiro]['valor'] += ec.valor or 0.0
 
-    # Ordenar por nome
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
+
+    POR_PAGINA = 25
+    paginas = []
+    pagina_atual = []
+    subtotal_turnos = 0
+    subtotal_valor = 0.0
+    total_geral_turnos = 0
+    total_geral_valor = 0.0
+
+    for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
+        pagina_atual.append((bombeiro, info))
+        subtotal_turnos += info['turnos']
+        subtotal_valor += info['valor']
+        total_geral_turnos += info['turnos']
+        total_geral_valor += info['valor']
+
+        if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
+            paginas.append({
+                'bombeiros': pagina_atual,
+                'subtotal_turnos': subtotal_turnos,
+                'subtotal_valor': subtotal_valor
+            })
+            pagina_atual = []
+            subtotal_turnos = 0
+            subtotal_valor = 0.0
 
     return render_template('imprimir_contabilidade_ecin.html',
                            mes=mes, ano=ano, categoria='ECIN',
-                           bombeiros=bombeiros_ordenados)
+                           paginas=paginas,
+                           total_geral_turnos=total_geral_turnos,
+                           total_geral_valor=total_geral_valor)
 
 
 @app.route('/administrativo/imprimir-contabilidade-elac')
@@ -6457,12 +6482,36 @@ def imprimir_contabilidade_elac():
 
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
 
+    POR_PAGINA = 25
+    paginas = []
+    pagina_atual = []
+    subtotal_turnos = 0
+    subtotal_valor = 0.0
+    total_geral_turnos = 0
+    total_geral_valor = 0.0
+
+    for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
+        pagina_atual.append((bombeiro, info))
+        subtotal_turnos += info['turnos']
+        subtotal_valor += info['valor']
+        total_geral_turnos += info['turnos']
+        total_geral_valor += info['valor']
+
+        if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
+            paginas.append({
+                'bombeiros': pagina_atual,
+                'subtotal_turnos': subtotal_turnos,
+                'subtotal_valor': subtotal_valor
+            })
+            pagina_atual = []
+            subtotal_turnos = 0
+            subtotal_valor = 0.0
+
     return render_template('imprimir_contabilidade_elac.html',
                            mes=mes, ano=ano, categoria='ELAC',
-                           bombeiros=bombeiros_ordenados)
-
-
-
+                           paginas=paginas,
+                           total_geral_turnos=total_geral_turnos,
+                           total_geral_valor=total_geral_valor)
 
 
 

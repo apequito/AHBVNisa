@@ -24,27 +24,11 @@
         <h3>Contabilidade de ELAC – {{ mes }}/{{ ano }}</h3>
     </div>
 
-    {% set bombeiros_por_pagina = 25 %}
-    {% set total_geral = namespace(valor=0.0, turnos=0) %}
-
-    {% for bombeiro, info in bombeiros %}
-        {% if loop.index0 % bombeiros_por_pagina == 0 %}
-            {% if not loop.first %}
-                <tr class="subtotal">
-                    <td colspan="2">Subtotal desta página</td>
-                    <td>{{ total_pagina.turnos }}</td>
-                    <td>{{ "%.2f"|format(total_pagina.valor) }} €</td>
-                    <td></td>
-                </tr>
-                </tbody></table>
-                <div class="quebra"></div>
-                <table>
-                    <thead><tr><th>Mec.</th><th>Nome</th><th>Nº Turnos</th><th>Valor Total (€)</th><th>Assinatura</th></tr></thead>
-                    <tbody>
-            {% endif %}
-            {% set total_pagina = namespace(valor=0.0, turnos=0) %}
-        {% endif %}
-
+    {% for pagina in paginas %}
+    <table>
+        <thead><tr><th>Mec.</th><th>Nome</th><th>Nº Turnos</th><th>Valor Total (€)</th><th>Assinatura</th></tr></thead>
+        <tbody>
+        {% for bombeiro, info in pagina.bombeiros %}
         <tr>
             <td>{{ bombeiro.mecanografico }}</td>
             <td>{{ bombeiro.nome }}</td>
@@ -52,28 +36,19 @@
             <td>{{ "%.2f"|format(info.valor) }}</td>
             <td></td>
         </tr>
-
-        {% set total_pagina.valor = total_pagina.valor + info.valor %}
-        {% set total_pagina.turnos = total_pagina.turnos + info.turnos %}
-        {% set total_geral.valor = total_geral.valor + info.valor %}
-        {% set total_geral.turnos = total_geral.turnos + info.turnos %}
-    {% else %}
-        <tr><td colspan="5" style="text-align:center;">Nenhum registo encontrado.</td></tr>
-    {% endfor %}
-
-    {% if bombeiros|length > 0 %}
+        {% endfor %}
         <tr class="subtotal">
             <td colspan="2">Subtotal desta página</td>
-            <td>{{ total_pagina.turnos }}</td>
-            <td>{{ "%.2f"|format(total_pagina.valor) }} €</td>
+            <td>{{ pagina.subtotal_turnos }}</td>
+            <td>{{ "%.2f"|format(pagina.subtotal_valor) }} €</td>
             <td></td>
         </tr>
-    {% endif %}
-    </tbody></table>
+        </tbody>
+    </table>
+    {% if not loop.last %}<div class="quebra"></div>{% endif %}
+    {% endfor %}
 
-    {% if bombeiros|length > 0 %}
-    <p style="text-align:right; margin-top:5px;"><strong>Total Geral: {{ total_geral.turnos }} turnos, {{ "%.2f"|format(total_geral.valor) }} €</strong></p>
-    {% endif %}
+    <p style="text-align:right; margin-top:10px;"><strong>Total Geral: {{ total_geral_turnos }} turnos, {{ "%.2f"|format(total_geral_valor) }} €</strong></p>
     <script>window.print();</script>
 </body>
 </html>
