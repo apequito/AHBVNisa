@@ -194,6 +194,15 @@
                    class="btn btn-sm btn-outline-success">
                     <i class="bi bi-download me-1"></i> Exportar Excel
                 </a>
+                <!-- Botões de contabilidade (sempre visíveis, usam o mês/ano e categoria atuais) -->
+                <a href="{{ url_for('imprimir_contabilidade_ecin', mes=mes_ecin, ano=ano_ecin) }}"
+                    target="_blank" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-printer me-1"></i> Contab. ECIN
+                </a>
+                <a href="{{ url_for('imprimir_contabilidade_elac', mes=mes_ecin, ano=ano_ecin) }}"
+                    target="_blank" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-printer me-1"></i> Contab. ELAC
+                </a>
                 {% if cat_ecin == 'ECIN' %}
                     <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}"
                        target="_blank" class="btn btn-sm btn-outline-secondary">
@@ -205,10 +214,7 @@
                         <i class="bi bi-printer me-1"></i> Imprimir ELAC
                     </a>
                 {% endif %}
-                <!-- Botão Valor Global -->
-                    <button class="btn btn-sm btn-outline-primary" onclick="definirValorGlobal()">
-                        <i class="bi bi-cash-coin me-1"></i> Valor Global
-                    </button>
+
                 <!-- Formulário Enviar Contagem -->
                 <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
                     <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
@@ -251,9 +257,9 @@
                                     <input type="hidden" name="cat_atual" value="{{ cat_ecin }}">
                                     <input type="hidden" name="bombeiro_atual" value="{{ bombeiro_id_ecin }}">
                                     <input type="number" step="0.01" name="valor"
-                                           class="form-control form-control-sm"
-                                           value="{{ ec.valor if ec.valor else '' }}"
-                                           style="width:80px;" placeholder="0.00">
+                                        class="form-control form-control-sm"
+                                        value="{{ ec.valor if ec.valor is not none else '42.00' }}"
+                                        style="width:80px;" placeholder="0.00">
                                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check"></i></button>
                                 </form>
                             </td>
@@ -276,52 +282,5 @@
     </div>
 </div>
 
-<!-- Modal Valor Global (funcional) -->
-<div class="modal fade" id="modalValorGlobal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <form method="POST" action="{{ url_for('atribuir_valor_global') }}">
-            <input type="hidden" name="tab" value="ecins">
-            <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
-            <input type="hidden" name="ano_ecin" value="{{ ano_ecin }}">
-            <input type="hidden" name="cat_ecin" value="{{ cat_ecin }}">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Valor Global</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        Este valor será aplicado a todos os registos ECIN/ELAC do mês selecionado.
-                    </div>
-                    <label class="form-label">Valor (€)</label>
-                    <input type="number" step="0.01" name="valor_global" class="form-control"
-                           placeholder="0.00" required>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Aplicar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- Script para garantir que o modal abre -->
-<script>
-function definirValorGlobal() {
-    const valor = prompt("Insira o valor global para todos os registos ECIN/ELAC do mês:");
-    if (valor !== null && !isNaN(valor) && valor.trim() !== '') {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ url_for('atribuir_valor_global') }}';
-        form.innerHTML = `
-            <input type="hidden" name="tab" value="ecins">
-            <input type="hidden" name="mes" value="{{ mes_ecin }}">
-            <input type="hidden" name="ano" value="{{ ano_ecin }}">
-            <input type="hidden" name="valor_global" value="${valor}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-</script>
 {% endblock %}

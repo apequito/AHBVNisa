@@ -6339,37 +6339,6 @@ def exportar_ecins_administrativo():
     return send_file(output, as_attachment=True, download_name='ecins.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-@app.route('/administrativo/valor-global', methods=['POST'])
-@login_required
-def atribuir_valor_global():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('administrativo', tab='ecins'))
-
-    mes = request.form.get('mes_ecin', type=int)
-    ano = request.form.get('ano_ecin', type=int)
-    cat = request.form.get('cat_ecin', 'todas')
-    valor = request.form.get('valor_global', type=float)
-
-    if not mes or not ano or not valor:
-        flash('Parâmetros incompletos.', 'warning')
-        return redirect(url_for('administrativo', tab='ecins'))
-
-    query = Ecin.query.filter(
-        db.extract('month', Ecin.data) == mes,
-        db.extract('year', Ecin.data) == ano
-    )
-    if cat == 'ECIN':
-        query = query.filter(Ecin.categoria == 'ECIN')
-    elif cat == 'ELAC':
-        query = query.filter(Ecin.categoria == 'ELAC')
-
-    # Atualizar todos os registos que correspondem ao filtro
-    query.update({Ecin.valor: valor}, synchronize_session='fetch')
-    db.session.commit()
-    flash(f'Valor {valor:.2f} € aplicado aos registos filtrados.', 'success')
-    return redirect(url_for('administrativo', tab='ecins',
-                            mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
 
 @app.route('/administrativo/enviar-contagem', methods=['POST'])
 @login_required
@@ -6424,6 +6393,67 @@ def enviar_contagem_ecins():
     return redirect(url_for('administrativo', tab='ecins',
                             mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
 
+
+@app.route('/administrativo/imprimir-contabilidade-ecin')
+@login_required
+def imprimir_contabilidade_ecin():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo', tab='ecins'))
+
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
+
+    ecins = Ecin.query.filter(
+        Ecin.categoria == 'ECIN',
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    ).order_by(Ecin.bombeiro_id, Ecin.data).all()
+
+    # Agrupar por bombeiro
+    from collections import defaultdict
+    dados = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
+    for ec in ecins:
+        if ec.bombeiro:
+            dados[ec.bombeiro]['turnos'] += 1
+            dados[ec.bombeiro]['valor'] += ec.valor or 0.0
+
+    # Ordenar por nome
+    bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
+
+    return render_template('imprimir_contabilidade_ecin.html',
+                           mes=mes, ano=ano, categoria='ECIN',
+                           bombeiros=bombeiros_ordenados)
+
+
+@app.route('/administrativo/imprimir-contabilidade-elac')
+@login_required
+def imprimir_contabilidade_elac():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('administrativo', tab='ecins'))
+
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
+
+    elacs = Ecin.query.filter(
+        Ecin.categoria == 'ELAC',
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano
+    ).order_by(Ecin.bombeiro_id, Ecin.data).all()
+
+    from collections import defaultdict
+    dados = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
+    for ec in elacs:
+        if ec.bombeiro:
+            dados[ec.bombeiro]['turnos'] += 1
+            dados[ec.bombeiro]['valor'] += ec.valor or 0.0
+
+    bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
+
+    return render_template('imprimir_contabilidade_elac.html',
+                           mes=mes, ano=ano, categoria='ELAC',
+                           bombeiros=bombeiros_ordenados)
 
 
 

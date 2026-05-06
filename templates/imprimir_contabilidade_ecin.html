@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Contabilidade ECIN - {{ mes }}/{{ ano }}</title>
+    <style>
+        @page { size: A4 portrait; margin: 15mm; }
+        body { font-family: Arial, sans-serif; font-size: 13px; }
+        .cabecalho { text-align: center; margin-bottom: 15px; }
+        h2 { margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #000; padding: 7px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .assinatura { width: 180px; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="cabecalho">
+        <h2>Associação Humanitária de Bombeiros Voluntários de Nisa</h2>
+        <p>Rua Dr. Cruz Malpique - 6050-341 Nisa</p>
+        <h3>Contabilidade de {{ categoria }} – {{ mes }}/{{ ano }}</h3>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Mecanográfico</th>
+                <th>Nome</th>
+                <th>Nº Turnos</th>
+                <th>Valor Total (€)</th>
+                <th class="assinatura">Assinatura</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bombeiro, info in bombeiros %}
+            <tr>
+                <td>{{ bombeiro.mecanografico }}</td>
+                <td>{{ bombeiro.nome }}</td>
+                <td>{{ info.turnos }}</td>
+                <td>{{ "%.2f"|format(info.valor) }}</td>
+                <td></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;">Nenhum registo encontrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>window.print();</script>
+</body>
+</html>

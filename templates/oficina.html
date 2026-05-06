@@ -23,8 +23,67 @@
             <a href="{{ url_for('exportar_oficina') }}" class="btn btn-outline-success ms-2">📥 Exportar</a>
             <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarOficina">📤 Importar</button>
         </div>
+
         <table class="table table-bordered table-sm">
-            <!-- cabeçalho e corpo idênticos ao anterior -->
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th><th>Data Registo</th><th>Nome Oficina</th><th>Data Recepção</th>
+                    <th>Motivo</th><th>Nº Avaria</th><th>Viatura</th><th>Kms</th>
+                    <th>Inoper.</th><th>Descrição</th><th>Nº Orç/Fat</th><th>Data Entrega</th>
+                    <th>Chefe</th><th>Cmd</th><th>Oper.</th><th>Estado</th><th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registos %}
+                <tr>
+                    <td><strong>{{ r.codigo }}</strong></td>
+                    <td>{{ r.data_registo.strftime('%d/%m/%Y %H:%M') if r.data_registo else '' }}</td>
+                    <td>{{ r.nome_oficina }}</td>
+                    <td>{{ r.data_recepcao.strftime('%d/%m/%Y') if r.data_recepcao else '' }}</td>
+                    <td>{{ r.motivo or '' }}</td>
+                    <td>{{ r.avaria.codigo if r.avaria else '' }}</td>
+                    <td>{{ r.viatura.matricula if r.viatura else '' }}</td>
+                    <td>{{ r.kms or '' }}</td>
+                    <td class="text-center">{{ 'Sim' if r.inoperacional else 'Não' }}</td>
+                    <td>{{ r.descricao_oficina or '' }}</td>
+                    <td>{{ r.n_orc_fat or '' }}</td>
+                    <td>{{ r.data_entrega.strftime('%d/%m/%Y') if r.data_entrega else '' }}</td>
+                    <td class="text-center">{{ '✔️' if r.chefe_oficina else '❌' }}</td>
+                    <td class="text-center">{{ '✔️' if r.comando else '❌' }}</td>
+                    <td class="text-center">{{ '✔️' if r.operacional else '❌' }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'warning' if r.estado == 'Oficina' else 'success' }}">
+                            {{ r.estado }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-warning btn-editar-oficina"
+                                    data-id="{{ r.id }}"
+                                    data-nome_oficina="{{ r.nome_oficina or '' }}"
+                                    data-data_recepcao="{{ r.data_recepcao.strftime('%Y-%m-%d') if r.data_recepcao else '' }}"
+                                    data-motivo="{{ r.motivo or '' }}"
+                                    data-avaria_id="{{ r.avaria_id or '' }}"
+                                    data-viatura_id="{{ r.viatura_id or '' }}"
+                                    data-kms="{{ r.kms or '' }}"
+                                    data-inoperacional="{{ 'on' if r.inoperacional else '' }}"
+                                    data-descricao_oficina="{{ r.descricao_oficina or '' }}"
+                                    data-n_orc_fat="{{ r.n_orc_fat or '' }}"
+                                    data-data_entrega="{{ r.data_entrega.strftime('%Y-%m-%d') if r.data_entrega else '' }}"
+                                    data-chefe_oficina="{{ 'on' if r.chefe_oficina else '' }}"
+                                    data-comando="{{ 'on' if r.comando else '' }}"
+                                    data-operacional="{{ 'on' if r.operacional else '' }}"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarOficina"
+                                    title="Editar">✏️</button>
+                            <a href="{{ url_for('apagar_registo_oficina', id=r.id) }}"
+                               class="btn btn-danger"
+                               onclick="return confirm('Apagar registo {{ r.codigo }}?')"
+                               title="Apagar">🗑️</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 
@@ -78,8 +137,294 @@
         </form>
 
         <table class="table table-bordered table-sm">
-            <!-- listagem do histórico (sem botões de ação) -->
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th><th>Data Registo</th><th>Nome Oficina</th><th>Viatura</th>
+                    <th>Motivo</th><th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in historico_oficina %}
+                <tr>
+                    <td><strong>{{ r.codigo }}</strong></td>
+                    <td>{{ r.data_registo.strftime('%d/%m/%Y %H:%M') if r.data_registo else '' }}</td>
+                    <td>{{ r.nome_oficina }}</td>
+                    <td>{{ r.viatura.matricula if r.viatura else '' }}</td>
+                    <td>{{ r.motivo or '' }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'warning' if r.estado == 'Oficina' else 'success' }}">
+                            {{ r.estado }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted">Nenhum registo encontrado.</td></tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 </div>
+
+<!-- ========== MODAL NOVO REGISTO ========== -->
+<div class="modal fade" id="modalNovaOficina" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="formNovaOficina">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Registo de Oficina</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Nome Oficina</label>
+                            <input type="text" name="nome_oficina" class="form-control mb-2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Data Recepção</label>
+                            <input type="date" name="data_recepcao" class="form-control mb-2" required>
+                        </div>
+                    </div>
+                    <label>Motivo</label>
+                    <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
+
+                    <label>Nº Avaria (estado "Analisar")</label>
+                    <select name="avaria_id" id="avariaSelect" class="form-select mb-2" onchange="preencherViatura()">
+                        <option value="">-- Nenhuma --</option>
+                        {% for av in avarias_analisar %}
+                        <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
+                            {{ av.codigo }} - {{ av.viatura.matricula }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Viatura</label>
+                            <input type="text" id="viaturaInput" class="form-control mb-2" readonly>
+                            <input type="hidden" name="viatura_id" id="viaturaHidden">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Kms</label>
+                            <input type="number" name="kms" id="kmsInput" class="form-control mb-2">
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="inoperacional" id="inoperacionalCheck">
+                        <label class="form-check-label" for="inoperacionalCheck">Inoperacional</label>
+                    </div>
+
+                    <label>Descrição Oficina</label>
+                    <textarea name="descricao_oficina" class="form-control mb-2" rows="2"></textarea>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Nº Orçamento/Fatura</label>
+                            <input type="text" name="n_orc_fat" class="form-control mb-2">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Data Entrega</label>
+                            <input type="date" name="data_entrega" class="form-control mb-2">
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="chefe_oficina" id="chefeCheck">
+                        <label class="form-check-label" for="chefeCheck">Chefe Oficina</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="comando" id="comandoCheck">
+                        <label class="form-check-label" for="comandoCheck">Comando</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="operacional" id="operacionalCheck" disabled>
+                        <label class="form-check-label" for="operacionalCheck">Operacional</label>
+                        <small class="text-muted">(disponível após Chefe Oficina e Comando selecionados)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Gravar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========== MODAL EDITAR REGISTO ========== -->
+<div class="modal fade" id="modalEditarOficina" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="formEditarOficina" action="">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5><i class="bi bi-pencil me-1"></i> Editar Registo de Oficina</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_id" name="id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Nome Oficina</label>
+                            <input type="text" name="nome_oficina" id="edit_nome_oficina" class="form-control mb-2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Data Recepção</label>
+                            <input type="date" name="data_recepcao" id="edit_data_recepcao" class="form-control mb-2" required>
+                        </div>
+                    </div>
+                    <label>Motivo</label>
+                    <textarea name="motivo" id="edit_motivo" class="form-control mb-2" rows="2"></textarea>
+
+                    <label>Nº Avaria (estado "Analisar")</label>
+                    <select name="avaria_id" id="edit_avaria_id" class="form-select mb-2" onchange="preencherViaturaEditar()">
+                        <option value="">-- Nenhuma --</option>
+                        {% for av in avarias_analisar %}
+                        <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
+                            {{ av.codigo }} - {{ av.viatura.matricula }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Viatura</label>
+                            <input type="text" id="edit_viatura_display" class="form-control mb-2" readonly>
+                            <input type="hidden" name="viatura_id" id="edit_viatura_id">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Kms</label>
+                            <input type="number" name="kms" id="edit_kms" class="form-control mb-2">
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="inoperacional" id="edit_inoperacional">
+                        <label class="form-check-label" for="edit_inoperacional">Inoperacional</label>
+                    </div>
+
+                    <label>Descrição Oficina</label>
+                    <textarea name="descricao_oficina" id="edit_descricao_oficina" class="form-control mb-2" rows="2"></textarea>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Nº Orçamento/Fatura</label>
+                            <input type="text" name="n_orc_fat" id="edit_n_orc_fat" class="form-control mb-2">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Data Entrega</label>
+                            <input type="date" name="data_entrega" id="edit_data_entrega" class="form-control mb-2">
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="chefe_oficina" id="edit_chefe_oficina">
+                        <label class="form-check-label" for="edit_chefe_oficina">Chefe Oficina</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="comando" id="edit_comando">
+                        <label class="form-check-label" for="edit_comando">Comando</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="operacional" id="edit_operacional">
+                        <label class="form-check-label" for="edit_operacional">Operacional</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning">Guardar Alterações</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========== MODAL IMPORTAR EXCEL ========== -->
+<div class="modal fade" id="modalImportarOficina" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_oficina') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5><i class="bi bi-upload me-1"></i> Importar Oficina (Excel)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Importar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ---------- Novo Registo ----------
+function preencherViatura() {
+    const select = document.getElementById('avariaSelect');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('viaturaInput').value = option.getAttribute('data-viatura') || '';
+    document.getElementById('viaturaHidden').value = select.value || '';
+    document.getElementById('kmsInput').value = option.getAttribute('data-kms') || '';
+}
+
+const chefeCheck = document.getElementById('chefeCheck');
+const comandoCheck = document.getElementById('comandoCheck');
+const operacionalCheck = document.getElementById('operacionalCheck');
+function atualizarOperacional() {
+    operacionalCheck.disabled = !(chefeCheck.checked && comandoCheck.checked);
+    if (operacionalCheck.disabled) operacionalCheck.checked = false;
+}
+chefeCheck.addEventListener('change', atualizarOperacional);
+comandoCheck.addEventListener('change', atualizarOperacional);
+
+// ---------- Editar Registo ----------
+function preencherViaturaEditar() {
+    const select = document.getElementById('edit_avaria_id');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('edit_viatura_display').value = option.getAttribute('data-viatura') || '';
+    document.getElementById('edit_viatura_id').value = select.value ? select.value : document.getElementById('edit_viatura_id').value;
+    document.getElementById('edit_kms').value = option.getAttribute('data-kms') || '';
+}
+
+const modalEditar = document.getElementById('modalEditarOficina');
+modalEditar.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    document.getElementById('formEditarOficina').action = '/oficina/editar/' + id;
+    document.getElementById('edit_nome_oficina').value = button.getAttribute('data-nome_oficina') || '';
+    document.getElementById('edit_data_recepcao').value = button.getAttribute('data-data_recepcao') || '';
+    document.getElementById('edit_motivo').value = button.getAttribute('data-motivo') || '';
+    document.getElementById('edit_descricao_oficina').value = button.getAttribute('data-descricao_oficina') || '';
+    document.getElementById('edit_n_orc_fat').value = button.getAttribute('data-n_orc_fat') || '';
+    document.getElementById('edit_data_entrega').value = button.getAttribute('data-data_entrega') || '';
+
+    document.getElementById('edit_inoperacional').checked = (button.getAttribute('data-inoperacional') === 'on');
+    document.getElementById('edit_chefe_oficina').checked = (button.getAttribute('data-chefe_oficina') === 'on');
+    document.getElementById('edit_comando').checked = (button.getAttribute('data-comando') === 'on');
+    document.getElementById('edit_operacional').checked = (button.getAttribute('data-operacional') === 'on');
+
+    // Avaria
+    const avariaId = button.getAttribute('data-avaria_id');
+    document.getElementById('edit_avaria_id').value = avariaId;
+    if (avariaId) {
+        preencherViaturaEditar();
+    } else {
+        document.getElementById('edit_viatura_display').value = '';
+        document.getElementById('edit_viatura_id').value = button.getAttribute('data-viatura_id') || '';
+        document.getElementById('edit_kms').value = button.getAttribute('data-kms') || '';
+    }
+
+    atualizarOperacionalEditar();
+});
+
+function atualizarOperacionalEditar() {
+    const chefe = document.getElementById('edit_chefe_oficina').checked;
+    const comando = document.getElementById('edit_comando').checked;
+    const operacional = document.getElementById('edit_operacional');
+    operacional.disabled = !(chefe && comando);
+    if (operacional.disabled) operacional.checked = false;
+}
+document.getElementById('edit_chefe_oficina').addEventListener('change', atualizarOperacionalEditar);
+document.getElementById('edit_comando').addEventListener('change', atualizarOperacionalEditar);
+</script>
 {% endblock %}
