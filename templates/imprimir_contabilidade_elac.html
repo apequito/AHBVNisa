@@ -5,13 +5,15 @@
     <title>Contabilidade ELAC - {{ mes }}/{{ ano }}</title>
     <style>
         @page { size: A4 portrait; margin: 15mm; }
-        body { font-family: Arial, sans-serif; font-size: 13px; }
-        .cabecalho { text-align: center; margin-bottom: 15px; }
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        .cabecalho { text-align: center; margin-bottom: 10px; }
         h2 { margin: 5px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #000; padding: 7px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; }
-        .assinatura { width: 180px; }
+        .assinatura { width: 150px; }
+        .subtotal { font-weight: bold; background-color: #e0e0e0; }
+        .quebra { page-break-after: always; }
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
 </head>
@@ -19,34 +21,59 @@
     <div class="cabecalho">
         <h2>Associação Humanitária de Bombeiros Voluntários de Nisa</h2>
         <p>Rua Dr. Cruz Malpique - 6050-341 Nisa</p>
-        <h3>Contabilidade de {{ categoria }} – {{ mes }}/{{ ano }}</h3>
+        <h3>Contabilidade de ELAC – {{ mes }}/{{ ano }}</h3>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Mecanográfico</th>
-                <th>Nome</th>
-                <th>Nº Turnos</th>
-                <th>Valor Total (€)</th>
-                <th class="assinatura">Assinatura</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for bombeiro, info in bombeiros %}
-            <tr>
-                <td>{{ bombeiro.mecanografico }}</td>
-                <td>{{ bombeiro.nome }}</td>
-                <td>{{ info.turnos }}</td>
-                <td>{{ "%.2f"|format(info.valor) }}</td>
-                <td></td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5" style="text-align:center;">Nenhum registo encontrado.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% set bombeiros_por_pagina = 25 %}
+    {% set total_geral = namespace(valor=0.0, turnos=0) %}
+
+    {% for bombeiro, info in bombeiros %}
+        {% if loop.index0 % bombeiros_por_pagina == 0 %}
+            {% if not loop.first %}
+                <tr class="subtotal">
+                    <td colspan="2">Subtotal desta página</td>
+                    <td>{{ total_pagina.turnos }}</td>
+                    <td>{{ "%.2f"|format(total_pagina.valor) }} €</td>
+                    <td></td>
+                </tr>
+                </tbody></table>
+                <div class="quebra"></div>
+                <table>
+                    <thead><tr><th>Mec.</th><th>Nome</th><th>Nº Turnos</th><th>Valor Total (€)</th><th>Assinatura</th></tr></thead>
+                    <tbody>
+            {% endif %}
+            {% set total_pagina = namespace(valor=0.0, turnos=0) %}
+        {% endif %}
+
+        <tr>
+            <td>{{ bombeiro.mecanografico }}</td>
+            <td>{{ bombeiro.nome }}</td>
+            <td>{{ info.turnos }}</td>
+            <td>{{ "%.2f"|format(info.valor) }}</td>
+            <td></td>
+        </tr>
+
+        {% set total_pagina.valor = total_pagina.valor + info.valor %}
+        {% set total_pagina.turnos = total_pagina.turnos + info.turnos %}
+        {% set total_geral.valor = total_geral.valor + info.valor %}
+        {% set total_geral.turnos = total_geral.turnos + info.turnos %}
+    {% else %}
+        <tr><td colspan="5" style="text-align:center;">Nenhum registo encontrado.</td></tr>
+    {% endfor %}
+
+    {% if bombeiros|length > 0 %}
+        <tr class="subtotal">
+            <td colspan="2">Subtotal desta página</td>
+            <td>{{ total_pagina.turnos }}</td>
+            <td>{{ "%.2f"|format(total_pagina.valor) }} €</td>
+            <td></td>
+        </tr>
+    {% endif %}
+    </tbody></table>
+
+    {% if bombeiros|length > 0 %}
+    <p style="text-align:right; margin-top:5px;"><strong>Total Geral: {{ total_geral.turnos }} turnos, {{ "%.2f"|format(total_geral.valor) }} €</strong></p>
+    {% endif %}
     <script>window.print();</script>
 </body>
-
 </html>

@@ -6363,17 +6363,23 @@ def enviar_contagem_ecins():
     ecins = query.order_by(Ecin.bombeiro_id).all()
 
     from collections import defaultdict
-    contagem_por_bombeiro = defaultdict(int)
+    contagem = defaultdict(int)
     for ec in ecins:
-        contagem_por_bombeiro[ec.bombeiro_id] += 1
+        contagem[ec.bombeiro_id] += 1
 
     enviadas = 0
-    for bombeiro_id, total in contagem_por_bombeiro.items():
+    for bombeiro_id, total in contagem.items():
         bombeiro = Bombeiro.query.get(bombeiro_id)
         if not bombeiro:
             continue
 
-        corpo = f"O(A) bombeiro(a) {bombeiro.nome} teve {total} turno(s) de {'ECIN' if cat == 'ECIN' else 'ELAC' if cat == 'ELAC' else 'ECIN/ELAC'} no mês de {mes}/{ano}."
+        categoria_nome = 'ECIN/ELAC'
+        if cat == 'ECIN':
+            categoria_nome = 'ECIN'
+        elif cat == 'ELAC':
+            categoria_nome = 'ELAC'
+
+        corpo = f"O(A) bombeiro(a) {bombeiro.nome} teve {total} turno(s) de {categoria_nome} no mês de {mes}/{ano}."
 
         msg = MensagemCorreio(
             remetente_id=current_user.id,
