@@ -6363,12 +6363,16 @@ def enviar_contagem_ecins():
     ecins = query.order_by(Ecin.bombeiro_id).all()
 
     from collections import defaultdict
-    contagem = defaultdict(int)
+    contagem = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
     for ec in ecins:
-        contagem[ec.bombeiro_id] += 1
+        contagem[ec.bombeiro_id]['turnos'] += 1
+        contagem[ec.bombeiro_id]['valor'] += ec.valor or 0.0
 
     enviadas = 0
-    for bombeiro_id, total in contagem.items():
+    # Guardar dados para o resumo do remetente
+    resumo_remetente = "Contagem de turnos enviada:\n\n"
+
+    for bombeiro_id, dados in contagem.items():
         bombeiro = Bombeiro.query.get(bombeiro_id)
         if not bombeiro:
             continue
@@ -6379,12 +6383,17 @@ def enviar_contagem_ecins():
         elif cat == 'ELAC':
             categoria_nome = 'ELAC'
 
-        corpo = f"O(A) bombeiro(a) {bombeiro.nome} teve {total} turno(s) de {categoria_nome} no mês de {mes}/{ano}."
+        total_turnos = dados['turnos']
+        total_valor = dados['valor']
+        corpo = (
+            f"O(A) bombeiro(a) {bombeiro.nome} teve {total_turnos} turno(s) de {categoria_nome} "
+            f"no mês de {mes}/{ano}, no valor de {total_valor:.2f} €."
+        )
 
         msg = MensagemCorreio(
             remetente_id=current_user.id,
             destinatario_id=bombeiro_id,
-            departamento=None,               # não é necessário para envio individual
+            departamento=None,
             assunto='Envio de Contagem de Turno',
             corpo=corpo,
             data_envio=datetime.utcnow(),
@@ -6395,8 +6404,25 @@ def enviar_contagem_ecins():
         db.session.add(msg)
         enviadas += 1
 
+        # Adicionar ao resumo do remetente
+        resumo_remetente += f"{bombeiro.nome}: {total_turnos} turnos, {total_valor:.2f} €\n"
+
+    # Enviar cópia da contagem ao remetente
+    msg_remetente = MensagemCorreio(
+        remetente_id=current_user.id,
+        destinatario_id=current_user.id,
+        departamento=None,
+        assunto='Cópia da Contagem de Turno Enviada',
+        corpo=resumo_remetente,
+        data_envio=datetime.utcnow(),
+        lida=False,
+        apagada_remetente=False,
+        apagada_destinatario=False
+    )
+    db.session.add(msg_remetente)
+
     db.session.commit()
-    flash(f'Contagens enviadas para {enviadas} bombeiros.', 'success')
+    flash(f'Contagens enviadas para {enviadas} bombeiros. Uma cópia foi guardada na sua caixa de entrada.', 'success')
     return redirect(url_for('administrativo', tab='ecins',
                             mes_ecin=mes, ano_ecin=ano, cat_ecin=cat))
 
@@ -6515,6 +6541,20 @@ def imprimir_contabilidade_elac():
                            total_geral_valor=total_geral_valor)
 
 
+@app.route('/correio/apagar-em-massa', methods=['POST'])
+@login_required
+def apagar_correio_massa():
+    ids = request.form.getlist('ids[]')  # lista de IDs enviados pelo formulário
+    for msg_id in ids:
+        msg = MensagemCorreio.query.get(int(msg_id))
+        if msg:
+            if msg.destinatario_id == current_user.id:
+                msg.apagada_destinatario = True
+            elif msg.remetente_id == current_user.id:
+                msg.apagada_remetente = True
+    db.session.commit()
+    flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
+    return redirect(url_for('correio'))
 
 
 

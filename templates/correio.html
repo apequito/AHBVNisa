@@ -21,15 +21,21 @@
     <!-- Caixa de Entrada -->
     <div class="tab-pane fade show active" id="entrada" role="tabpanel">
         {% if caixa_entrada %}
+            <div class="mb-2">
+                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas()">🗑️ Eliminar Correio</button>
+            </div>
             <div class="list-group">
                 {% for msg in caixa_entrada %}
                 <div class="list-group-item p-0">
-                    <!-- Cabeçalho da mensagem (sempre visível) -->
-                    <div class="d-flex justify-content-between align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}"
-                         style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}" aria-expanded="false">
-                        <div>
-                            <strong>{{ msg.assunto }}</strong>
-                            <small class="text-muted ms-2">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                    <div class="d-flex justify-content-between align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}">
+                        <div class="form-check">
+                            <input class="form-check-input check-correio" type="checkbox" value="{{ msg.id }}">
+                        </div>
+                        <div class="flex-grow-1 ms-2" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ msg.assunto }}</strong>
+                                <small class="text-muted ms-2">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
                             <div class="small text-muted">De: {{ msg.remetente.nome }}</div>
                             {% if not msg.lida %}<span class="badge bg-danger mt-1">Nova</span>{% endif %}
                         </div>
@@ -37,10 +43,8 @@
                             {% if not msg.lida %}
                             <a href="{{ url_for('correio_marcar_lida', id=msg.id) }}" class="btn btn-sm btn-outline-success" title="Marcar como lida"><i class="bi bi-check-lg"></i></a>
                             {% endif %}
-                            <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')" title="Apagar"><i class="bi bi-trash"></i></a>
                         </div>
                     </div>
-                    <!-- Corpo expandido (inicialmente escondido) -->
                     <div class="collapse" id="msg-collapse-{{ msg.id }}">
                         <div class="p-3 border-top">
                             <p>{{ msg.corpo }}</p>
@@ -77,9 +81,6 @@
                     </div>
                     <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
                     <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
-                    <div class="mt-2 text-end">
-                        <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')"><i class="bi bi-trash"></i></a>
-                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -144,37 +145,57 @@
 </div>
 
 <script>
-    // Função para abrir modal em modo "Nova Mensagem"
-    function novaMensagem() {
-        document.getElementById('modalTitulo').textContent = 'Nova Mensagem';
-        document.getElementById('modalAssunto').value = 'Sem assunto';
-        document.getElementById('modalCorpo').value = '';
-        document.getElementById('modalTipoBombeiro').checked = true;
-        document.getElementById('modalDestinatarioId').value = '';
-        document.getElementById('modalDepartamento').value = '';
-        toggleDestinatario();
-        var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
-        modal.show();
+function eliminarSelecionadas() {
+    const checkboxes = document.querySelectorAll('.check-correio:checked');
+    if (checkboxes.length === 0) {
+        alert('Selecione pelo menos uma mensagem para eliminar.');
+        return;
     }
+    if (!confirm('Tem a certeza que deseja eliminar as mensagens selecionadas?')) {
+        return;
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for('apagar_correio_massa') }}';
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+}
 
-    // Função para responder a uma mensagem
-    function responderMensagem(remetenteId, remetenteNome, assuntoOriginal) {
-        document.getElementById('modalTitulo').textContent = 'Responder';
-        document.getElementById('modalAssunto').value = 'RE: ' + assuntoOriginal;
-        document.getElementById('modalCorpo').value = '';
-        // Selecionar o destinatário como o remetente original
-        document.getElementById('modalTipoBombeiro').checked = true;
-        document.getElementById('modalDestinatarioId').value = remetenteId;
-        toggleDestinatario();
-        var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
-        modal.show();
-    }
+// --- Funções já existentes (nova mensagem, resposta, etc.) ---
+function novaMensagem() {
+    document.getElementById('modalTitulo').textContent = 'Nova Mensagem';
+    document.getElementById('modalAssunto').value = 'Sem assunto';
+    document.getElementById('modalCorpo').value = '';
+    document.getElementById('modalTipoBombeiro').checked = true;
+    document.getElementById('modalDestinatarioId').value = '';
+    document.getElementById('modalDepartamento').value = '';
+    toggleDestinatario();
+    var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
+    modal.show();
+}
 
-    // Mostrar/ocultar campos de destinatário com base no radio
-    function toggleDestinatario() {
-        var tipo = document.querySelector('input[name="destinatario_tipo"]:checked').value;
-        document.getElementById('modalDivBombeiro').style.display = (tipo === 'bombeiro') ? 'block' : 'none';
-        document.getElementById('modalDivDepartamento').style.display = (tipo === 'departamento') ? 'block' : 'none';
-    }
+function responderMensagem(remetenteId, remetenteNome, assuntoOriginal) {
+    document.getElementById('modalTitulo').textContent = 'Responder';
+    document.getElementById('modalAssunto').value = 'RE: ' + assuntoOriginal;
+    document.getElementById('modalCorpo').value = '';
+    document.getElementById('modalTipoBombeiro').checked = true;
+    document.getElementById('modalDestinatarioId').value = remetenteId;
+    toggleDestinatario();
+    var modal = new bootstrap.Modal(document.getElementById('modalNovaMensagem'));
+    modal.show();
+}
+
+function toggleDestinatario() {
+    var tipo = document.querySelector('input[name="destinatario_tipo"]:checked').value;
+    document.getElementById('modalDivBombeiro').style.display = (tipo === 'bombeiro') ? 'block' : 'none';
+    document.getElementById('modalDivDepartamento').style.display = (tipo === 'departamento') ? 'block' : 'none';
+}
 </script>
 {% endblock %}
