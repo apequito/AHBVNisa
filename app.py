@@ -5924,8 +5924,8 @@ def painel_comando():
     # ----- Dispensas por aprovar -----
     dispensas_pendentes = Dispensa.query.filter_by(aprovada=False).count()
 
-    # ----- Créditos em análise -----
-    creditos_analise = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
+    # ----- Disponibilidades por confirmar (substitui Créditos) -----
+    disponibilidades_pendentes = Disponibilidade.query.filter_by(confirmada=False).count()
 
     # ----- Viaturas Inoperacionais -----
     viaturas_inop = Viatura.query.filter(
@@ -5951,7 +5951,7 @@ def painel_comando():
                            avarias_ativas=avarias_ativas,
                            trocas_pendentes=trocas_pendentes,
                            dispensas_pendentes=dispensas_pendentes,
-                           creditos_analise=creditos_analise,
+                           disponibilidades_pendentes=disponibilidades_pendentes,
                            viaturas_inop=viaturas_inop,
                            reunioes=reunioes,
                            notas=notas)
@@ -6102,6 +6102,7 @@ def inject_pendencias():
         user = current_user
         total = 0
 
+        # --- Valores comuns a Admin/Comando ---
         if user.tipo_user == 'Admin' or user.resp_departamento == 'Comando':
             pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
             pendencias['trocas'] = TrocaServico.query.filter_by(estado='aceite_colega').count()
@@ -6109,14 +6110,19 @@ def inject_pendencias():
             pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
             pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
             pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
-            # NOVO: Stock Farmácia abaixo do mínimo
+
+            # Stock Farmácia abaixo do mínimo
             pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
                 StockFarmacia.infstock > 0,
                 StockFarmacia.stock <= StockFarmacia.infstock
             ).count()
-            # NOVO: Reposições de ambulância pendentes
+
+            # Reposições de ambulância pendentes
             pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+
             total = sum(pendencias.values())
+
+        # --- Departamentos específicos ---
         else:
             if user.resp_departamento == 'Oficina':
                 pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
@@ -6125,18 +6131,29 @@ def inject_pendencias():
             if user.resp_departamento == 'Secretaria':
                 pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
             if user.resp_departamento == 'Farmacia':
-                # Responsável da Farmácia vê os produtos em falta
                 pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
                     StockFarmacia.infstock > 0,
                     StockFarmacia.stock <= StockFarmacia.infstock
                 ).count()
-                # E também as reposições de ambulância pendentes
                 pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             if user.resp_departamento == 'Socorrista':
                 pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             total = sum(pendencias.values())
 
+        # --- Inspeções periódicas próximas (apenas para Admin, Comando, Oficina) ---
+        pendencias['inspecoes_proximas'] = 0
+        if user.tipo_user == 'Admin' or user.resp_departamento in ('Comando', 'Oficina'):
+            hoje = date.today()
+            limite = hoje + timedelta(days=30)
+            pendencias['inspecoes_proximas'] = GestaoFrota.query.join(Viatura).filter(
+                GestaoFrota.inspecao_periodica != None,
+                GestaoFrota.inspecao_periodica >= hoje,
+                GestaoFrota.inspecao_periodica <= limite
+            ).count()
+            total += pendencias['inspecoes_proximas']
+
         pendencias['total'] = total
+
     return dict(pendencias=pendencias)
 
 

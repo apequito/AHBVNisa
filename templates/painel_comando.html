@@ -51,16 +51,15 @@
         </div>
     </div>
 
-    <!-- Créditos em Análise -->
-    <div class="col-md-2">
-        <div class="card text-white {{ 'bg-info' if creditos_analise > 0 else 'bg-success' }} shadow-sm">
-            <a href="{{ url_for('listar_creditos') }}" class="text-white text-decoration-none">
-                <div class="card-body text-center">
-                    <h1 class="display-4">{{ creditos_analise }}</h1>
-                    <p class="mb-0"><i class="bi bi-credit-card me-1"></i>Créditos</p>
-                </div>
-            </a>
-        </div>
+    <!-- Disponibilidades por confirmar -->
+<div class="col-md-2">
+    <div class="card text-white {{ 'bg-warning' if disponibilidades_pendentes > 0 else 'bg-success' }} shadow-sm">
+        <a href="{{ url_for('disponibilidades', filtro='nao_confirmadas') }}" class="text-white text-decoration-none">
+            <div class="card-body text-center">
+                <h1 class="display-4">{{ disponibilidades_pendentes }}</h1>
+                <p class="mb-0"><i class="bi bi-person-check me-1"></i>Disponibilidades</p>
+            </div>
+        </a>
     </div>
 </div>
 

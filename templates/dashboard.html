@@ -103,9 +103,14 @@
                         <a href="{{ url_for('oficina') }}" class="btn btn-outline-danger btn-sm rounded-pill">
                             <i class="bi bi-tools me-1"></i>Oficina
                         </a>
-                        <a href="{{ url_for('gestao_frota') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
-                            <i class="bi bi-speedometer2 me-1"></i>Gestão de Frota
-                        </a>
+                        <a href="{{ url_for('gestao_frota') }}" class="btn btn-outline-secondary btn-sm rounded-pill position-relative">
+    <i class="bi bi-speedometer2 me-1"></i>Gestão de Frota
+    {% if pendencias.inspecoes_proximas is defined and pendencias.inspecoes_proximas > 0 %}
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">
+        {{ pendencias.inspecoes_proximas }}
+    </span>
+    {% endif %}
+</a>
                     {% endif %}
                 </div>
             </div>
