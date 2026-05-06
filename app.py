@@ -5237,9 +5237,12 @@ def backup_importar():
 
     # ---------- 1. APAGAR TODOS OS DADOS EXISTENTES ----------
     modelos_para_apagar = [
-        NotaComando, Reuniao, TipoFardaMaterial,          # novas tabelas
-        Nota, MensagemCorreio, ChecklistAmbulanciaItem, ChecklistAmbulancia,
-        StockAmbulancia, StockFarmacia, CategoriaFarmacia,
+        NotaComando, Reuniao, TipoFardaMaterial,
+        Nota, MensagemCorreio,
+        StockAmbulancia,  # ← antes de ChecklistAmbulancia
+        ChecklistAmbulanciaItem,  # ← antes de ChecklistAmbulancia
+        ChecklistAmbulancia,
+        StockFarmacia, CategoriaFarmacia,
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
         Avaria, Disponibilidade, Deslocacao,
