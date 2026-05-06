@@ -18,7 +18,7 @@
 </ul>
 
 <div class="tab-content" id="correioTabContent">
-    <!-- Caixa de Entrada -->
+    <!-- ===== Caixa de Entrada ===== -->
     <div class="tab-pane fade show active" id="entrada" role="tabpanel">
         <!-- Filtro -->
         <div class="btn-group mb-3">
@@ -28,48 +28,54 @@
         </div>
 
         {% if caixa_entrada %}
-            <div class="mb-2">
-                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas('entrada')">🗑️ Eliminar Selecionadas</button>
-            </div>
-            <div class="list-group">
-                {% for msg in caixa_entrada %}
-                <div class="list-group-item p-0">
-                    <div class="d-flex align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}">
-                        <input type="checkbox" class="form-check-input check-correio" value="{{ msg.id }}">
-                        <div class="flex-grow-1 ms-2" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}">
-                            <div class="d-flex justify-content-between">
-                                <strong>{{ msg.assunto }}</strong>
-                                <small class="text-muted ms-2">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
-                            </div>
-                            <div class="small text-muted">De: {{ msg.remetente.nome }}</div>
-                            {% if not msg.lida %}<span class="badge bg-danger mt-1">Nova</span>{% endif %}
-                        </div>
-                        <div class="btn-group ms-3">
-                            {% if not msg.lida %}
-                            <a href="{{ url_for('correio_marcar_lida', id=msg.id) }}" class="btn btn-sm btn-outline-success" title="Marcar como lida"><i class="bi bi-check-lg"></i></a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="collapse" id="msg-collapse-{{ msg.id }}">
-                        <div class="p-3 border-top">
-                            <p>{{ msg.corpo }}</p>
-                            <div class="d-flex justify-content-end">
-                                <button class="btn btn-sm btn-primary"
-                                        onclick="responderMensagem({{ msg.remetente_id }}, '{{ msg.remetente.nome|e }}', '{{ msg.assunto|e }}')">
-                                    <i class="bi bi-reply"></i> Responder
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <form method="POST" action="{{ url_for('apagar_correio_massa') }}">
+                <div class="mb-2">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem a certeza que deseja eliminar as mensagens selecionadas?')">
+                        🗑️ Eliminar Selecionadas
+                    </button>
                 </div>
-                {% endfor %}
-            </div>
+                <div class="list-group">
+                    {% for msg in caixa_entrada %}
+                    <div class="list-group-item p-0">
+                        <div class="d-flex align-items-center p-3 {% if not msg.lida %}fw-bold bg-light{% endif %}">
+                            <input type="checkbox" class="form-check-input check-correio" name="ids[]" value="{{ msg.id }}">
+                            <div class="flex-grow-1 ms-2" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#msg-collapse-{{ msg.id }}">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ msg.assunto }}</strong>
+                                    <small class="text-muted ms-2">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                <div class="small text-muted">De: {{ msg.remetente.nome }}</div>
+                                {% if not msg.lida %}<span class="badge bg-danger mt-1">Nova</span>{% endif %}
+                            </div>
+                            <div class="btn-group ms-3">
+                                {% if not msg.lida %}
+                                <a href="{{ url_for('correio_marcar_lida', id=msg.id) }}" class="btn btn-sm btn-outline-success" title="Marcar como lida"><i class="bi bi-check-lg"></i></a>
+                                {% endif %}
+                                <!-- Apagar individual -->
+                                <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')" title="Apagar"><i class="bi bi-trash"></i></a>
+                            </div>
+                        </div>
+                        <div class="collapse" id="msg-collapse-{{ msg.id }}">
+                            <div class="p-3 border-top">
+                                <p>{{ msg.corpo }}</p>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-primary"
+                                            onclick="responderMensagem({{ msg.remetente_id }}, '{{ msg.remetente.nome|e }}', '{{ msg.assunto|e }}')">
+                                        <i class="bi bi-reply"></i> Responder
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
         {% else %}
             <p class="text-muted">A sua caixa de entrada está vazia.</p>
         {% endif %}
     </div>
 
-    <!-- Enviadas -->
+    <!-- ===== Enviadas ===== -->
     <div class="tab-pane fade" id="enviadas" role="tabpanel">
         <div class="mb-3">
             <button class="btn btn-success" onclick="novaMensagem()">
@@ -77,31 +83,38 @@
             </button>
         </div>
         {% if enviadas %}
-            <div class="mb-2">
-                <button class="btn btn-sm btn-danger" onclick="eliminarSelecionadas('enviadas')">🗑️ Eliminar Selecionadas</button>
-            </div>
-            <div class="list-group">
-                {% for msg in enviadas %}
-                <div class="list-group-item d-flex align-items-center">
-                    <input type="checkbox" class="form-check-input check-correio" value="{{ msg.id }}">
-                    <div class="flex-grow-1 ms-2">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ msg.assunto }}</strong>
-                            <small class="text-muted">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
-                        </div>
-                        <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
-                        <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
-                    </div>
+            <form method="POST" action="{{ url_for('apagar_correio_massa') }}">
+                <div class="mb-2">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem a certeza que deseja eliminar as mensagens selecionadas?')">
+                        🗑️ Eliminar Selecionadas
+                    </button>
                 </div>
-                {% endfor %}
-            </div>
+                <div class="list-group">
+                    {% for msg in enviadas %}
+                    <div class="list-group-item d-flex align-items-center">
+                        <input type="checkbox" class="form-check-input check-correio" name="ids[]" value="{{ msg.id }}">
+                        <div class="flex-grow-1 ms-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ msg.assunto }}</strong>
+                                <small class="text-muted">{{ msg.data_envio.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <p class="mb-1">{{ msg.corpo[:150] }}{% if msg.corpo|length > 150 %}...{% endif %}</p>
+                            <small class="text-muted">Para: {% if msg.destinatario %}{{ msg.destinatario.nome }}{% else %}Departamento {{ msg.departamento }}{% endif %}</small>
+                        </div>
+                        <div class="btn-group ms-3">
+                            <a href="{{ url_for('correio_apagar', id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar esta mensagem?')" title="Apagar"><i class="bi bi-trash"></i></a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
         {% else %}
             <p class="text-muted">Nenhuma mensagem enviada.</p>
         {% endif %}
     </div>
 </div>
 
-<!-- Modal Nova Mensagem / Resposta (mantido) -->
+<!-- Modal Nova Mensagem / Resposta -->
 <div class="modal fade" id="modalNovaMensagem" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ url_for('correio_enviar') }}">
@@ -156,30 +169,6 @@
 </div>
 
 <script>
-function eliminarSelecionadas(aba) {
-    // Apanhar apenas as checkboxes da aba ativa (a que está visível)
-    const checkboxes = document.querySelectorAll('.tab-pane.active .check-correio:checked');
-    if (checkboxes.length === 0) {
-        alert('Selecione pelo menos uma mensagem para eliminar.');
-        return;
-    }
-    if (!confirm('Tem a certeza que deseja eliminar as mensagens selecionadas?')) {
-        return;
-    }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ url_for('apagar_correio_massa') }}';
-    checkboxes.forEach(cb => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'ids[]';
-        input.value = cb.value;
-        form.appendChild(input);
-    });
-    document.body.appendChild(form);
-    form.submit();
-}
-
 function novaMensagem() {
     document.getElementById('modalTitulo').textContent = 'Nova Mensagem';
     document.getElementById('modalAssunto').value = 'Sem assunto';

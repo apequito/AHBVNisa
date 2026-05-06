@@ -6667,6 +6667,46 @@ def imprimir_contabilidade_elac():
                            total_geral_valor=total_geral_valor)
 
 
+@app.route('/correio/apagar/<int:id>')
+@login_required
+def correio_apagar(id):
+    msg = MensagemCorreio.query.get_or_404(id)
+    if msg.remetente_id == current_user.id:
+        msg.apagada_remetente = True
+    elif msg.destinatario_id == current_user.id or msg.departamento == current_user.resp_departamento:
+        msg.apagada_destinatario = True
+    else:
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('correio'))
+    db.session.commit()
+    flash('Mensagem removida.', 'info')
+    return redirect(url_for('correio'))
+
+@app.route('/correio/apagar-em-massa', methods=['POST'])
+@login_required
+def apagar_correio_massa():
+    ids = request.form.getlist('ids[]')
+    print(f"DEBUG: IDs recebidos: {ids}")  # para ver nos logs do Render
+    if not ids:
+        flash('Nenhuma mensagem selecionada.', 'warning')
+        return redirect(url_for('correio'))
+
+    for msg_id in ids:
+        try:
+            msg = MensagemCorreio.query.get(int(msg_id))
+            if msg:
+                if msg.destinatario_id == current_user.id or msg.departamento == current_user.resp_departamento:
+                    msg.apagada_destinatario = True
+                elif msg.remetente_id == current_user.id:
+                    msg.apagada_remetente = True
+        except Exception as e:
+            print(f"DEBUG: Erro ao apagar msg {msg_id}: {e}")
+
+    db.session.commit()
+    flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
+    return redirect(url_for('correio'))
+
+
 @app.route('/correio/apagar-em-massa', methods=['POST'])
 @login_required
 def apagar_correio_massa():
