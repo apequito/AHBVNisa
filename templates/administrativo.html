@@ -206,9 +206,9 @@
                     </a>
                 {% endif %}
                 <!-- Botão Valor Global -->
-                <button class="btn btn-sm btn-outline-primary" onclick="definirValorGlobal()">
-    <i class="bi bi-cash-coin me-1"></i> Valor Global
-</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="definirValorGlobal()">
+                        <i class="bi bi-cash-coin me-1"></i> Valor Global
+                    </button>
                 <!-- Formulário Enviar Contagem -->
                 <form method="POST" action="{{ url_for('enviar_contagem_ecins') }}" class="d-inline">
                     <input type="hidden" name="mes_ecin" value="{{ mes_ecin }}">
