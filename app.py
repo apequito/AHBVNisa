@@ -5237,13 +5237,13 @@ def backup_importar():
 
     # ---------- 1. APAGAR TODOS OS DADOS EXISTENTES ----------
     modelos_para_apagar = [
+        NotaComando, Reuniao, TipoFardaMaterial,          # novas tabelas
         Nota, MensagemCorreio, ChecklistAmbulanciaItem, ChecklistAmbulancia,
         StockAmbulancia, StockFarmacia, CategoriaFarmacia,
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
-        Avaria, Disponibilidade, Deslocacao,  # <-- Deslocacao antes de Viatura
-        Viatura, Bombeiro,
-        TipoFardaMaterial, Reuniao, NotaComando
+        Avaria, Disponibilidade, Deslocacao,
+        Viatura, Bombeiro
     ]
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
@@ -5496,6 +5496,58 @@ def backup_importar():
                 erros.append(f"Deslocações linha {row_num}: {str(e)[:100]}")
         db.session.flush()
 
+    # ---------- 21. FARDAMENTO ATRIBUÍDO ----------
+    if 'Fardamento Atribuido' in wb.sheetnames:
+        ws = wb['Fardamento Atribuido']
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(c is None for c in row):
+                continue
+            try:
+                fa = _importar_linha_fardamento_atribuido(row, row_num)
+                if fa: db.session.add(fa); total_importado += 1
+            except Exception as e:
+                erros.append(f"Fardamento Atribuído linha {row_num}: {str(e)[:100]}")
+        db.session.flush()
+
+    # ---------- 22. REUNIÕES ----------
+    if 'Reunioes' in wb.sheetnames:
+        ws = wb['Reunioes']
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(c is None for c in row):
+                continue
+            try:
+                r = _importar_linha_reunioes(row, row_num)
+                if r: db.session.add(r); total_importado += 1
+            except Exception as e:
+                erros.append(f"Reuniões linha {row_num}: {str(e)[:100]}")
+        db.session.flush()
+
+    # ---------- 23. NOTAS COMANDO ----------
+    if 'Notas Comando' in wb.sheetnames:
+        ws = wb['Notas Comando']
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(c is None for c in row):
+                continue
+            try:
+                nc = _importar_linha_notas_comando(row, row_num)
+                if nc: db.session.add(nc); total_importado += 1
+            except Exception as e:
+                erros.append(f"Notas Comando linha {row_num}: {str(e)[:100]}")
+        db.session.flush()
+
+    # ---------- 24. TIPOS FARDA/MATERIAL ----------
+    if 'Tipos Farda Material' in wb.sheetnames:
+        ws = wb['Tipos Farda Material']
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(c is None for c in row):
+                continue
+            try:
+                tf = _importar_linha_tipos_farda_material(row, row_num)
+                if tf: db.session.add(tf); total_importado += 1
+            except Exception as e:
+                erros.append(f"Tipos Farda Material linha {row_num}: {str(e)[:100]}")
+        db.session.flush()
+
     db.session.commit()
 
     if erros:
@@ -5504,6 +5556,154 @@ def backup_importar():
         flash(f'{total_importado} registos importados com sucesso!', 'success')
     return redirect(url_for('dashboard'))
 
+
+def _importar_linha_stock_farmacia(row, row_num):
+    try:
+        cat = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+        nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+        tamanho_val = str(row[3]).strip()[:100] if len(row) > 3 and row[3] else ''
+        stock_val = 0
+        if len(row) > 4 and row[4] is not None:
+            try:
+                stock_val = int(row[4])
+            except (ValueError, TypeError):
+                pass
+        infstock_val = 0
+        if len(row) > 5 and row[5] is not None:
+            try:
+                infstock_val = int(row[5])
+            except (ValueError, TypeError):
+                pass
+        if not nome:
+            return None
+        s = StockFarmacia(
+            categoria=cat,
+            nome=nome,
+            tamanho=tamanho_val if tamanho_val else None,
+            stock=stock_val,
+            infstock=infstock_val,
+            data_atualizacao=datetime.utcnow()
+        )
+        return s
+    except Exception:
+        return None
+
+
+def _importar_linha_ecins(row, row_num):
+    try:
+        mec = str(row[0]).strip() if row[0] else None
+        data_str = str(row[1]).strip() if len(row) > 1 else None
+        turno = str(row[2]).strip() if len(row) > 2 else ''
+        categoria = str(row[3]).strip() if len(row) > 3 else ''
+        funcao = str(row[4]).strip() if len(row) > 4 else None
+        estado = str(row[5]).strip() if len(row) > 5 else 'Pendente'
+        valor = float(row[6]) if len(row) > 6 and row[6] else 0.0
+
+        data = _parse_data(data_str)
+        if not mec or not data:
+            return None
+        bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+        if not bombeiro:
+            return None
+        ec = Ecin(
+            bombeiro_id=bombeiro.id,
+            data=data,
+            turno=turno,
+            categoria=categoria,
+            funcao=funcao,
+            estado=estado,
+            valor=valor
+        )
+        return ec
+    except Exception:
+        return None
+
+def _importar_linha_fardamento_atribuido(row, row_num):
+        try:
+            mec = str(row[0]).strip() if row[0] else None
+            tipo = str(row[1]).strip() if len(row) > 1 else ''
+            nome = str(row[2]).strip() if len(row) > 2 else ''
+            tamanho = str(row[3]).strip() if len(row) > 3 else ''
+            data_entrega_str = str(row[4]).strip() if len(row) > 4 else None
+            estado = str(row[5]).strip() if len(row) > 5 else 'Entregue'
+            idpedido = int(row[6]) if len(row) > 6 and row[6] else None
+
+            data_entrega = _parse_data(data_entrega_str)
+            if not mec or not data_entrega:
+                return None
+            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
+            if not bombeiro:
+                return None
+            fa = FardamentoAtribuido(
+                bombeiro_id=bombeiro.id,
+                tipo=tipo,
+                nome=nome,
+                tamanho=tamanho,
+                data_entrega=data_entrega,
+                estado=estado,
+                idpedido=idpedido
+            )
+            return fa
+        except Exception:
+            return None
+
+def _importar_linha_reunioes(row, row_num):
+        try:
+            data_str = str(row[0]).strip() if row[0] else None
+            hora = str(row[1]).strip() if len(row) > 1 else None
+            assunto = str(row[2]).strip() if len(row) > 2 else ''
+            descricao = str(row[3]).strip() if len(row) > 3 else ''
+            criador_mec = str(row[4]).strip() if len(row) > 4 else None
+
+            data = _parse_data(data_str)
+            if not data or not assunto:
+                return None
+            criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
+            r = Reuniao(
+                data=data,
+                hora=hora if hora else None,
+                assunto=assunto,
+                descricao=descricao,
+                criador_id=criador.id if criador else 1
+            )
+            return r
+        except Exception:
+            return None
+
+
+def _importar_linha_notas_comando(row, row_num):
+    try:
+        criador_mec = str(row[0]).strip() if row[0] else None
+        data_criacao_str = str(row[1]).strip() if len(row) > 1 else None
+        descricao = str(row[2]).strip() if len(row) > 2 else ''
+        data_evento_str = str(row[3]).strip() if len(row) > 3 else None
+
+        criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
+        data_criacao = _parse_datetime(data_criacao_str) or datetime.utcnow()
+        data_evento = _parse_data(data_evento_str) if data_evento_str else None
+        nc = NotaComando(
+            criador_id=criador.id if criador else 1,
+            data_criacao=data_criacao,
+            descricao=descricao,
+            data_evento=data_evento
+        )
+        return nc
+    except Exception:
+        return None
+
+def _importar_linha_tipos_farda_material(row, row_num):
+    try:
+        nome = str(row[0]).strip() if row[0] else ''
+        categoria = str(row[1]).strip() if len(row) > 1 else 'Farda'
+        if not nome:
+            return None
+        if TipoFardaMaterial.query.filter_by(nome=nome, categoria=categoria).first():
+            return None   # já existe, ignorar
+        tf = TipoFardaMaterial(nome=nome, categoria=categoria)
+        return tf
+    except Exception:
+        return None
+    
 
 def _importar_linha_deslocacoes(row, row_num):
     """Formato: Data, Hora, Serviço, Origem, Destino, Valor, Mecanográfico, Viatura Matrícula, Nº Serviço"""
@@ -5556,17 +5756,18 @@ def backup_exportar():
     wb = openpyxl.Workbook()
     header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
     header_font = Font(bold=True)
-    now = datetime.now()
+
+    def escrever_cabecalho(ws, cabecalhos):
+        ws.append(cabecalhos)
+        for col in range(1, len(cabecalhos) + 1):
+            ws.cell(row=1, column=col).fill = header_fill
+            ws.cell(row=1, column=col).font = header_font
 
     # ---- 1. Bombeiros ----
     ws = wb.active
     ws.title = "Bombeiros"
-    cab = ['Nº Interno', 'Mecanográfico', 'Nome', 'Nome Completo', 'Email', 'Telemóvel', 'Posto',
-           'Tipo Bombeiro', 'Resp. Departamento', 'Tipo Utilizador', 'Ativo', 'Password Hash']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Nº Interno', 'Mecanográfico', 'Nome', 'Nome Completo', 'Email', 'Telemóvel', 'Posto',
+                            'Tipo Bombeiro', 'Resp. Departamento', 'Tipo Utilizador', 'Ativo', 'Password Hash'])
     for b in Bombeiro.query.order_by(Bombeiro.numero_interno).all():
         ws.append([b.numero_interno, b.mecanografico, b.nome, b.nomecompleto or '', b.email,
                    b.telemovel or '', b.posto, b.tipo_bombeiro, b.resp_departamento or '', b.tipo_user,
@@ -5574,52 +5775,23 @@ def backup_exportar():
 
     # ---- 2. Viaturas ----
     ws = wb.create_sheet("Viaturas")
-    cab = ['Matrícula', 'Tipo', 'Nomenclatura', 'Marca', 'Modelo', 'Ano', 'Estado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Matrícula', 'Tipo', 'Nomenclatura', 'Marca', 'Modelo', 'Ano', 'Estado'])
     for v in Viatura.query.order_by(Viatura.matricula).all():
         ws.append([v.matricula, v.tipo, v.nomenclatura, v.marca, v.modelo, v.ano, v.estado])
 
     # ---- 3. Avarias ----
     ws = wb.create_sheet("Avarias")
-    cab = ['Código', 'Viatura Matrícula', 'Descrição', 'Reportado por (mec.)', 'Kms',
-           'Resp. Oficina', 'Comando', 'Estado', 'Data Reporte']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Código', 'Viatura Matrícula', 'Descrição', 'Reportado por (mec.)', 'Kms',
+                            'Resp. Oficina', 'Comando', 'Estado', 'Data Reporte'])
     for a in Avaria.query.order_by(Avaria.data_reporte.asc()).all():
         ws.append([a.codigo, a.viatura.matricula if a.viatura else '', a.descricao,
                    a.reportador.mecanografico if a.reportador else '', a.kms or '',
                    'Sim' if a.responsavel_oficina else 'Não', 'Sim' if a.comando_verificado else 'Não',
                    a.estado, a.data_reporte.strftime('%d/%m/%Y %H:%M') if a.data_reporte else ''])
 
-
-    # ---- 21. Deslocações ----
-    ws = wb.create_sheet("Deslocacoes")
-    cab = ['Data', 'Hora Início', 'Serviço', 'Origem', 'Destino', 'Valor',
-           'Viatura Matrícula', 'Nº Serviço', 'Bombeiro (mec.)']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for d in Deslocacao.query.order_by(Deslocacao.data.asc()).all():
-        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
-                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
-                   d.valor if d.valor else '',
-                   d.viatura.matricula if d.viatura else '',
-                   d.n_servico or '',
-                   d.bombeiro.mecanografico if d.bombeiro else ''])
-
     # ---- 4. Escalas ----
     ws = wb.create_sheet("Escalas")
-    cab = ['Mecanográfico', 'Início', 'Fim', 'Turno', 'Categoria', 'Função']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Mecanográfico', 'Início', 'Fim', 'Turno', 'Categoria', 'Função'])
     for e in Escala.query.order_by(Escala.data_inicio.asc()).all():
         ws.append([e.bombeiro.mecanografico if e.bombeiro else '',
                    e.data_inicio.strftime('%d/%m/%Y %H:%M') if e.data_inicio else '',
@@ -5628,27 +5800,18 @@ def backup_exportar():
 
     # ---- 5. Trocas ----
     ws = wb.create_sheet("Trocas")
-    cab = ['Origem (mec.)', 'Destino (mec.)', 'Data Origem', 'Turno Origem', 'Data Destino', 'Turno Destino',
-           'Motivo', 'Estado', 'Data Pedido']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Origem (mec.)', 'Destino (mec.)', 'Data Origem', 'Data Destino', 'Motivo', 'Estado', 'Data Pedido'])
     for t in TrocaServico.query.order_by(TrocaServico.data_pedido.asc()).all():
         ws.append([t.bombeiro_origem.mecanografico if t.bombeiro_origem else '',
                    t.bombeiro_destino.mecanografico if t.bombeiro_destino else '',
                    t.data_origem.strftime('%d/%m/%Y') if t.data_origem else '',
-                   t.turno_origem or '', t.data_destino.strftime('%d/%m/%Y') if t.data_destino else '',
-                   t.turno_destino or '', t.motivo or '', t.estado or '',
+                   t.data_destino.strftime('%d/%m/%Y') if t.data_destino else '',
+                   t.motivo or '', t.estado or '',
                    t.data_pedido.strftime('%d/%m/%Y %H:%M') if t.data_pedido else ''])
 
     # ---- 6. Dispensas ----
     ws = wb.create_sheet("Dispensas")
-    cab = ['Bombeiro (mec.)', 'Início', 'Fim', 'Motivo', 'Aprovada']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Bombeiro (mec.)', 'Início', 'Fim', 'Motivo', 'Aprovada'])
     for d in Dispensa.query.order_by(Dispensa.data_inicio.asc()).all():
         ws.append([d.bombeiro.mecanografico if d.bombeiro else '',
                    d.data_inicio.strftime('%d/%m/%Y') if d.data_inicio else '',
@@ -5657,23 +5820,16 @@ def backup_exportar():
 
     # ---- 7. Disponibilidades ----
     ws = wb.create_sheet("Disponibilidades")
-    cab = ['Bombeiro (mec.)', 'Data', 'Turno Extra', 'Categoria', 'Confirmada']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Bombeiro (mec.)', 'Data', 'Turno Extra', 'Categoria', 'Confirmada'])
     for d in Disponibilidade.query.order_by(Disponibilidade.data.asc()).all():
         ws.append([d.bombeiro.mecanografico if d.bombeiro else '',
                    d.data.strftime('%d/%m/%Y') if d.data else '',
-                   d.turno_extra or '', d.categoria or '', 'Sim' if d.confirmada else 'Não'])
+                   d.turno_extra or '', d.categoria or '',
+                   'Sim' if d.confirmada else 'Não'])
 
     # ---- 8. Créditos ----
     ws = wb.create_sheet("Créditos")
-    cab = ['Bombeiro (mec.)', 'Data', 'Descrição', 'Horas', 'Estado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Bombeiro (mec.)', 'Data', 'Descrição', 'Horas', 'Estado'])
     for c in CreditoDispensa.query.order_by(CreditoDispensa.data.asc()).all():
         ws.append([c.bombeiro.mecanografico if c.bombeiro else '',
                    c.data.strftime('%d/%m/%Y') if c.data else '',
@@ -5681,45 +5837,28 @@ def backup_exportar():
 
     # ---- 9. Stock Fardamento ----
     ws = wb.create_sheet("Stock Fardamento")
-    cab = ['ID', 'Tipo', 'Nome', 'Descrição', 'Tamanho', 'Stock']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Nome', 'Descrição', 'Tamanho', 'Tipo', 'Stock'])
     for s in StockFardamento.query.order_by(StockFardamento.nome).all():
-        ws.append([s.id, s.tipo, s.nome, s.descricao or '', s.tamanho or '', s.stock])
+        ws.append([s.nome, s.descricao or '', s.tamanho or '', s.tipo, s.stock])
 
     # ---- 10. Stock Farmácia ----
     ws = wb.create_sheet("Stock Farmacia")
-    cab = ['ID', 'Categoria', 'Nome', 'Tamanho', 'Stock', 'Última Atualização']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Categoria', 'Nome', 'Tamanho', 'Stock', 'Stock Mínimo', 'Última Atualização'])
     for s in StockFarmacia.query.order_by(StockFarmacia.nome).all():
-        ws.append([s.id, s.categoria, s.nome, s.tamanho or '', s.stock,
+        ws.append([s.categoria, s.nome, s.tamanho or '', s.stock, s.infstock or 0,
                    s.data_atualizacao.strftime('%d/%m/%Y %H:%M') if s.data_atualizacao else ''])
 
     # ---- 11. Categorias Farmácia ----
     ws = wb.create_sheet("Categorias Farmacia")
-    cab = ['ID', 'Nome', 'Checklist']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Nome', 'Checklist'])
     for cat in CategoriaFarmacia.query.order_by(CategoriaFarmacia.nome).all():
-        ws.append([cat.id, cat.nome, 'Sim' if cat.checklist else 'Não'])
+        ws.append([cat.nome, 'Sim' if cat.checklist else 'Não'])
 
     # ---- 12. Stock Ambulância ----
     ws = wb.create_sheet("Stock Ambulância")
-    cab = ['ID', 'Data', 'Ambulância', 'Produto', 'Quantidade', 'Solicitante (mec.)', 'Responsável (mec.)', 'Confirmado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Data', 'Ambulância', 'Produto', 'Quantidade', 'Solicitante (mec.)', 'Responsável (mec.)', 'Confirmado'])
     for sa in StockAmbulancia.query.order_by(StockAmbulancia.data.asc()).all():
-        ws.append([sa.id,
-                   sa.data.strftime('%d/%m/%Y %H:%M') if sa.data else '',
+        ws.append([sa.data.strftime('%d/%m/%Y %H:%M') if sa.data else '',
                    sa.ambulancia.matricula if sa.ambulancia else '',
                    sa.produto_stock.nome if sa.produto_stock else '',
                    sa.quantidade,
@@ -5729,11 +5868,7 @@ def backup_exportar():
 
     # ---- 13. Checklist Ambulância ----
     ws = wb.create_sheet("Checklist Ambulância")
-    cab = ['ID', 'Data/Hora', 'Viatura', 'Bombeiro (mec.)', 'Finalizado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['ID Checklist', 'Data/Hora', 'Viatura', 'Bombeiro (mec.)', 'Finalizado'])
     for ch in ChecklistAmbulancia.query.order_by(ChecklistAmbulancia.data_hora.asc()).all():
         ws.append([ch.id, ch.data_hora.strftime('%d/%m/%Y %H:%M') if ch.data_hora else '',
                    ch.viatura.matricula if ch.viatura else '',
@@ -5742,48 +5877,49 @@ def backup_exportar():
 
     # ---- 14. Checklist Ambulância Itens ----
     ws = wb.create_sheet("Checklist Itens")
-    cab = ['ID', 'Checklist ID', 'Produto', 'Quantidade']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Checklist ID', 'Produto', 'Quantidade'])
     for item in ChecklistAmbulanciaItem.query.all():
-        ws.append([item.id, item.checklist_id, item.produto.nome if item.produto else '', item.quantidade])
+        ws.append([item.checklist_id, item.produto.nome if item.produto else '', item.quantidade])
 
-    # ---- 15. ECINS ----
+    # ---- 15. Mensagens Correio ----
+    ws = wb.create_sheet("Mensagens Correio")
+    escrever_cabecalho(ws, ['Remetente (mec.)', 'Destinatário (mec.)', 'Departamento', 'Assunto', 'Corpo', 'Data', 'Lida'])
+    for m in MensagemCorreio.query.order_by(MensagemCorreio.data_envio.asc()).all():
+        ws.append([m.remetente.mecanografico if m.remetente else '',
+                   m.destinatario.mecanografico if m.destinatario else '',
+                   m.departamento or '', m.assunto, m.corpo,
+                   m.data_envio.strftime('%d/%m/%Y %H:%M') if m.data_envio else '',
+                   'Sim' if m.lida else 'Não'])
+
+    # ---- 16. Notas Central ----
+    ws = wb.create_sheet("Notas Central")
+    escrever_cabecalho(ws, ['Criador (mec.)', 'Data Criação', 'Descrição', 'Data Evento'])
+    for n in Nota.query.order_by(Nota.data_criacao.asc()).all():
+        ws.append([n.criador.mecanografico if n.criador else '',
+                   n.data_criacao.strftime('%d/%m/%Y %H:%M') if n.data_criacao else '',
+                   n.descricao, n.data_evento.strftime('%d/%m/%Y') if n.data_evento else ''])
+
+    # ---- 17. ECINS ----
     ws = wb.create_sheet("ECINS")
-    cab = ['Bombeiro (mec.)', 'Data', 'Turno', 'Categoria', 'Função', 'Estado', 'Valor']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Bombeiro (mec.)', 'Data', 'Turno', 'Categoria', 'Função', 'Estado', 'Valor'])
     for ec in Ecin.query.order_by(Ecin.data.asc()).all():
         ws.append([ec.bombeiro.mecanografico if ec.bombeiro else '',
                    ec.data.strftime('%d/%m/%Y') if ec.data else '',
-                   ec.turno, ec.categoria or '', ec.funcao or '', ec.estado,
-                   ec.valor if ec.valor else ''])
+                   ec.turno, ec.categoria or '', ec.funcao or '', ec.estado, ec.valor or 0.0])
 
-    # ---- 16. Oficina ----
+    # ---- 18. Oficina ----
     ws = wb.create_sheet("Oficina")
-    cab = ['Código', 'Nome Oficina', 'Data Recepção', 'Motivo', 'Nº Avaria', 'Viatura', 'Kms', 'Estado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Código', 'Nome Oficina', 'Data Recepção', 'Motivo', 'Nº Avaria', 'Viatura', 'Kms', 'Estado'])
     for o in Oficina.query.order_by(Oficina.data_registo.asc()).all():
         ws.append([o.codigo, o.nome_oficina,
                    o.data_recepcao.strftime('%d/%m/%Y') if o.data_recepcao else '',
                    o.motivo or '', o.avaria.codigo if o.avaria else '',
                    o.viatura.matricula if o.viatura else '', o.kms or '', o.estado])
 
-    # ---- 17. Gestão Frota ----
+    # ---- 19. Gestão Frota ----
     ws = wb.create_sheet("Gestao Frota")
-    cab = ['Matrícula', 'Inspeção', 'Kms Últ. Revisão', 'Kms Próx. Revisão', 'Kms Pneus Diant.',
-           'Kms Pneus Tras.', 'Kms Correia', 'Apontamentos']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Matrícula', 'Inspeção', 'Kms Últ. Revisão', 'Kms Próx. Revisão', 'Kms Pneus Diant.',
+                            'Kms Pneus Tras.', 'Kms Correia', 'Apontamentos'])
     for g in GestaoFrota.query.all():
         v = g.viatura
         ws.append([v.matricula if v else '',
@@ -5792,90 +5928,55 @@ def backup_exportar():
                    g.kms_pneus_dianteiros or '', g.kms_pneus_trazeiros or '',
                    g.kms_correia or '', g.outros_apontamentos or ''])
 
-    # ---- 18. Fardamentos ----
+    # ---- 20. Fardamentos (Pedidos) ----
     ws = wb.create_sheet("Fardamentos")
-    cab = ['ID', 'Data Registo', 'Bombeiro (mec.)', 'Tipo', 'Nome', 'Tamanho', 'Motivo', 'Estado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Data Registo', 'Bombeiro (mec.)', 'Tipo', 'Nome', 'Tamanho', 'Motivo', 'Estado'])
     for f in Fardamento.query.order_by(Fardamento.data_registo.asc()).all():
-        ws.append([f.id, f.data_registo.strftime('%d/%m/%Y %H:%M') if f.data_registo else '',
+        ws.append([f.data_registo.strftime('%d/%m/%Y %H:%M') if f.data_registo else '',
                    f.bombeiro.mecanografico if f.bombeiro else '',
                    f.tipo, f.nome, f.tamanho, f.motivo, f.estado])
 
-    # ---- 19. Fardamento Atribuído ----
+    # ---- 21. Fardamento Atribuído ----
     ws = wb.create_sheet("Fardamento Atribuido")
-    cab = ['Bombeiro (mec.)', 'Tipo', 'Nome', 'Tamanho', 'Data Entrega', 'Estado']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Bombeiro (mec.)', 'Tipo', 'Nome', 'Tamanho', 'Data Entrega', 'Estado', 'ID Pedido'])
     for fa in FardamentoAtribuido.query.order_by(FardamentoAtribuido.data_entrega.asc()).all():
         ws.append([fa.bombeiro.mecanografico if fa.bombeiro else '',
                    fa.tipo, fa.nome, fa.tamanho,
                    fa.data_entrega.strftime('%d/%m/%Y') if fa.data_entrega else '',
-                   fa.estado])
+                   fa.estado, fa.idpedido or ''])
 
-    # ---- 20. Tipo Farda/Material ----
-    ws = wb.create_sheet("Tipos Farda Material")
-    cab = ['Nome', 'Categoria']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for tf in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
-        ws.append([tf.nome, tf.categoria])
+    # ---- 22. Deslocações ----
+    ws = wb.create_sheet("Deslocacoes")
+    escrever_cabecalho(ws, ['Data', 'Hora', 'Serviço', 'Origem', 'Destino', 'Valor', 'Viatura', 'Nº Serviço', 'Bombeiro (mec.)'])
+    for d in Deslocacao.query.order_by(Deslocacao.data.asc()).all():
+        ws.append([d.data.strftime('%d/%m/%Y') if d.data else '',
+                   d.hora_inicio, d.servico, d.local_origem or '', d.local_destino or '',
+                   d.valor or 0.0,
+                   d.viatura.matricula if d.viatura else '',
+                   d.n_servico or '',
+                   d.bombeiro.mecanografico if d.bombeiro else ''])
 
-    # ---- 22. Reuniões ----
+    # ---- 23. Reuniões ----
     ws = wb.create_sheet("Reunioes")
-    cab = ['Data', 'Hora', 'Assunto', 'Descrição', 'Criador (mec.)']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
+    escrever_cabecalho(ws, ['Data', 'Hora', 'Assunto', 'Descrição', 'Criador (mec.)'])
     for r in Reuniao.query.order_by(Reuniao.data.asc()).all():
         ws.append([r.data.strftime('%d/%m/%Y') if r.data else '',
                    r.hora or '', r.assunto, r.descricao or '',
                    r.criador.mecanografico if r.criador else ''])
 
-    # ---- 23. Notas Central ----
-    ws = wb.create_sheet("Notas Central")
-    cab = ['Criador (mec.)', 'Data Criação', 'Descrição', 'Data Evento']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for n in Nota.query.order_by(Nota.data_criacao.asc()).all():
+    # ---- 24. Notas Comando ----
+    ws = wb.create_sheet("Notas Comando")
+    escrever_cabecalho(ws, ['Criador (mec.)', 'Data Criação', 'Descrição', 'Data Evento'])
+    for n in NotaComando.query.order_by(NotaComando.data_criacao.asc()).all():
         ws.append([n.criador.mecanografico if n.criador else '',
                    n.data_criacao.strftime('%d/%m/%Y %H:%M') if n.data_criacao else '',
                    n.descricao, n.data_evento.strftime('%d/%m/%Y') if n.data_evento else ''])
 
-    # ---- 24. Notas Comando ----
-    ws = wb.create_sheet("Notas Comando")
-    cab = ['Criador (mec.)', 'Data Criação', 'Descrição', 'Data Evento']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for nc in NotaComando.query.order_by(NotaComando.data_criacao.asc()).all():
-        ws.append([nc.criador.mecanografico if nc.criador else '',
-                   nc.data_criacao.strftime('%d/%m/%Y %H:%M') if nc.data_criacao else '',
-                   nc.descricao, nc.data_evento.strftime('%d/%m/%Y') if nc.data_evento else ''])
-
-    # ---- 25. Mensagens Correio ----
-    ws = wb.create_sheet("Mensagens Correio")
-    cab = ['Remetente (mec.)', 'Destinatário (mec.)', 'Departamento', 'Assunto', 'Corpo', 'Data', 'Lida']
-    ws.append(cab)
-    for col in range(1, len(cab)+1):
-        ws.cell(row=1, column=col).fill = header_fill
-        ws.cell(row=1, column=col).font = header_font
-    for m in MensagemCorreio.query.order_by(MensagemCorreio.data_envio.asc()).all():
-        ws.append([m.remetente.mecanografico if m.remetente else '',
-                   m.destinatario.mecanografico if m.destinatario else '',
-                   m.departamento or '', m.assunto, m.corpo,
-                   m.data_envio.strftime('%d/%m/%Y %H:%M') if m.data_envio else '',
-                   'Sim' if m.lida else 'Não'])
+    # ---- 25. Tipos Farda/Material ----
+    ws = wb.create_sheet("Tipos Farda Material")
+    escrever_cabecalho(ws, ['Nome', 'Categoria'])
+    for t in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
+        ws.append([t.nome, t.categoria])
 
     output = BytesIO()
     wb.save(output)
