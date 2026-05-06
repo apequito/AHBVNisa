@@ -4109,7 +4109,6 @@ def stock_farmacia():
         )
         db.session.add(novo)
         db.session.commit()
-        verificar_stock_minimo(novo)      # ALERTA
         flash('Produto de farmácia adicionado.', 'success')
         return redirect(url_for('stock_farmacia'))
 
@@ -4137,7 +4136,6 @@ def editar_stock_farmacia(id):
     item.stock = novo_stock
     item.infstock = novo_infstock                                    # NOVO
     db.session.commit()
-    verificar_stock_minimo(item)                                     # ALERTA
     flash('Produto atualizado.', 'success')
     return redirect(url_for('stock_farmacia'))
 
