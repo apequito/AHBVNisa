@@ -25,9 +25,9 @@
 
 <div class="row g-4">
 
-    <!-- ========== SECÇÃO BOMBEIRO ========== -->
+    <!-- ========== SECÇÃO BOMBEIRO (Azul) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd; box-shadow: 0 4px 12px rgba(13,110,253,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
@@ -39,20 +39,17 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('perfil') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                    <a href="{{ url_for('perfil') }}" class="btn btn-primary btn-sm rounded-pill">
                         <i class="bi bi-person-gear me-1"></i>Meu Perfil
                     </a>
-                    <a href="{{ url_for('meus_creditos') }}" class="btn btn-outline-warning btn-sm rounded-pill">
+                    <a href="{{ url_for('meus_creditos') }}" class="btn btn-primary btn-sm rounded-pill">
                         <i class="bi bi-clock-history me-1"></i>Crédito Horas
                     </a>
-                    <a href="{{ url_for('deslocacoes') }}" class="btn btn-outline-info btn-sm rounded-pill">
-                        <i class="bi bi-car-front me-1"></i>Deslocações
-                    </a>
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                        <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                        <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-primary btn-sm rounded-pill">
                             <i class="bi bi-people-fill me-1"></i>Gerir Bombeiros
                         </a>
-                        <a href="{{ url_for('listar_creditos') }}" class="btn btn-outline-secondary btn-sm rounded-pill position-relative">
+                        <a href="{{ url_for('listar_creditos') }}" class="btn btn-primary btn-sm rounded-pill position-relative">
                             <i class="bi bi-card-checklist me-1"></i>Créditos (gestão)
                             {% if pendencias.creditos is defined and pendencias.creditos > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -61,7 +58,10 @@
                             {% endif %}
                         </a>
                     {% endif %}
-                    <a href="{{ url_for('correio') }}" class="btn btn-outline-info btn-sm rounded-pill position-relative">
+                    <a href="{{ url_for('deslocacoes') }}" class="btn btn-primary btn-sm rounded-pill">
+                        <i class="bi bi-car-front me-1"></i>Deslocações
+                    </a>
+                    <a href="{{ url_for('correio') }}" class="btn btn-primary btn-sm rounded-pill position-relative">
                         <i class="bi bi-envelope me-1"></i>Correio
                         {% if msgs_naolidas > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -74,9 +74,9 @@
         </div>
     </div>
 
-    <!-- ========== SECÇÃO VIATURAS ========== -->
+    <!-- ========== SECÇÃO VIATURAS (Vermelho) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545; box-shadow: 0 4px 12px rgba(220,53,69,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
@@ -88,10 +88,10 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('listar_viaturas') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                    <a href="{{ url_for('listar_viaturas') }}" class="btn btn-danger btn-sm rounded-pill">
                         <i class="bi bi-truck-front me-1"></i>Viaturas
                     </a>
-                    <a href="{{ url_for('avarias') }}" class="btn btn-outline-warning btn-sm rounded-pill position-relative">
+                    <a href="{{ url_for('avarias') }}" class="btn btn-danger btn-sm rounded-pill position-relative">
                         <i class="bi bi-exclamation-triangle me-1"></i>Avarias
                         {% if pendencias.avarias is defined and pendencias.avarias > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -100,26 +100,26 @@
                         {% endif %}
                     </a>
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina'] %}
-                        <a href="{{ url_for('oficina') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                        <a href="{{ url_for('oficina') }}" class="btn btn-danger btn-sm rounded-pill">
                             <i class="bi bi-tools me-1"></i>Oficina
                         </a>
-                        <a href="{{ url_for('gestao_frota') }}" class="btn btn-outline-secondary btn-sm rounded-pill position-relative">
-    <i class="bi bi-speedometer2 me-1"></i>Gestão de Frota
-    {% if pendencias.inspecoes_proximas is defined and pendencias.inspecoes_proximas > 0 %}
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">
-        {{ pendencias.inspecoes_proximas }}
-    </span>
-    {% endif %}
-</a>
+                        <a href="{{ url_for('gestao_frota') }}" class="btn btn-danger btn-sm rounded-pill position-relative">
+                            <i class="bi bi-speedometer2 me-1"></i>Gestão de Frota
+                            {% if pendencias.inspecoes_proximas is defined and pendencias.inspecoes_proximas > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">
+                                {{ pendencias.inspecoes_proximas }}
+                            </span>
+                            {% endif %}
+                        </a>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ========== SECÇÃO SERVIÇO ========== -->
+    <!-- ========== SECÇÃO SERVIÇO (Verde) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #198754; box-shadow: 0 4px 12px rgba(25,135,84,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #198754;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
@@ -131,11 +131,11 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('escala') }}" class="btn btn-outline-success btn-sm rounded-pill">
+                    <a href="{{ url_for('escala') }}" class="btn btn-success btn-sm rounded-pill">
                         <i class="bi bi-calendar-week me-1"></i>Escala
                     </a>
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-                        <a href="{{ url_for('listar_ecins') }}" class="btn btn-outline-dark btn-sm rounded-pill position-relative">
+                        <a href="{{ url_for('listar_ecins') }}" class="btn btn-success btn-sm rounded-pill position-relative">
                             <i class="bi bi-clipboard-check me-1"></i>ECINS
                             {% if pendencias.ecins is defined and pendencias.ecins > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -144,7 +144,7 @@
                             {% endif %}
                         </a>
                     {% endif %}
-                    <a href="{{ url_for('trocas') }}" class="btn btn-outline-success btn-sm rounded-pill position-relative">
+                    <a href="{{ url_for('trocas') }}" class="btn btn-success btn-sm rounded-pill position-relative">
                         <i class="bi bi-arrow-left-right me-1"></i>Trocas
                         {% if pendencias.trocas is defined and pendencias.trocas > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -152,7 +152,7 @@
                         </span>
                         {% endif %}
                     </a>
-                    <a href="{{ url_for('dispensas') }}" class="btn btn-outline-success btn-sm rounded-pill position-relative">
+                    <a href="{{ url_for('dispensas') }}" class="btn btn-success btn-sm rounded-pill position-relative">
                         <i class="bi bi-calendar-x me-1"></i>Dispensas
                         {% if pendencias.dispensas is defined and pendencias.dispensas > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -165,9 +165,9 @@
         </div>
     </div>
 
-    <!-- ========== SECÇÃO OPERAÇÕES ========== -->
+    <!-- ========== SECÇÃO OPERAÇÕES (Ciano) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0dcaf0; box-shadow: 0 4px 12px rgba(13,202,240,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0dcaf0;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
@@ -179,10 +179,10 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('checklist') }}" class="btn btn-outline-info btn-sm rounded-pill">
+                    <a href="{{ url_for('checklist') }}" class="btn btn-info btn-sm rounded-pill">
                         <i class="bi bi-list-check me-1"></i>Checklist
                     </a>
-                    <a href="{{ url_for('fardamento') }}" class="btn btn-outline-info btn-sm rounded-pill position-relative">
+                    <a href="{{ url_for('fardamento') }}" class="btn btn-info btn-sm rounded-pill position-relative">
                         <i class="bi bi-vest me-1"></i>Fardamento
                         {% if pendencias.fardamento is defined and pendencias.fardamento > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -191,11 +191,14 @@
                         {% endif %}
                     </a>
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                        <a href="{{ url_for('stock_fardamento') }}" class="btn btn-outline-dark btn-sm rounded-pill">
+                        <a href="{{ url_for('stock_fardamento') }}" class="btn btn-info btn-sm rounded-pill">
                             <i class="bi bi-box-seam me-1"></i>Stock Fardamento
                         </a>
+                        <a href="{{ url_for('fardamento_atribuido') }}" class="btn btn-info btn-sm rounded-pill">
+                            Fardamento Atribuído
+                        </a>
                     {% endif %}
-                    <a href="{{ url_for('disponibilidades') }}" class="btn btn-outline-info btn-sm rounded-pill">
+                    <a href="{{ url_for('disponibilidades') }}" class="btn btn-info btn-sm rounded-pill">
                         <i class="bi bi-person-check me-1"></i>Disponibilidade
                     </a>
                 </div>
@@ -203,9 +206,9 @@
         </div>
     </div>
 
-    <!-- ========== SECÇÃO FARMÁCIA & AMBULÂNCIA ========== -->
+    <!-- ========== SECÇÃO FARMÁCIA & AMBULÂNCIA (Roxo) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1; box-shadow: 0 4px 12px rgba(111,66,193,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #6f42c1;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-purple bg-opacity-10 p-3 me-3" style="background-color: rgba(111,66,193,0.1);">
@@ -218,26 +221,29 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia'] %}
-                        <a href="{{ url_for('stock_farmacia') }}" class="btn btn-outline-purple btn-sm rounded-pill position-relative" style="color: #6f42c1; border-color: #6f42c1;">
-    <i class="bi bi-capsule me-1"></i>Stock Farmácia
-    {% if pendencias.stock_farmacia_minimo is defined and pendencias.stock_farmacia_minimo > 0 %}
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-        {{ pendencias.stock_farmacia_minimo }}
-    </span>
-    {% endif %}
-</a>
+                        <a href="{{ url_for('stock_farmacia') }}" class="btn btn-sm rounded-pill text-white position-relative"
+                           style="background-color: #6f42c1; border-color: #6f42c1;">
+                            <i class="bi bi-capsule me-1"></i>Stock Farmácia
+                            {% if pendencias.stock_farmacia_minimo is defined and pendencias.stock_farmacia_minimo > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ pendencias.stock_farmacia_minimo }}
+                            </span>
+                            {% endif %}
+                        </a>
                     {% endif %}
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista'] %}
-                        <a href="{{ url_for('stock_ambulancia') }}" class="btn btn-outline-purple btn-sm rounded-pill position-relative" style="color: #6f42c1; border-color: #6f42c1;">
-    <i class="bi bi-truck-flatbed me-1"></i>Stock Ambulância
-    {% if pendencias.stock_ambulancia is defined and pendencias.stock_ambulancia > 0 %}
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-        {{ pendencias.stock_ambulancia }}
-    </span>
-    {% endif %}
-</a>
+                        <a href="{{ url_for('stock_ambulancia') }}" class="btn btn-sm rounded-pill text-white position-relative"
+                           style="background-color: #6f42c1; border-color: #6f42c1;">
+                            <i class="bi bi-truck-flatbed me-1"></i>Stock Ambulância
+                            {% if pendencias.stock_ambulancia is defined and pendencias.stock_ambulancia > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ pendencias.stock_ambulancia }}
+                            </span>
+                            {% endif %}
+                        </a>
                     {% endif %}
-                    <a href="{{ url_for('checklist_ambulancia') }}" class="btn btn-outline-purple btn-sm rounded-pill" style="color: #6f42c1; border-color: #6f42c1;">
+                    <a href="{{ url_for('checklist_ambulancia') }}" class="btn btn-sm rounded-pill text-white"
+                       style="background-color: #6f42c1; border-color: #6f42c1;">
                         <i class="bi bi-clipboard-pulse me-1"></i>Checklist Ambulância
                     </a>
                 </div>
@@ -245,9 +251,9 @@
         </div>
     </div>
 
-    <!-- ========== NOVA SECÇÃO: GESTÃO ========== -->
+    <!-- ========== NOVA SECÇÃO: GESTÃO (Laranja) ========== -->
     <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14; box-shadow: 0 4px 12px rgba(253,126,20,0.2) !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-4">
                     <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
@@ -260,26 +266,25 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                        <a href="{{ url_for('painel_comando') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                        <a href="{{ url_for('painel_comando') }}" class="btn btn-warning btn-sm rounded-pill">
                             <i class="bi bi-speedometer2 me-1"></i>Painel Comando
                         </a>
                     {% endif %}
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.resp_departamento == 'Central' %}
-                        <a href="{{ url_for('central') }}" class="btn btn-outline-success btn-sm rounded-pill">
+                        <a href="{{ url_for('central') }}" class="btn btn-warning btn-sm rounded-pill">
                             <i class="bi bi-broadcast me-1"></i>Central
                         </a>
                     {% endif %}
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Secretaria' %}
-                        <a href="{{ url_for('administrativo') }}" class="btn btn-outline-primary btn-sm rounded-pill">
-                             <i class="bi bi-building me-1"></i>Administrativo
+                        <a href="{{ url_for('administrativo') }}" class="btn btn-warning btn-sm rounded-pill">
+                            <i class="bi bi-building me-1"></i>Administrativo
                         </a>
                     {% endif %}
-                    <!-- Backup e Restauro (apenas Admin/Comando) -->
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                        <a href="{{ url_for('backup_exportar') }}" class="btn btn-outline-success btn-sm rounded-pill">
+                        <a href="{{ url_for('backup_exportar') }}" class="btn btn-warning btn-sm rounded-pill">
                             <i class="bi bi-download me-1"></i> Backup
                         </a>
-                        <button class="btn btn-outline-danger btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
+                        <button class="btn btn-warning btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
                             <i class="bi bi-upload me-1"></i> Restaurar
                         </button>
                     {% endif %}
@@ -290,12 +295,8 @@
 
 </div>
 
-<!-- Estilo adicional para a cor roxa personalizada -->
+<!-- Estilo adicional (inalterado) -->
 <style>
-    .btn-outline-purple:hover {
-        color: #fff !important;
-        background-color: #6f42c1 !important;
-    }
     .card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
@@ -311,7 +312,7 @@
     }
 </style>
 
-<!-- Modal de confirmação para importar backup -->
+<!-- Modal de confirmação para importar backup (inalterado) -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
 <div class="modal fade" id="modalImportarBackup" tabindex="-1">
     <div class="modal-dialog">
@@ -323,7 +324,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <strong>Atenção!</strong> Esta operação irá <strong>apagar todos os dados atuais</strong> e substituí-los pelos dados do ficheiro Excel.
+                        <strong>Atenção!</strong> Esta operação irá <strong>apagar todos os dados actuais</strong> e substituí-los pelos dados do ficheiro Excel.
                     </div>
                     <input type="file" name="ficheiro_backup" class="form-control" accept=".xlsx" required>
                 </div>
