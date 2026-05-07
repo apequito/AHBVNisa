@@ -49,10 +49,10 @@
             <li><a class="dropdown-item" href="#" onclick="imprimirMes()"><i class="bi bi-printer me-1"></i> Imprimir Mês</a></li>
             {% endif %}
 {% if tem_ecin or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-<li><a class="dropdown-item" href="#" onclick="imprimirMesECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
+<li><a class="dropdown-item" href="#" onclick="imprimirEscalaECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
 {% endif %}
 {% if tem_elac or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-<li><a class="dropdown-item" href="#" onclick="imprimirMesELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
+<li><a class="dropdown-item" href="#" onclick="imprimirEscalaELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
 {% endif %}
         </ul>
     </div>
@@ -225,16 +225,18 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
 }
 
-function imprimirMesECIN() {
+function imprimirEscalaECIN() {
     const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
     const ano = new Date().getFullYear();
     window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
 }
 
-function imprimirMesELAC() {
+function imprimirEscalaELAC() {
     const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
     const ano = new Date().getFullYear();
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
-});
+}
+);
+
 </script>
 {% endblock %}
