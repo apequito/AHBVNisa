@@ -2966,7 +2966,7 @@ def listar_ecins():
 @app.route('/ecins/adicionar', methods=['POST'])
 @login_required
 def adicionar_ecin():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -2998,7 +2998,7 @@ def adicionar_ecin():
 @app.route('/ecins/escalar/<int:id>')
 @login_required
 def escalar_ecin(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -3078,7 +3078,7 @@ def escalar_ecin(id):
 @app.route('/ecins/imprimir')
 @login_required
 def imprimir_ecins():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -3124,7 +3124,7 @@ def imprimir_ecins():
 @app.route('/ecins/modificar/<int:id>')
 @login_required
 def modificar_ecin(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -3169,7 +3169,7 @@ def modificar_ecin(id):
 @app.route('/ecins/imprimir-escala-ecin')
 @login_required
 def imprimir_escala_ecin():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -3217,7 +3217,7 @@ def imprimir_escala_ecin():
 @app.route('/ecins/imprimir-escala-elac')
 @login_required
 def imprimir_escala_elac():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
