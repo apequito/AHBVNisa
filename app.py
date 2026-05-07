@@ -6871,24 +6871,6 @@ def apagar_correio_massa():
     return redirect(url_for('correio'))
 
 
-function imprimirMes() {
-    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
-    const ano = new Date().getFullYear();
-    window.open('/escala/imprimir-mes?mes=' + mes + '&ano=' + ano, '_blank');
-}
-
-function imprimirMesECIN() {
-    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
-    const ano = new Date().getFullYear();
-    window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
-}
-
-function imprimirMesELAC() {
-    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
-    const ano = new Date().getFullYear();
-    window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
-}
-
 
 #if __name__ == '__main__':
     #app.run(debug=True)
