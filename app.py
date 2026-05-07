@@ -2930,7 +2930,7 @@ def exportar_disponibilidades():
 @app.route('/ecins')
 @login_required
 def listar_ecins():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
