@@ -6448,6 +6448,17 @@ def administrativo():
         db.extract('year', Ecin.data) == ano_ecin
     ).distinct().order_by(Bombeiro.nome).all()
 
+    # Atribuir 42.00 € automaticamente a todos os ECINs do filtro que ainda não têm valor
+    ecins_sem_valor = [ec for ec in ecins if ec.valor is None]
+    if ecins_sem_valor:
+        for ec in ecins_sem_valor:
+            ec.valor = 42.0
+        db.session.commit()
+        # Atualizar a lista para refletir os novos valores
+        ecins = query_ecin.order_by(Ecin.data.desc()).all()
+        total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
+
+
     return render_template('administrativo.html',
                            deslocacoes=deslocacoes,
                            total_valor_desl=total_valor_desl,
