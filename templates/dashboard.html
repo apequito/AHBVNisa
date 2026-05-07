@@ -42,10 +42,11 @@
                     <a href="{{ url_for('perfil') }}" class="btn btn-primary btn-sm rounded-pill">
                         <i class="bi bi-person-gear me-1"></i>Meu Perfil
                     </a>
+                    <a href="{{ url_for('ferias') }}" class="btn btn-primary btn-sm rounded-pill">
+                        <i class="bi bi-sun me-1"></i>Férias
+                    </a>
                     <a href="{{ url_for('meus_creditos') }}" class="btn btn-primary btn-sm rounded-pill">
-                        <i cla<a href="{{ url_for('ferias') }}" class="btn btn-primary btn-sm rounded-pill">
-    <i class="bi bi-sun me-1"></i>Férias
-</a>ss="bi bi-clock-history me-1"></i>Crédito Horas
+                        <i class="bi bi-clock-history me-1"></i>Crédito Horas
                     </a>
 
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
