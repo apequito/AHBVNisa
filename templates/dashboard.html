@@ -43,8 +43,11 @@
                         <i class="bi bi-person-gear me-1"></i>Meu Perfil
                     </a>
                     <a href="{{ url_for('meus_creditos') }}" class="btn btn-primary btn-sm rounded-pill">
-                        <i class="bi bi-clock-history me-1"></i>Crédito Horas
+                        <i cla<a href="{{ url_for('ferias') }}" class="btn btn-primary btn-sm rounded-pill">
+    <i class="bi bi-sun me-1"></i>Férias
+</a>ss="bi bi-clock-history me-1"></i>Crédito Horas
                     </a>
+
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                         <a href="{{ url_for('gerir_bombeiros') }}" class="btn btn-primary btn-sm rounded-pill">
                             <i class="bi bi-people-fill me-1"></i>Gerir Bombeiros
@@ -193,11 +196,6 @@
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
                         <a href="{{ url_for('stock_fardamento') }}" class="btn btn-info btn-sm rounded-pill">
                             <i class="bi bi-box-seam me-1"></i>Stock Fardamento
-                        </a>
-                    {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-                        <a href="{{ url_for('fardamento_atribuido') }}" class="btn btn-info btn-sm rounded-pill">
-                            Fardamento Atribuído
                         </a>
                     {% endif %}
                     <a href="{{ url_for('disponibilidades') }}" class="btn btn-info btn-sm rounded-pill">

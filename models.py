@@ -121,6 +121,21 @@ class Escala(db.Model):
 
     bombeiro = db.relationship('Bombeiro', backref='escalas')
 
+class Ferias(db.Model):
+    __tablename__ = 'ferias'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    data_inicio = db.Column(db.Date, nullable=False)
+    data_fim = db.Column(db.Date, nullable=False)
+    estado = db.Column(db.String(20), default='Pendente')  # Pendente, Aprovado, Rejeitado
+    data_pedido = db.Column(db.DateTime, default=datetime.utcnow)
+    aprovado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+
+    bombeiro = db.relationship('Bombeiro', foreign_keys=[bombeiro_id], backref='ferias_pedidas')
+    aprovador = db.relationship('Bombeiro', foreign_keys=[aprovado_por])
+
+
+
 
 # ---------- Troca de serviço ----------
 class TrocaServico(db.Model):

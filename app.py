@@ -1525,6 +1525,110 @@ def importar_oficina():
         flash(f'{linhas_importadas} importadas com sucesso.', 'success')
     return redirect(url_for('oficina'))
 
+#---------------------Férias-----------------
+
+@app.route('/ferias', methods=['GET', 'POST'])
+@login_required
+def ferias():
+    if request.method == 'POST':
+        datas_str = request.form.get('datas', '')  # datas separadas por vírgula
+        if not datas_str:
+            flash('Selecione pelo menos um dia.', 'warning')
+            return redirect(url_for('ferias'))
+        datas = [d.strip() for d in datas_str.split(',') if d.strip()]
+        datas.sort()
+        data_inicio = datetime.strptime(datas[0], '%Y-%m-%d').date()
+        data_fim = datetime.strptime(datas[-1], '%Y-%m-%d').date()
+
+        # Verificar sobreposição? (opcional)
+        existente = Ferias.query.filter(
+            Ferias.bombeiro_id == current_user.id,
+            Ferias.estado != 'Rejeitado',
+            Ferias.data_inicio <= data_fim,
+            Ferias.data_fim >= data_inicio
+        ).first()
+        if existente:
+            flash('Já tem um pedido de férias que cobre este período.', 'warning')
+            return redirect(url_for('ferias'))
+
+        nova = Ferias(
+            bombeiro_id=current_user.id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            estado='Pendente'
+        )
+        db.session.add(nova)
+        db.session.commit()
+        flash('Pedido de férias enviado.', 'success')
+        return redirect(url_for('ferias'))
+
+    # GET – filtros
+    ano = request.args.get('ano', type=int, default=date.today().year)
+    bombeiro_id = request.args.get('bombeiro_id', type=int)
+    estado_filtro = request.args.get('estado', '')
+
+    query = Ferias.query
+    if ano:
+        query = query.filter(db.extract('year', Ferias.data_inicio) == ano)
+    if bombeiro_id:
+        query = query.filter_by(bombeiro_id=bombeiro_id)
+    if estado_filtro:
+        query = query.filter_by(estado=estado_filtro)
+
+    # Se for user normal, só vê os seus pedidos
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        query = query.filter_by(bombeiro_id=current_user.id)
+
+    pedidos = query.order_by(Ferias.data_inicio.desc()).all()
+    bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+
+    return render_template('ferias.html', pedidos=pedidos, bombeiros=bombeiros,
+                           ano=ano, bombeiro_id=bombeiro_id, estado_filtro=estado_filtro)
+
+
+
+@app.route('/ferias/aprovar/<int:id>')
+@login_required
+def aprovar_ferias(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('ferias'))
+    ferias = Ferias.query.get_or_404(id)
+    ferias.estado = 'Aprovado'
+    ferias.aprovado_por = current_user.id
+    db.session.commit()
+    flash('Férias aprovadas.', 'success')
+    return redirect(url_for('ferias'))
+
+@app.route('/ferias/rejeitar/<int:id>')
+@login_required
+def rejeitar_ferias(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('ferias'))
+    ferias = Ferias.query.get_or_404(id)
+    ferias.estado = 'Rejeitado'
+    ferias.aprovado_por = current_user.id
+    db.session.commit()
+    flash('Férias rejeitadas.', 'info')
+    return redirect(url_for('ferias'))
+
+@app.route('/ferias/apagar/<int:id>')
+@login_required
+def apagar_ferias(id):
+    ferias = Ferias.query.get_or_404(id)
+    if current_user.id != ferias.bombeiro_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('ferias'))
+    db.session.delete(ferias)
+    db.session.commit()
+    flash('Pedido removido.', 'info')
+    return redirect(url_for('ferias'))
+
+
+
+
+
 
 # ---------- Escala ----------
 @app.route('/escala')

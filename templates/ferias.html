@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-sun me-2"></i>Gestão de Férias</h2>
+
+<!-- Filtros -->
+<form method="GET" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label">Ano</label>
+        <input type="number" name="ano" class="form-control form-control-sm" value="{{ ano }}" style="width:100px;">
+    </div>
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    <div class="col-auto">
+        <label class="form-label">Bombeiro</label>
+        <select name="bombeiro_id" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            {% for b in bombeiros %}
+            <option value="{{ b.id }}" {% if bombeiro_id == b.id %}selected{% endif %}>{{ b.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <div class="col-auto">
+        <label class="form-label">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="Pendente" {% if estado_filtro == 'Pendente' %}selected{% endif %}>Pendente</option>
+            <option value="Aprovado" {% if estado_filtro == 'Aprovado' %}selected{% endif %}>Aprovado</option>
+            <option value="Rejeitado" {% if estado_filtro == 'Rejeitado' %}selected{% endif %}>Rejeitado</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+        <a href="{{ url_for('ferias') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+    </div>
+    <div class="col-auto ms-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoPedido">
+            <i class="bi bi-plus-circle me-1"></i> Novo Pedido
+        </button>
+    </div>
+</form>
+
+<!-- Tabela de pedidos -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-bordered mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Bombeiro</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Dias</th>
+                    <th>Estado</th>
+                    <th>Data Pedido</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pedidos %}
+                <tr>
+                    <td>{{ p.bombeiro.nome }}</td>
+                    <td>{{ p.data_inicio.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ p.data_fim.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ (p.data_fim - p.data_inicio).days + 1 }}</td>
+                    <td>
+                        {% if p.estado == 'Pendente' %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                        {% elif p.estado == 'Aprovado' %}
+                            <span class="badge bg-success">Aprovado</span>
+                        {% elif p.estado == 'Rejeitado' %}
+                            <span class="badge bg-danger">Rejeitado</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                            {% if p.estado == 'Pendente' %}
+                                <a href="{{ url_for('aprovar_ferias', id=p.id) }}" class="btn btn-sm btn-success">Aprovar</a>
+                                <a href="{{ url_for('rejeitar_ferias', id=p.id) }}" class="btn btn-sm btn-warning">Rejeitar</a>
+                            {% endif %}
+                        {% endif %}
+                        {% if current_user.id == p.bombeiro_id or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                            {% if p.estado != 'Aprovado' %}
+                                <a href="{{ url_for('apagar_ferias', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar este pedido?')">🗑️</a>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-3">Nenhum pedido de férias.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Novo Pedido -->
+<div class="modal fade" id="modalNovoPedido" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="formFerias">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Pedido de Férias</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Selecione os dias (clique para marcar/desmarcar):</label>
+                            <div id="calendarioFerias" class="border p-2" style="min-height:250px;"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Dias selecionados:</strong></p>
+                            <ul id="listaDiasSelecionados" class="list-unstyled"></ul>
+                            <input type="hidden" name="datas" id="datasSelecionadas">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enviar Pedido</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let mesAtual = new Date().getMonth() + 1;
+let anoAtual = new Date().getFullYear();
+let selectedDates = new Set();
+
+function carregarCalendario() {
+    const container = document.getElementById('calendarioFerias');
+    const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual, 0);
+    const totalDias = ultimoDia.getDate();
+    const diaSemanaInicio = primeiroDia.getDay();
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(-1)">&lt;</button>
+            <strong>${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mesAtual-1]} ${anoAtual}</strong>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(1)">&gt;</button>
+        </div>
+        <table class="table table-bordered table-sm text-center">
+            <thead><tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
+            <tbody>`;
+
+    let dia = 1;
+    for (let semana = 0; semana < 6; semana++) {
+        html += '<tr>';
+        for (let d = 0; d < 7; d++) {
+            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
+                html += '<td></td>';
+            } else {
+                const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+                const selecionado = selectedDates.has(dataStr);
+                html += `<td class="${selecionado ? 'bg-primary text-white' : ''}" style="cursor:pointer;" data-date="${dataStr}">${dia}</td>`;
+                dia++;
+            }
+        }
+        html += '</tr>';
+        if (dia > totalDias) break;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    Array.from(container.querySelectorAll('td[data-date]')).forEach(td => {
+        td.addEventListener('click', function() {
+            const dataStr = this.getAttribute('data-date');
+            if (selectedDates.has(dataStr)) {
+                selectedDates.delete(dataStr);
+                this.classList.remove('bg-primary', 'text-white');
+            } else {
+                selectedDates.add(dataStr);
+                this.classList.add('bg-primary', 'text-white');
+            }
+            atualizarLista();
+        });
+    });
+}
+
+function mudarMes(delta) {
+    mesAtual += delta;
+    if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
+    if (mesAtual > 12) { mesAtual = 1; anoAtual++; }
+    carregarCalendario();
+}
+
+function atualizarLista() {
+    const lista = document.getElementById('listaDiasSelecionados');
+    const datas = Array.from(selectedDates).sort();
+    lista.innerHTML = datas.map(d => `<li>${d.split('-').reverse().join('/')}</li>`).join('');
+    document.getElementById('datasSelecionadas').value = datas.join(',');
+}
+
+document.getElementById('formFerias').addEventListener('submit', function(e) {
+    if (selectedDates.size === 0) {
+        e.preventDefault();
+        alert('Selecione pelo menos um dia.');
+    }
+});
+
+document.getElementById('modalNovoPedido').addEventListener('show.bs.modal', function() {
+    mesAtual = new Date().getMonth() + 1;
+    anoAtual = new Date().getFullYear();
+    selectedDates.clear();
+    carregarCalendario();
+    atualizarLista();
+});
+</script>
+{% endblock %}
