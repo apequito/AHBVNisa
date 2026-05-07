@@ -4891,19 +4891,23 @@ def _importar_linha_stock_fardamento(row, row_num):
                 pass
 
         nome = str(row[start_col]).strip() if len(row) > start_col and row[start_col] else ''
+        if not nome:
+            return None
+
         descricao = str(row[start_col+1]).strip() if len(row) > start_col+1 and row[start_col+1] else ''
         tamanho = str(row[start_col+2]).strip() if len(row) > start_col+2 and row[start_col+2] else ''
         tipo = str(row[start_col+3]).strip() if len(row) > start_col+3 and row[start_col+3] else ''
         stock_val = int(row[start_col+4]) if len(row) > start_col+4 and row[start_col+4] else 0
 
-        if not nome:
-            return None
-
+        # Criar o objecto – se tiver ID, define-se explicitamente
         s = StockFardamento(
-            nome=nome, descricao=descricao, tamanho=tamanho, tipo=tipo, stock=stock_val
+            id=id_original,
+            nome=nome,
+            descricao=descricao,
+            tamanho=tamanho,
+            tipo=tipo,
+            stock=stock_val
         )
-        if id_original:
-            s.id = id_original   # força a manutenção do ID
         return s
     except Exception:
         return None
@@ -5270,19 +5274,25 @@ def backup_importar():
     erros = []
     total_importado = 0
 
-    # ---------- 1. APAGAR TODOS OS DADOS EXISTENTES ----------
+
+
     modelos_para_apagar = [
         NotaComando, Reuniao, TipoFardaMaterial,
         Nota, MensagemCorreio,
-        StockAmbulancia,  # ← antes de ChecklistAmbulancia
-        ChecklistAmbulanciaItem,  # ← antes de ChecklistAmbulancia
+        StockAmbulancia,
+        ChecklistAmbulanciaItem,
         ChecklistAmbulancia,
         StockFarmacia, CategoriaFarmacia,
+        StockFardamento,  # ← ADICIONE ESTA LINHA
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
         Avaria, Disponibilidade, Deslocacao,
         Viatura, Bombeiro
     ]
+
+
+
+
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
     db.session.flush()
@@ -5351,6 +5361,7 @@ def backup_importar():
             except Exception as e:
                 erros.append(f"Stock Fardamento linha {row_num}: {str(e)[:100]}")
         db.session.flush()
+
 
     # ---------- 7. DISPONIBILIDADES ----------
     if 'Disponibilidades' in wb.sheetnames:
