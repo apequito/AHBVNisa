@@ -223,6 +223,18 @@ function imprimirMes() {
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
+}
+
+function imprimirMesECIN() {
+    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
+    const ano = new Date().getFullYear();
+    window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
+}
+
+function imprimirMesELAC() {
+    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
+    const ano = new Date().getFullYear();
+    window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
 });
 </script>
 {% endblock %}

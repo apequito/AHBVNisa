@@ -48,29 +48,23 @@
             text-overflow: ellipsis;
             line-height: 1.4;
         }
-        .posto-abrev {
-            font-weight: bold;
-        }
-        .nome-bombeiro {
-            font-weight: bold;
-            margin: 0 2px;
-        }
-        .mecanografico {
-            font-size: 9px;
-            color: #333;
-        }
-        hr {
-            margin: 2px 0;
-            border: none;
-            border-top: 1px solid #ccc;
-        }
+        .posto-abrev { font-weight: bold; }
+        .nome-bombeiro { font-weight: bold; margin: 0 2px; }
+        .mecanografico { font-size: 9px; color: #333; }
+        hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
 
+        .no-print { margin: 15px; text-align: right; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none; }
         }
     </style>
 </head>
 <body>
+    <div class="no-print">
+        <button onclick="window.print()" style="padding:8px 20px; font-size:14px;">🖨️ Imprimir</button>
+    </div>
+
     <h2>Escala ECIN - {{ meses[mes-1] }} {{ ano }}</h2>
     <table>
         <thead>
@@ -89,21 +83,11 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Mapeamento de abreviaturas -->
             {% set abrev = {
-                'Comandante': 'Cmd',
-                '2º Comandante': '2ºCmdt',
-                'Adjunto Comando': 'Adj Com',
-                'Of. Bomb. 1ª': 'Of1',
-                'Of. Bomb. 2ª': 'Of2',
-                'Chefe': 'Chf',
-                'Sub Chefe': 'SChf',
-                'Bomb. 1ª': '1ª',
-                'Bomb. 2ª': '2ª',
-                'Bomb. 3ª': '3ª',
-                'Bombeiro Especialista': 'B.Esp',
-                'Estagiário': 'Estg',
-                'Cadete': 'Cad'
+                'Comandante': 'Cmd', '2º Comandante': '2ºCmdt', 'Adjunto Comando': 'Adj Com',
+                'Of. Bomb. 1ª': 'Of1', 'Of. Bomb. 2ª': 'Of2', 'Chefe': 'Chf',
+                'Sub Chefe': 'SChf', 'Bomb. 1ª': '1ª', 'Bomb. 2ª': '2ª',
+                'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp', 'Estagiário': 'Estg', 'Cadete': 'Cad'
             } %}
             {% for dia in dias %}
             <tr>
@@ -131,6 +115,5 @@
             {% endfor %}
         </tbody>
     </table>
-    <script>window.print();</script>
 </body>
 </html>
