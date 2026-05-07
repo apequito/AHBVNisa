@@ -32,15 +32,31 @@
         </select>
     </div>
     <div class="col-auto ms-auto">
-        <div class="dropdown">
-            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">⚙️ Ferramentas</button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{{ url_for('exportar_escala') }}"><i class="bi bi-download me-1"></i> Exportar Excel</a></li>
-                <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalImportarEscala"><i class="bi bi-upload me-1"></i> Importar Excel</button></li>
-                <li><a class="dropdown-item" href="#" onclick="imprimirMes()"><i class="bi bi-printer me-1"></i> Imprimir Mês</a></li>
-            </ul>
-        </div>
+    <div class="dropdown">
+        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            ⚙️ Ferramentas
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <!-- Exportar / Importar (apenas Admin/Comando) -->
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            <li><a class="dropdown-item" href="{{ url_for('exportar_escala') }}"><i class="bi bi-download me-1"></i> Exportar Excel</a></li>
+            <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalImportarEscala"><i class="bi bi-upload me-1"></i> Importar Excel</button></li>
+            <li><hr class="dropdown-divider"></li>
+            {% endif %}
+
+            <!-- Imprimir Escala do Mês (Admin, Comando e Profissionais) -->
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.tipo_bombeiro == 'Profissional' %}
+            <li><a class="dropdown-item" href="#" onclick="imprimirMes()"><i class="bi bi-printer me-1"></i> Imprimir Mês</a></li>
+            {% endif %}
+
+            <!-- Imprimir Escala ECIN (todos) -->
+            <li><a class="dropdown-item" href="#" onclick="imprimirMesECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
+
+            <!-- Imprimir Escala ELAC (todos) -->
+            <li><a class="dropdown-item" href="#" onclick="imprimirMesELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
+        </ul>
     </div>
+</div>
 </div>
 
 <!-- Pesquisa por mecanográfico -->

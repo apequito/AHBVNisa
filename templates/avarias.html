@@ -20,8 +20,8 @@
     <!-- Aba Registo -->
     <div class="tab-pane fade show active" id="registo" role="tabpanel">
         <div class="mb-3">
-            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
             <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalNovaAvaria">Reportar Avaria</button>
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
             <a href="{{ url_for('exportar_avarias') }}" class="btn btn-outline-success ms-2">📥 Exportar</a>
             <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalImportarAvarias">📤 Importar</button>
             {% endif %}

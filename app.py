@@ -2673,7 +2673,7 @@ def aprovar_credito(id):
 # ---------- Disponibilidades ----------
 @app.route('/disponibilidades', methods=['GET', 'POST'])
 @login_required
-def disponibilidades():
+def     disponibilidades():
     if request.method == 'POST':
         # Recolher as datas enviadas (separadas por vírgula)
         datas_str = request.form.get('datas', '')
@@ -2720,7 +2720,7 @@ def disponibilidades():
     query = Disponibilidade.query
 
     # Apenas Admin/Comando podem ver todos; os restantes ficam limitados ao seu ID
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         query = query.filter_by(bombeiro_id=current_user.id)
     elif bombeiro_id:
         query = query.filter_by(bombeiro_id=bombeiro_id)
@@ -2761,7 +2761,7 @@ def disponibilidades():
 @app.route('/disponibilidades/apagar', methods=['POST'])
 @login_required
 def apagar_disponibilidades_mes():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('disponibilidades'))
 
@@ -2790,7 +2790,7 @@ def apagar_disponibilidades_mes():
 @app.route('/disponibilidades/aprovar', methods=['POST'])
 @login_required
 def aprovar_disponibilidades():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('disponibilidades'))
 
@@ -2828,7 +2828,7 @@ def aprovar_disponibilidades():
 @app.route('/disponibilidades/imprimir')
 @login_required
 def imprimir_disponibilidades():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('disponibilidades'))
 
@@ -2854,7 +2854,7 @@ def imprimir_disponibilidades():
 @app.route('/disponibilidades/confirmar', methods=['POST'])
 @login_required
 def confirmar_disponibilidade():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('disponibilidades'))
 
@@ -2891,7 +2891,7 @@ def confirmar_disponibilidade():
 @app.route('/disponibilidades/exportar')
 @login_required
 def exportar_disponibilidades():
-    if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento not in ['Comando', 'ECIN']:
         lista = Disponibilidade.query.order_by(Disponibilidade.data.desc()).all()
     else:
         lista = Disponibilidade.query.filter_by(bombeiro_id=current_user.id)\
@@ -2930,7 +2930,7 @@ def exportar_disponibilidades():
 @app.route('/ecins')
 @login_required
 def listar_ecins():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -2966,7 +2966,7 @@ def listar_ecins():
 @app.route('/ecins/adicionar', methods=['POST'])
 @login_required
 def adicionar_ecin():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -2998,7 +2998,7 @@ def adicionar_ecin():
 @app.route('/ecins/escalar/<int:id>')
 @login_required
 def escalar_ecin(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -3078,7 +3078,7 @@ def escalar_ecin(id):
 @app.route('/ecins/imprimir')
 @login_required
 def imprimir_ecins():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -3124,7 +3124,7 @@ def imprimir_ecins():
 @app.route('/ecins/modificar/<int:id>')
 @login_required
 def modificar_ecin(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('listar_ecins'))
 
@@ -3169,7 +3169,7 @@ def modificar_ecin(id):
 @app.route('/ecins/imprimir-escala-ecin')
 @login_required
 def imprimir_escala_ecin():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -3217,7 +3217,7 @@ def imprimir_escala_ecin():
 @app.route('/ecins/imprimir-escala-elac')
 @login_required
 def imprimir_escala_elac():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -4522,7 +4522,7 @@ def confirmar_reposicao(id):
 @app.route('/central')
 @login_required
 def central():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Central':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Central']:
         flash('Acesso restrito ao Departamento Central.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -4879,15 +4879,34 @@ def _importar_linha_stock_farmacia(row, row_num):
 
 
 def _importar_linha_stock_fardamento(row, row_num):
-    nome = str(row[0]).strip() if row[0] else ''
-    descricao = str(row[1]).strip() if len(row) > 1 else ''
-    tamanho = str(row[2]).strip() if len(row) > 2 else ''
-    tipo = str(row[3]).strip() if len(row) > 3 else ''
-    stock = int(row[4]) if len(row) > 4 and row[4] else 0
-    s = StockFardamento(nome=nome, descricao=descricao, tamanho=tamanho, tipo=tipo, stock=stock)
-    db.session.add(s)
-    db.session.flush()
-    return None
+    try:
+        id_original = None
+        start_col = 0
+        # Se a primeira coluna for um número inteiro, assumimos que é o ID
+        if row[0] is not None:
+            try:
+                id_original = int(row[0])
+                start_col = 1
+            except (ValueError, TypeError):
+                pass
+
+        nome = str(row[start_col]).strip() if len(row) > start_col and row[start_col] else ''
+        descricao = str(row[start_col+1]).strip() if len(row) > start_col+1 and row[start_col+1] else ''
+        tamanho = str(row[start_col+2]).strip() if len(row) > start_col+2 and row[start_col+2] else ''
+        tipo = str(row[start_col+3]).strip() if len(row) > start_col+3 and row[start_col+3] else ''
+        stock_val = int(row[start_col+4]) if len(row) > start_col+4 and row[start_col+4] else 0
+
+        if not nome:
+            return None
+
+        s = StockFardamento(
+            nome=nome, descricao=descricao, tamanho=tamanho, tipo=tipo, stock=stock_val
+        )
+        if id_original:
+            s.id = id_original   # força a manutenção do ID
+        return s
+    except Exception:
+        return None
 
 
 def _importar_linha_disponibilidades(row, row_num):
@@ -5854,17 +5873,28 @@ def backup_exportar():
                    c.data.strftime('%d/%m/%Y') if c.data else '',
                    c.descricao or '', c.horas, c.observacao or ''])
 
+
     # ---- 9. Stock Fardamento ----
     ws = wb.create_sheet("Stock Fardamento")
-    escrever_cabecalho(ws, ['Nome', 'Descrição', 'Tamanho', 'Tipo', 'Stock'])
+    cabecalhos = ['ID', 'Nome', 'Descrição', 'Tamanho', 'Tipo', 'Stock']
+    ws.append(cabecalhos)
+    for col in range(1, len(cabecalhos) + 1):
+        ws.cell(row=1, column=col).fill = header_fill
+        ws.cell(row=1, column=col).font = header_font
     for s in StockFardamento.query.order_by(StockFardamento.nome).all():
-        ws.append([s.nome, s.descricao or '', s.tamanho or '', s.tipo, s.stock])
+        ws.append([s.id, s.nome, s.descricao or '', s.tamanho or '', s.tipo, s.stock])
+
+
 
     # ---- 10. Stock Farmácia ----
     ws = wb.create_sheet("Stock Farmacia")
-    escrever_cabecalho(ws, ['Categoria', 'Nome', 'Tamanho', 'Stock', 'Stock Mínimo', 'Última Atualização'])
+    cabecalhos = ['ID', 'Categoria', 'Nome', 'Tamanho', 'Stock', 'Stock Mínimo', 'Última Atualização']
+    ws.append(cabecalhos)
+    for col in range(1, len(cabecalhos) + 1):
+        ws.cell(row=1, column=col).fill = header_fill
+        ws.cell(row=1, column=col).font = header_font
     for s in StockFarmacia.query.order_by(StockFarmacia.nome).all():
-        ws.append([s.categoria, s.nome, s.tamanho or '', s.stock, s.infstock or 0,
+        ws.append([s.id, s.categoria, s.nome, s.tamanho or '', s.stock, s.infstock or 0,
                    s.data_atualizacao.strftime('%d/%m/%Y %H:%M') if s.data_atualizacao else ''])
 
     # ---- 11. Categorias Farmácia ----
@@ -6839,6 +6869,25 @@ def apagar_correio_massa():
     db.session.commit()
     flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
     return redirect(url_for('correio'))
+
+
+function imprimirMes() {
+    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
+    const ano = new Date().getFullYear();
+    window.open('/escala/imprimir-mes?mes=' + mes + '&ano=' + ano, '_blank');
+}
+
+function imprimirMesECIN() {
+    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
+    const ano = new Date().getFullYear();
+    window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
+}
+
+function imprimirMesELAC() {
+    const mes = new URLSearchParams(window.location.search).get('mes') || new Date().getMonth()+1;
+    const ano = new Date().getFullYear();
+    window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
+}
 
 
 #if __name__ == '__main__':
