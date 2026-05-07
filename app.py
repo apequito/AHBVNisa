@@ -84,6 +84,8 @@ def create_tables():
         )
         db.session.add(sistema)
         db.session.commit()
+
+
 # ---------- Autenticação ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():

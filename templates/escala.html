@@ -48,12 +48,12 @@
             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.tipo_bombeiro == 'Profissional' %}
             <li><a class="dropdown-item" href="#" onclick="imprimirMes()"><i class="bi bi-printer me-1"></i> Imprimir Mês</a></li>
             {% endif %}
-{% if tem_ecin or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-<li><a class="dropdown-item" href="#" onclick="imprimirEscalaECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
-{% endif %}
-{% if tem_elac or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-<li><a class="dropdown-item" href="#" onclick="imprimirEscalaELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
-{% endif %}
+            {% if tem_ecin or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                <li><a class="dropdown-item" href="#" onclick="imprimirEscalaECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
+            {% endif %}
+            {% if tem_elac or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                <li><a class="dropdown-item" href="#" onclick="imprimirEscalaELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
+            {% endif %}
         </ul>
     </div>
 </div>
@@ -237,7 +237,7 @@ function imprimirEscalaELAC() {
     const ano = new Date().getFullYear();
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
 }
-);
+
 
 </script>
 {% endblock %}
