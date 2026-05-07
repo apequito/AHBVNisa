@@ -69,9 +69,9 @@ def create_tables():
         db.session.commit()
 
     # Criar utilizador "Sistema" para mensagens automáticas
-    if not Bombeiro.query.filter_by(mecanografico='SISTEMA').first():
+    if not Bombeiro.query.filter((Bombeiro.mecanografico == 'SISTEMA') | (Bombeiro.numero_interno == 'B998')).first():
         sistema = Bombeiro(
-            numero_interno='B999',
+            numero_interno='B998',  # número interno livre
             mecanografico='SISTEMA',
             nome='Sistema de Alertas',
             nomecompleto='Sistema de Alertas Automáticos',
