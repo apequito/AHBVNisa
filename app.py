@@ -1635,6 +1635,19 @@ def escala():
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).all()
     mecanograficos_ativos = [b.mecanografico for b in bombeiros_ativos]
 
+    # Verificar se o bombeiro logado tem registos ECIN/ELAC na tabela Ecin
+    tem_ecin = False
+    tem_elac = False
+    if current_user.is_authenticated:
+        tem_ecin = Ecin.query.filter(
+            Ecin.bombeiro_id == current_user.id,
+            Ecin.categoria == 'ECIN'
+        ).first() is not None
+        tem_elac = Ecin.query.filter(
+            Ecin.bombeiro_id == current_user.id,
+            Ecin.categoria == 'ELAC'
+        ).first() is not None
+
     return render_template('escala.html',
                            escalas=escalas,
                            meses=meses,
@@ -1655,6 +1668,8 @@ def escala():
                            trocas_hoje=trocas_hoje,
                            dispensas_hoje=dispensas_hoje,
                            hoje=hoje,
+                           tem_ecin=tem_ecin,
+                           tem_elac=tem_elac,
                            now=date.today())
 
 @app.route('/escala/imprimir-mes')

@@ -48,12 +48,12 @@
             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.tipo_bombeiro == 'Profissional' %}
             <li><a class="dropdown-item" href="#" onclick="imprimirMes()"><i class="bi bi-printer me-1"></i> Imprimir Mês</a></li>
             {% endif %}
-
-            <!-- Imprimir Escala ECIN (todos) -->
-            <li><a class="dropdown-item" href="#" onclick="imprimirMesECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
-
-            <!-- Imprimir Escala ELAC (todos) -->
-            <li><a class="dropdown-item" href="#" onclick="imprimirMesELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
+{% if tem_ecin or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+<li><a class="dropdown-item" href="#" onclick="imprimirMesECIN()"><i class="bi bi-printer me-1"></i> Imprimir Escala ECIN</a></li>
+{% endif %}
+{% if tem_elac or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+<li><a class="dropdown-item" href="#" onclick="imprimirMesELAC()"><i class="bi bi-printer me-1"></i> Imprimir Escala ELAC</a></li>
+{% endif %}
         </ul>
     </div>
 </div>
