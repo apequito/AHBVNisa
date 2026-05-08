@@ -67,14 +67,20 @@
             {% endfor %}
         </select>
     </div>
-    {% if current_user.tipo_bombeiro == 'Profissional' %}
-        <div class="mb-2">
-            <small class="text-muted">Férias:</small>
-        {% for i in range(12) %}
-            <a href="{{ url_for('ferias', mes=i+1, ano=now.year) }}" class="btn btn-outline-warning btn-sm">{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i] }}</a>
+    {% if current_user.tipo_bombeiro == 'Profissional' and ferias_mes %}
+<div class="alert alert-info p-2">
+    <strong><i class="bi bi-sun"></i> As suas férias no mês selecionado:</strong>
+    <ul class="mb-0">
+        {% for f in ferias_mes %}
+        <li>{{ f.data_inicio.strftime('%d/%m/%Y') }} a {{ f.data_fim.strftime('%d/%m/%Y') }}
+            {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
+            {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
+            {% endif %}
+        </li>
         {% endfor %}
-        </div>
-    {% endif %}
+    </ul>
+</div>
+{% endif %}
     <div class="col-auto ms-auto">
         <div class="dropdown">
             <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

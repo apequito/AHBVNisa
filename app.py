@@ -1757,6 +1757,19 @@ def escala():
             Ecin.categoria == 'ELAC'
         ).first() is not None
 
+    # Carregar férias para o mês selecionado (apenas utilizadores profissionais)
+    ferias_mes = []
+    if current_user.tipo_bombeiro == 'Profissional':
+        mes_ref = mes or date.today().month
+        ano_ref = date.today().year  # ou usar o ano do filtro, se existir
+        ferias_mes = Ferias.query.filter(
+            Ferias.bombeiro_id == current_user.id,
+            Ferias.estado != 'Rejeitado',
+            db.extract('month', Ferias.data_inicio) <= mes_ref,
+            db.extract('month', Ferias.data_fim) >= mes_ref
+        ).order_by(Ferias.data_inicio).all()
+
+
     return render_template('escala.html',
                            escalas=escalas,
                            meses=meses,
@@ -1779,6 +1792,7 @@ def escala():
                            hoje=hoje,
                            tem_ecin=tem_ecin,
                            tem_elac=tem_elac,
+                           ferias_mes=ferias_mes,
                            now=date.today())
 
 @app.route('/escala/imprimir-mes')

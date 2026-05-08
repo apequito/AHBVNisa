@@ -17,7 +17,7 @@
             {% endfor %}
         </select>
     </div>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
     <div class="col-auto">
         <label class="form-label">Bombeiro</label>
         <select name="bombeiro_id" class="form-select form-select-sm">
@@ -41,9 +41,9 @@
         <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
         <a href="{{ url_for('ferias') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
     </div>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
     <div class="col-auto ms-auto">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoPedido">
+        <button class="btn btn-primary" data-bs-target="#modalNovoPedido" data-bs-toggle="modal">
             <i class="bi bi-plus-circle me-1"></i> Novo Pedido
         </button>
     </div>
@@ -83,13 +83,13 @@
                     </td>
                     <td>{{ p.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>
-                        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
                             {% if p.estado == 'Pendente' %}
                                 <a href="{{ url_for('aprovar_ferias', id=p.id) }}" class="btn btn-sm btn-success">Aprovar</a>
                                 <a href="{{ url_for('rejeitar_ferias', id=p.id) }}" class="btn btn-sm btn-warning">Rejeitar</a>
                             {% endif %}
                         {% endif %}
-                        {% if current_user.id == p.bombeiro_id or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                        {% if current_user.id == p.bombeiro_id or current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
                             {% if p.estado != 'Aprovado' %}
                                 <a href="{{ url_for('apagar_ferias', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar este pedido?')">🗑️</a>
                             {% endif %}
@@ -135,11 +135,12 @@
 </div>
 
 <script>
-// Corrigir a abertura do modal (evitar que feche imediatamente)
+// Forçar abertura do modal (evita fecho imediato)
 document.addEventListener('DOMContentLoaded', function() {
     const btnNovo = document.querySelector('[data-bs-target="#modalNovoPedido"]');
     if (btnNovo) {
         btnNovo.addEventListener('click', function(e) {
+            e.preventDefault();
             const modalEl = document.getElementById('modalNovoPedido');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.show();
