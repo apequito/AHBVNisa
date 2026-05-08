@@ -111,11 +111,7 @@
         <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
         <ul class="mb-0">
             {% for ini, fim in ferias_intervalos %}
-            <li>{{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}
-                {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
-                {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
-                {% endif %}
-            </li>
+            <li>{{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}</li>
             {% endfor %}
         </ul>
     </div>
