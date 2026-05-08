@@ -1842,7 +1842,7 @@ def imprimir_escala_mes():
         mes = hoje.month
         ano = hoje.year
 
-    # Feriados fixos em Portugal
+    # Feriados fixos
     feriados = []
     feriados_fixos = {
         (1, 1): "Ano Novo", (4, 25): "Dia da Liberdade", (5, 1): "Dia do Trabalhador",
@@ -1857,22 +1857,22 @@ def imprimir_escala_mes():
         except ValueError:
             pass
 
-    # Obter todas as escalas do mês, excluindo ECIN, ELAC e Piquete
+    # Escalas do mês (excluindo ECIN, ELAC, Piquete)
     escalas = Escala.query.join(Bombeiro).filter(
         db.extract('month', Escala.data_inicio) == mes,
         db.extract('year', Escala.data_inicio) == ano,
         ~Escala.categoria.in_(['ECIN', 'ELAC', 'Piquete'])
     ).order_by(Escala.data_inicio.asc()).all()
 
-    # Ordenação personalizada (sem data)
+    # Ordenação personalizada
     categorias_ordem = ['Motorista', 'Socorrista', 'Centralista', 'EIP']
     prioridades = {
-        'Motorista': ['Luís Matias', 'Jorge Pereira', 'José Soldado', 'José Seco', 'Pedro Fernandes',
-                      'David Charrinho', 'Fábio Leirinha', 'Soeiro Mendes', 'Ana Marzia',
-                      'Filipe Martins', 'Eric Nobre'],
-        'Socorrista': ['José Rodrigues', 'Paulo Branquinho', 'Sabrina Fernandes'],
-        'Centralista': ['Mariana Charrinho', 'Ruben Ramos', 'António Pequito'],
-        'EIP': ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
+        'Motorista': ['Luís Matias','Jorge Pereira','José Soldado','José Seco','Pedro Fernandes',
+                      'David Charrinho','Fábio Leirinha','Soeiro Mendes','Ana Marzia',
+                      'Filipe Martins','Eric Nobre'],
+        'Socorrista': ['José Rodrigues','Paulo Branquinho','Sabrina Fernandes'],
+        'Centralista': ['Mariana Charrinho','Ruben Ramos','António Pequito'],
+        'EIP': ['José Fernandes','João Mateus','Tiago Bizarro','João Carita','João Silva']
     }
     for cat in prioridades:
         prioridades[cat] = {nome: i for i, nome in enumerate(prioridades[cat])}
@@ -1889,7 +1889,7 @@ def imprimir_escala_mes():
 
     escalas = sorted(escalas, key=chave_ordenacao)
 
-    # Construir estrutura ordenada
+    # Estrutura para o template
     from collections import OrderedDict
     estrutura = OrderedDict()
     for esc in escalas:

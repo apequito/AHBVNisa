@@ -26,7 +26,6 @@
 </head>
 <body>
 
-<!-- Cabeçalho da associação -->
 <div class="cabecalho">
     <div class="nome-assoc">Associação Humanitária de Bombeiros Voluntários de Nisa</div>
     <div class="morada">Rua Dr. Cruz Malpique - 6050 - 341</div>
@@ -78,12 +77,12 @@
                     {% set dia_ferias = ferias_por_bombeiro.get(id, []) %}
                     <td class="{% if dia in dia_ferias %}ferias-cell{% elif d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
                         {% if dia in dia_ferias %}
-                            F
-                        {% elif turnos.get(dia) %}
-                            {{ turnos[dia] }}
-                        {% else %}
-                            D
-                        {% endif %}
+    F
+{% elif turnos.get(dia) %}
+    {{ turnos[dia] }}
+{% else %}
+    D
+{% endif %}
                     </td>
                 {% endfor %}
             </tr>
