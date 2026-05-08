@@ -1909,6 +1909,25 @@ def imprimir_escala_mes():
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     dias = list(range(1, ultimo_dia + 1))
 
+    # ---------- Férias aprovadas ----------
+    ferias_query = Ferias.query.filter(
+        Ferias.estado == 'Aprovado',
+        db.extract('month', Ferias.data_fim) >= mes,
+        db.extract('month', Ferias.data_inicio) <= mes,
+        db.extract('year', Ferias.data_inicio) == ano,
+        db.extract('year', Ferias.data_fim) == ano
+    ).all()
+
+    ferias_por_bombeiro = {}
+    for f in ferias_query:
+        d = f.data_inicio
+        while d <= f.data_fim:
+            if d.year == ano and d.month == mes:
+                if f.bombeiro_id not in ferias_por_bombeiro:
+                    ferias_por_bombeiro[f.bombeiro_id] = set()
+                ferias_por_bombeiro[f.bombeiro_id].add(d.day)
+            d += timedelta(days=1)
+
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
     return render_template('imprimir_escala_mes.html',
                            estrutura=estrutura,
@@ -1918,7 +1937,8 @@ def imprimir_escala_mes():
                            meses=meses,
                            categorias_ordem=categorias_ordem,
                            feriados=feriados,
-                           date=date)   # <-- passamos a função date
+                           ferias_por_bombeiro=ferias_por_bombeiro,
+                           date=date)
 
 
 

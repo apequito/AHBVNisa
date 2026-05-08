@@ -18,6 +18,7 @@
         .linha-colorida { height: 3px; padding: 0; }
         .nome-col { text-align: left; font-weight: bold; min-width: 130px; font-size: 8px; }
         .feriado-weekend { background-color: #add8e6 !important; }
+        .ferias-cell { background-color: #006400; color: white; font-weight: bold; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -73,11 +74,12 @@
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
                 {% for dia in dias %}
                     {% set d = date(ano, mes, dia) %}
-                    <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
-                        {% if turnos.get(dia) %}
-                            {{ turnos[dia] }}
-                        {% else %}
+                    {% set dia_ferias = ferias_por_bombeiro.get(id, set()) %}
+                    <td class="{% if dia in dia_ferias %}ferias-cell{% elif d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
+                        {% if dia in dia_ferias %}
                             F
+                        {% elif turnos.get(dia) %}
+                            {{ turnos[dia] }}
                         {% endif %}
                     </td>
                 {% endfor %}
