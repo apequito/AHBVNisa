@@ -74,7 +74,7 @@
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
                 {% for dia in dias %}
                     {% set d = date(ano, mes, dia) %}
-                    {% set dia_ferias = ferias_por_bombeiro.get(id, set()) %}
+                    {% set dia_ferias = ferias_por_bombeiro.get(id, []) %}
                     <td class="{% if dia in dia_ferias %}ferias-cell{% elif d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
                         {% if dia in dia_ferias %}
                             F
