@@ -41,10 +41,9 @@
     <thead>
         <tr>
             <th class="nome-col">Nome</th>
-            {% for dia in dias %}
-            {% set d = date(ano, mes, dia) %}
-            <th class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}" style="width:2.5%;">
-                {{ dia }}
+            {% for i in range(dias|length) %}
+            <th class="{% if datas[i].weekday() in (5,6) or datas[i] in feriados %}feriado-weekend{% endif %}" style="width:2.5%;">
+                {{ dias[i] }}
             </th>
             {% endfor %}
         </tr>
@@ -75,11 +74,10 @@
 
             <tr>
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
-                {% for dia in dias %}
-                    {% set d = date(ano, mes, dia) %}
-                    <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
-                        {% if turnos.get(dia) %}
-                            {{ turnos[dia] }}
+                {% for i in range(dias|length) %}
+                    <td class="{% if datas[i].weekday() in (5,6) or datas[i] in feriados %}feriado-weekend{% endif %}">
+                        {% if turnos.get(dias[i]) %}
+                            {{ turnos[dias[i]] }}
                         {% else %}
                             F
                         {% endif %}
@@ -112,4 +110,3 @@
 <script>window.print();</script>
 </body>
 </html>
-
