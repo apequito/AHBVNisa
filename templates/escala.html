@@ -67,20 +67,6 @@
             {% endfor %}
         </select>
     </div>
-    {% if current_user.tipo_bombeiro == 'Profissional' and ferias_mes %}
-<div class="alert alert-info p-2">
-    <strong><i class="bi bi-sun"></i> As suas férias no mês selecionado:</strong>
-    <ul class="mb-0">
-        {% for f in ferias_mes %}
-        <li>{{ f.data_inicio.strftime('%d/%m/%Y') }} a {{ f.data_fim.strftime('%d/%m/%Y') }}
-            {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
-            {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
     <div class="col-auto ms-auto">
         <div class="dropdown">
             <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -112,6 +98,30 @@
         </div>
     </div>
 </div>
+
+<!-- Férias (apenas Profissionais) -->
+{% if current_user.tipo_bombeiro == 'Profissional' %}
+<div class="mb-3">
+    <small class="text-muted">Férias:</small>
+    {% for i in range(12) %}
+        <a href="{{ url_for('escala', mes=i+1) }}" class="btn btn-outline-warning btn-sm {% if i+1 == mes_atual %}active{% endif %}">{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i] }}</a>
+    {% endfor %}
+    {% if ferias_mes %}
+    <div class="alert alert-info p-2 mt-2">
+        <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
+        <ul class="mb-0">
+            {% for f in ferias_mes %}
+            <li>{{ f.data_inicio.strftime('%d/%m/%Y') }} a {{ f.data_fim.strftime('%d/%m/%Y') }}
+                {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
+                {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- Pesquisa por mecanográfico -->
 <div class="row g-2 align-items-end mb-3">
@@ -200,8 +210,8 @@
 <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#modalNovaEscala"><i class="bi bi-plus-circle me-1"></i> Adicionar Escala</button>
 {% endif %}
 
-<!-- Modal Nova Escala (melhorado) mantido como antes -->
-<!-- Modal Importar (mantido como antes) -->
+<!-- Modal Nova Escala (melhorado) e Modal Importar mantidos como antes -->
+<!-- ... (copie aqui os modais que já existiam no seu ficheiro escala.html) ... -->
 
 <script>
 function preencherNome() {

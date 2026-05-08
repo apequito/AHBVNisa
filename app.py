@@ -1596,12 +1596,30 @@ def aprovar_ferias(id):
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('ferias'))
-    ferias = Ferias.query.get_or_404(id)
-    ferias.estado = 'Aprovado'
-    ferias.aprovado_por = current_user.id
+
+    f = Ferias.query.get_or_404(id)
+    f.estado = 'Aprovado'
+    f.aprovado_por = current_user.id
+
+    # Criar registos na escala para cada dia de férias
+    dia_atual = f.data_inicio
+    while dia_atual <= f.data_fim:
+        nova_escala = Escala(
+            bombeiro_id=f.bombeiro_id,
+            data_inicio=datetime.combine(dia_atual, datetime.min.time()),
+            data_fim=datetime.combine(dia_atual, datetime.max.time()),
+            turno='Férias',
+            categoria='Férias',
+            funcao='Férias Aprovadas'
+        )
+        db.session.add(nova_escala)
+        dia_atual += timedelta(days=1)
+
     db.session.commit()
-    flash('Férias aprovadas.', 'success')
+    flash('Férias aprovadas e registadas na escala.', 'success')
     return redirect(url_for('ferias'))
+
+
 
 @app.route('/ferias/rejeitar/<int:id>')
 @login_required
@@ -1739,8 +1757,8 @@ def escala():
     ).all())
 
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Bombeiro']
-    turnos = ['1 - 00h/08h','2 - 08h/16h','3 - 16h/24h','4 - 11h/19h','5 - 10h/18h','6 - 07h/19h','7 - 19h/07h','8 - 08h/20h','9 - 20h/08h']
+    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Férias']
+    turnos = ['1 - 00h/08h','2 - 08h/16h','3 - 16h/24h','4 - 11h/19h','5 - 10h/18h','6 - 07h/19h','7 - 19h/07h','8 - 08h/20h','9 - 20h/08h', 'Férias']
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).all()
     mecanograficos_ativos = [b.mecanografico for b in bombeiros_ativos]
 
@@ -1757,17 +1775,17 @@ def escala():
             Ecin.categoria == 'ELAC'
         ).first() is not None
 
-    # Carregar férias para o mês selecionado (apenas utilizadores profissionais)
+    # Carregar férias do próprio utilizador (apenas profissionais)
     ferias_mes = []
     if current_user.tipo_bombeiro == 'Profissional':
         mes_ref = mes or date.today().month
-        ano_ref = date.today().year  # ou usar o ano do filtro, se existir
-        ferias_mes = Ferias.query.filter(
-            Ferias.bombeiro_id == current_user.id,
-            Ferias.estado != 'Rejeitado',
-            db.extract('month', Ferias.data_inicio) <= mes_ref,
-            db.extract('month', Ferias.data_fim) >= mes_ref
-        ).order_by(Ferias.data_inicio).all()
+        ano_ref = date.today().year
+        ferias_mes = Escala.query.filter(
+            Escala.bombeiro_id == current_user.id,
+            Escala.categoria == 'Férias',
+            db.extract('month', Escala.data_inicio) == mes_ref,
+            db.extract('year', Escala.data_inicio) == ano_ref
+        ).order_by(Escala.data_inicio).all()
 
 
     return render_template('escala.html',
