@@ -1960,8 +1960,6 @@ def imprimir_escala_mes():
 
 
 
-
-
 @app.route('/escala/adicionar', methods=['POST'])
 @login_required
 def adicionar_escala():
