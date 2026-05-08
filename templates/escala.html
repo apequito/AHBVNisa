@@ -106,20 +106,20 @@
     {% for i in range(12) %}
         <a href="{{ url_for('escala', mes=i+1) }}" class="btn btn-outline-warning btn-sm {% if i+1 == mes_atual %}active{% endif %}">{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i] }}</a>
     {% endfor %}
-    {% if ferias_mes %}
-    <div class="alert alert-info p-2 mt-2">
-        <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
-        <ul class="mb-0">
-            {% for f in ferias_mes %}
-            <li>{{ f.data_inicio.strftime('%d/%m/%Y') }} a {{ f.data_fim.strftime('%d/%m/%Y') }}
-                {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
-                {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+    {% if ferias_intervalos %}
+<div class="alert alert-info p-2 mt-2">
+    <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
+    <ul class="mb-0">
+        {% for ini, fim in ferias_intervalos %}
+        <li>{{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}
+            {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
+            {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 </div>
 {% endif %}
 

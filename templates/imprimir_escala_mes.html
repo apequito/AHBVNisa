@@ -126,15 +126,18 @@
             <tr>
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
                 {% for dia in dias %}
-                    {% set d = date(ano, mes, dia) %}
-                    <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %} turno-cell">
-                        {% if turnos.get(dia) %}
-                            {{ turnos[dia] }}
-                        {% else %}
-                            F
-                        {% endif %}
-                    </td>
-                {% endfor %}
+    {% set d = date(ano, mes, dia) %}
+    {% set tem_ferias = ferias_por_bombeiro.get(id, set()) %}
+    <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %} {% if dia in tem_ferias %}bg-success text-white fw-bold{% endif %}">
+        {% if dia in tem_ferias %}
+            F
+        {% elif turnos.get(dia) %}
+            {{ turnos[dia] }}
+        {% else %}
+            F
+        {% endif %}
+    </td>
+{% endfor %}
             </tr>
         {% endfor %}
     </tbody>
