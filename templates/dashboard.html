@@ -138,7 +138,7 @@
                     <a href="{{ url_for('escala') }}" class="btn btn-success btn-sm rounded-pill">
                         <i class="bi bi-calendar-week me-1"></i>Escala
                     </a>
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria', 'ECIN'] %}
                         <a href="{{ url_for('listar_ecins') }}" class="btn btn-success btn-sm rounded-pill position-relative">
                             <i class="bi bi-clipboard-check me-1"></i>ECINS
                             {% if pendencias.ecins is defined and pendencias.ecins > 0 %}
