@@ -1956,7 +1956,7 @@ def imprimir_escala_mes():
                            categorias_ordem=categorias_ordem,
                            feriados=feriados,
                            ferias_lista=ferias_lista,
-                           date=date)
+                           date_func=date)
 
 
 
