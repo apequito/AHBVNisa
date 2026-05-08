@@ -42,7 +42,7 @@
         <tr>
             <th class="nome-col">Nome</th>
             {% for dia in dias %}
-            {% set d = date_func(ano, mes, dia) %}
+            {% set d = date(ano, mes, dia) %}
             <th class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}" style="width:2.5%;">
                 {{ dia }}
             </th>
@@ -76,7 +76,7 @@
             <tr>
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
                 {% for dia in dias %}
-                    {% set d = date_func(ano, mes, dia) %}
+                    {% set d = date(ano, mes, dia) %}
                     <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
                         {% if turnos.get(dia) %}
                             {{ turnos[dia] }}

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, date as date_func
+from datetime import datetime, timedelta, date
 from io import BytesIO
 import calendar
 from flask import Flask, render_template, redirect, url_for, request, flash, send_file, jsonify
@@ -1956,7 +1956,7 @@ def imprimir_escala_mes():
                            categorias_ordem=categorias_ordem,
                            feriados=feriados,
                            ferias_lista=ferias_lista,
-                           date_func=date_func)
+                           date=date)  # ← voltar a usar 'date' simples
 
 
 
