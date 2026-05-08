@@ -67,6 +67,14 @@
             {% endfor %}
         </select>
     </div>
+    {% if current_user.tipo_bombeiro == 'Profissional' %}
+<div class="mb-2">
+    <small class="text-muted">Férias:</small>
+    {% for i in range(12) %}
+        <a href="{{ url_for('ferias', mes=i+1, ano=agora.year) }}" class="btn btn-outline-warning btn-sm">{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i] }}</a>
+    {% endfor %}
+</div>
+{% endif %}
     <div class="col-auto ms-auto">
         <div class="dropdown">
             <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

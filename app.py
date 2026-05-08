@@ -1540,7 +1540,7 @@ def ferias():
         data_inicio = datetime.strptime(datas[0], '%Y-%m-%d').date()
         data_fim = datetime.strptime(datas[-1], '%Y-%m-%d').date()
 
-        # Verificar sobreposição? (opcional)
+        # Verificar sobreposição (opcional)
         existente = Ferias.query.filter(
             Ferias.bombeiro_id == current_user.id,
             Ferias.estado != 'Rejeitado',
@@ -1564,26 +1564,29 @@ def ferias():
 
     # GET – filtros
     ano = request.args.get('ano', type=int, default=date.today().year)
+    mes = request.args.get('mes', type=int)                     # ← NOVO
     bombeiro_id = request.args.get('bombeiro_id', type=int)
     estado_filtro = request.args.get('estado', '')
 
     query = Ferias.query
     if ano:
         query = query.filter(db.extract('year', Ferias.data_inicio) == ano)
+    if mes:                                                     # ← NOVO
+        query = query.filter(db.extract('month', Ferias.data_inicio) == mes)
     if bombeiro_id:
         query = query.filter_by(bombeiro_id=bombeiro_id)
     if estado_filtro:
         query = query.filter_by(estado=estado_filtro)
 
     # Se for user normal, só vê os seus pedidos
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
         query = query.filter_by(bombeiro_id=current_user.id)
 
     pedidos = query.order_by(Ferias.data_inicio.desc()).all()
     bombeiros = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
     return render_template('ferias.html', pedidos=pedidos, bombeiros=bombeiros,
-                           ano=ano, bombeiro_id=bombeiro_id, estado_filtro=estado_filtro)
+                           ano=ano, mes=mes, bombeiro_id=bombeiro_id, estado_filtro=estado_filtro)
 
 
 

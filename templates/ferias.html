@@ -8,6 +8,15 @@
         <label class="form-label">Ano</label>
         <input type="number" name="ano" class="form-control form-control-sm" value="{{ ano }}" style="width:100px;">
     </div>
+    <div class="col-auto">
+        <label class="form-label">Mês</label>
+        <select name="mes" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            {% for i in range(1,13) %}
+            <option value="{{ i }}" {% if mes == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
     <div class="col-auto">
         <label class="form-label">Bombeiro</label>
@@ -32,11 +41,13 @@
         <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
         <a href="{{ url_for('ferias') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
     </div>
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
     <div class="col-auto ms-auto">
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoPedido">
             <i class="bi bi-plus-circle me-1"></i> Novo Pedido
         </button>
     </div>
+    {% endif %}
 </form>
 
 <!-- Tabela de pedidos -->
@@ -93,8 +104,8 @@
     </div>
 </div>
 
-<!-- Modal Novo Pedido -->
-<div class="modal fade" id="modalNovoPedido" tabindex="-1">
+<!-- Modal Novo Pedido (corrigido) -->
+<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="POST" id="formFerias">
             <div class="modal-content">
@@ -124,6 +135,19 @@
 </div>
 
 <script>
+// Corrigir a abertura do modal (evitar que feche imediatamente)
+document.addEventListener('DOMContentLoaded', function() {
+    const btnNovo = document.querySelector('[data-bs-target="#modalNovoPedido"]');
+    if (btnNovo) {
+        btnNovo.addEventListener('click', function(e) {
+            const modalEl = document.getElementById('modalNovoPedido');
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+        });
+    }
+});
+
+// Calendário
 let mesAtual = new Date().getMonth() + 1;
 let anoAtual = new Date().getFullYear();
 let selectedDates = new Set();
