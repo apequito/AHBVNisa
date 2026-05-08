@@ -1830,6 +1830,8 @@ def escala():
                            ferias_intervalos=ferias_intervalos,
                            now=date.today())
 
+
+
 @app.route('/escala/imprimir-mes')
 @login_required
 def imprimir_escala_mes():
@@ -1840,7 +1842,7 @@ def imprimir_escala_mes():
         mes = hoje.month
         ano = hoje.year
 
-    # Feriados fixos em Portugal (mantém igual)
+    # Feriados fixos em Portugal
     feriados = []
     feriados_fixos = {
         (1, 1): "Ano Novo", (4, 25): "Dia da Liberdade", (5, 1): "Dia do Trabalhador",
@@ -1907,9 +1909,9 @@ def imprimir_escala_mes():
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     dias = list(range(1, ultimo_dia + 1))
 
-    # --- NOVO: Obter férias aprovadas do mês ---
-    # ---------- FÉRIAS APROVADAS ----------
-    ferias = Ferias.query.filter(
+    # ---------- FÉRIAS APROVADAS (lista para o rodapé) ----------
+    ferias_lista = []
+    ferias_query = Ferias.query.filter(
         Ferias.estado == 'Aprovado',
         db.extract('month', Ferias.data_fim) >= mes,
         db.extract('month', Ferias.data_inicio) <= mes,
@@ -1917,16 +1919,32 @@ def imprimir_escala_mes():
         db.extract('year', Ferias.data_fim) == ano
     ).all()
 
-    ferias_intervalos_por_bombeiro = {}
-    for f in ferias:
-        # Calcula os intervalos contínuos para este bombeiro
-        intervalos = agrupar_ferias([f])  # só uma férias de cada vez
-        if f.bombeiro_id not in ferias_intervalos_por_bombeiro:
-            ferias_intervalos_por_bombeiro[f.bombeiro_id] = []
-        for ini, fim in intervalos:
-            # Filtra apenas os dias que caem dentro do mês/ano
-            if ini.year == ano and ini.month == mes or fim.year == ano and fim.month == mes:
-                ferias_intervalos_por_bombeiro[f.bombeiro_id].append((ini, fim))
+    from collections import defaultdict
+    dias_por_bombeiro = defaultdict(list)
+
+    for f in ferias_query:
+        d = f.data_inicio
+        while d <= f.data_fim:
+            if d.year == ano and d.month == mes:
+                dias_por_bombeiro[f.bombeiro_id].append(d)
+            d += timedelta(days=1)
+
+    for bid, dias in dias_por_bombeiro.items():
+        dias = sorted(set(dias))
+        inicio = fim = dias[0]
+        for d in dias[1:]:
+            if d == fim + timedelta(days=1):
+                fim = d
+            else:
+                b = Bombeiro.query.get(bid)
+                if b:
+                    ferias_lista.append((b.nome, inicio, fim))
+                inicio = fim = d
+        b = Bombeiro.query.get(bid)
+        if b:
+            ferias_lista.append((b.nome, inicio, fim))
+
+    ferias_lista.sort(key=lambda x: x[0].lower())
 
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
     return render_template('imprimir_escala_mes.html',
@@ -1937,7 +1955,7 @@ def imprimir_escala_mes():
                            meses=meses,
                            categorias_ordem=categorias_ordem,
                            feriados=feriados,
-                           ferias_por_bombeiro=ferias_por_bombeiro,   # NOVO
+                           ferias_lista=ferias_lista,
                            date=date)
 
 
