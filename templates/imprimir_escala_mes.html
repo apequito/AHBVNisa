@@ -124,7 +124,16 @@
             {% endif %}
 
             <tr>
-                <td class="nome-col">{{ nome }} ({{ mec }})</td>
+                <td class="nome-col">
+    {{ nome }} ({{ mec }})
+    {% if id in ferias_intervalos_por_bombeiro %}
+        <br><small style="color: #006400; font-weight: bold;">
+        {% for ini, fim in ferias_intervalos_por_bombeiro[id] %}
+            Férias: {{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}{% if not loop.last %}<br>{% endif %}
+        {% endfor %}
+        </small>
+    {% endif %}
+</td>
                 {% for dia in dias %}
     {% set d = date(ano, mes, dia) %}
     {% set tem_ferias = ferias_por_bombeiro.get(id, set()) %}

@@ -107,19 +107,19 @@
         <a href="{{ url_for('escala', mes=i+1) }}" class="btn btn-outline-warning btn-sm {% if i+1 == mes_atual %}active{% endif %}">{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i] }}</a>
     {% endfor %}
     {% if ferias_intervalos %}
-<div class="alert alert-info p-2 mt-2">
-    <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
-    <ul class="mb-0">
-        {% for ini, fim in ferias_intervalos %}
-        <li>{{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}
-            {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
-            {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
+    <div class="alert alert-info p-2 mt-2">
+        <strong><i class="bi bi-sun"></i> As suas férias no mês:</strong>
+        <ul class="mb-0">
+            {% for ini, fim in ferias_intervalos %}
+            <li>{{ ini.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }}
+                {% if f.estado == 'Pendente' %}<span class="badge bg-warning text-dark">Pendente</span>
+                {% elif f.estado == 'Aprovado' %}<span class="badge bg-success">Aprovado</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -210,8 +210,57 @@
 <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#modalNovaEscala"><i class="bi bi-plus-circle me-1"></i> Adicionar Escala</button>
 {% endif %}
 
-<!-- Modal Nova Escala (melhorado) e Modal Importar mantidos como antes -->
-<!-- ... (copie aqui os modais que já existiam no seu ficheiro escala.html) ... -->
+<!-- Modal Nova Escala (melhorado) -->
+{% if current_user.tipo_user == 'Admin' %}
+<div class="modal fade" id="modalNovaEscala" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('adicionar_escala') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Nova Escala</h5></div>
+                <div class="modal-body">
+                    <label>Mecanográfico</label>
+                    <select name="bombeiro_id" id="selectMecanografico" class="form-select mb-2" required onchange="preencherNome()">
+                        <option value="">Selecione...</option>
+                        {% for b in bombeiros_ativos %}
+                        <option value="{{ b.id }}" data-mecanografico="{{ b.mecanografico }}" data-nome="{{ b.nome }}">{{ b.mecanografico }} - {{ b.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Nome</label>
+                    <input type="text" id="nomeBombeiro" class="form-control mb-2" readonly>
+                    <label>Data</label>
+                    <input type="date" name="data_inicio" class="form-control mb-2" required>
+                    <label>Turno</label>
+                    <select name="turno" class="form-select mb-2" required>
+                        {% for t in turnos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                    </select>
+                    <label>Categoria</label>
+                    <select name="categoria" class="form-select mb-2" required>
+                        {% for cat in categorias %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+                    </select>
+                    <label>Função (opcional)</label>
+                    <input type="text" name="funcao" class="form-control" placeholder="Ex: Chefe, Motorista...">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Guardar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Importar (mantido) -->
+<div class="modal fade" id="modalImportarEscala" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_escala') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Escala (Excel)</h5></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
 function preencherNome() {

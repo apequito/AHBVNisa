@@ -1648,19 +1648,16 @@ def apagar_ferias(id):
 
 
 def agrupar_ferias(lista_ferias):
-    """Recebe uma lista de objetos Ferias e retorna uma lista de intervalos
-    (data_inicio, data_fim) ordenados e agrupados por continuidade."""
+    """Recebe uma lista de objetos Ferias e retorna uma lista de intervalos (data_inicio, data_fim) agrupados."""
     if not lista_ferias:
         return []
-    # Ordenar por data_inicio
     dias = []
     for f in lista_ferias:
-        # Se o registo já é um intervalo (data_fim > data_inicio), trata como vários dias
         d = f.data_inicio
         while d <= f.data_fim:
             dias.append(d)
             d += timedelta(days=1)
-    dias = sorted(set(dias))  # eliminar duplicados e ordenar
+    dias = sorted(set(dias))
     intervalos = []
     inicio = dias[0]
     fim = dias[0]
@@ -1680,85 +1677,85 @@ def agrupar_ferias(lista_ferias):
 @app.route('/escala')
 @login_required
 def escala():
+    # Filtros
     mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
     categoria = request.args.get('categoria', '')
     mecanografico = request.args.get('mecanografico', '')
     turno_filtro = request.args.get('turno', '')
-    dia_filtro = request.args.get('dia', type=int)  # dia do mês
+    dia_filtro = request.args.get('dia', type=int)
 
     query = Escala.query.join(Bombeiro)
 
     if mes:
         query = query.filter(db.extract('month', Escala.data_inicio) == mes)
+    if ano:
+        query = query.filter(db.extract('year', Escala.data_inicio) == ano)
     if categoria:
         query = query.filter(Escala.categoria == categoria)
     if mecanografico:
         query = query.filter(Bombeiro.mecanografico == mecanografico)
     if turno_filtro:
         query = query.filter(Escala.turno == turno_filtro)
-    if dia_filtro and mes:
-        hoje = date.today()
-        data_ref = date(hoje.year, mes, dia_filtro)
+    if dia_filtro:
+        data_ref = date(ano, mes, dia_filtro)
         query = query.filter(
             func.date(Escala.data_inicio) <= data_ref,
             func.date(Escala.data_fim) >= data_ref
         )
 
-    if current_user.tipo_user != 'Admin':
+    # Permissões: utilizador normal vê apenas as suas escalas
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
         query = query.filter(Escala.bombeiro_id == current_user.id)
 
-    # Obter todas as escalas que correspondem aos filtros
-    escalas_brutas = query.order_by(Escala.data_inicio.asc()).all()
+    # Ordenação base (para depois aplicar a personalizada)
+    escalas = query.order_by(Escala.data_inicio.asc()).all()
 
     # ---------- ORDENAÇÃO PERSONALIZADA ----------
     categorias_ordem = ['Motorista', 'Socorrista', 'Centralista', 'EIP',
                         'ECIN', 'ELAC', 'Piquete']
 
     prioridades = {
-        'Motorista': ['Luís Matias','Jorge Pereira','José Soldado','José Seco','Pedro Fernandes',
-              'David Charrinho','Fábio Leirinha','Soeiro Mendes','Ana Marzia',
-              'Filipe Martins','Eric Nobre'],
-        'Socorrista': ['José Rodrigues','Paulo Branquinho','Sabrina Fernandes'],
-        'Centralista': ['Mariana Charrinho','Ruben Ramos','António Pequito'],
-        'EIP': ['José Fernandes','João Mateus','Tiago Bizarro','João Carita','João Silva']
+        'Motorista': ['Luís Matias', 'Jorge Pereira', 'José Soldado', 'José Seco', 'Pedro Fernandes',
+                      'David Charrinho', 'Fábio Leirinha', 'Soeiro Mendes', 'Ana Marzia',
+                      'Filipe Martins', 'Eric Nobre'],
+        'Socorrista': ['José Rodrigues', 'Paulo Branquinho', 'Sabrina Fernandes'],
+        'Centralista': ['Mariana Charrinho', 'Ruben Ramos', 'António Pequito'],
+        'EIP': ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
     }
     for cat in prioridades:
         prioridades[cat] = {nome: i for i, nome in enumerate(prioridades[cat])}
 
     def chave_ordenacao(esc):
-        # 1º critério: data (convertendo para date)
         data_ini = esc.data_inicio.date() if hasattr(esc.data_inicio, 'date') else esc.data_inicio
-        # 2º critério: ordem da categoria
         cat = esc.categoria if esc.categoria else 'Outros'
         ordem_cat = categorias_ordem.index(cat) if cat in categorias_ordem else len(categorias_ordem)
         nome = esc.bombeiro.nome.strip()
-        # 3º critério: posição do nome (se categoria tiver lista) ou turno+nome
         if cat in prioridades:
             pos_nome = prioridades[cat].get(nome, len(prioridades[cat]))
             return (data_ini, ordem_cat, pos_nome, nome)
         else:
             return (data_ini, ordem_cat, esc.turno, nome)
 
-    escalas = sorted(escalas_brutas, key=chave_ordenacao)
+    escalas = sorted(escalas, key=chave_ordenacao)
 
-    # Cartões de resumo (opcional, mantidos para compatibilidade com o template)
+    # Cartões de resumo
     total_escalas = len(escalas)
     total_bombeiros = len(set(e.bombeiro_id for e in escalas))
-    categorias_presentes = set(e.categoria for e in escalas if e.categoria)
-    total_categorias = len(categorias_presentes)
+    total_categorias = len(set(e.categoria for e in escalas if e.categoria))
     total_turnos = len(set(e.turno for e in escalas))
 
-    # Atividade do mês (para mini-calendário)
+    # Atividade do mês para o mini-calendário
     dias_com_escalas = []
     if mes:
-        ano_ref = datetime.now().year
         for dia in range(1, 32):
             try:
-                data_ref = date(ano_ref, mes, dia)
+                data_ref = date(ano, mes, dia)
             except ValueError:
                 break
             tem = Escala.query.filter(
                 db.extract('month', Escala.data_inicio) == mes,
+                db.extract('year', Escala.data_inicio) == ano,
                 func.date(Escala.data_inicio) <= data_ref,
                 func.date(Escala.data_fim) >= data_ref
             ).first() is not None
@@ -1781,40 +1778,32 @@ def escala():
         Dispensa.aprovada == True
     ).all())
 
+    # Verificar se o utilizador tem registos ECIN / ELAC
+    tem_ecin = Ecin.query.filter(Ecin.bombeiro_id == current_user.id, Ecin.categoria == 'ECIN').first() is not None
+    tem_elac = Ecin.query.filter(Ecin.bombeiro_id == current_user.id, Ecin.categoria == 'ELAC').first() is not None
+
+    # Listas auxiliares
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Férias']
-    turnos = ['1 - 00h/08h','2 - 08h/16h','3 - 16h/24h','4 - 11h/19h','5 - 10h/18h','6 - 07h/19h','7 - 19h/07h','8 - 08h/20h','9 - 20h/08h', 'Férias']
+    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Bombeiro']
+    turnos = ['1 - 00h/08h','2 - 08h/16h','3 - 16h/24h','4 - 11h/19h','5 - 10h/18h','6 - 07h/19h','7 - 19h/07h','8 - 08h/20h','9 - 20h/08h']
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).all()
     mecanograficos_ativos = [b.mecanografico for b in bombeiros_ativos]
 
-    # Verificar se o bombeiro logado tem registos ECIN/ELAC na tabela Ecin
-    tem_ecin = False
-    tem_elac = False
-    if current_user.is_authenticated:
-        tem_ecin = Ecin.query.filter(
-            Ecin.bombeiro_id == current_user.id,
-            Ecin.categoria == 'ECIN'
-        ).first() is not None
-        tem_elac = Ecin.query.filter(
-            Ecin.bombeiro_id == current_user.id,
-            Ecin.categoria == 'ELAC'
-        ).first() is not None
-
-    # Carregar férias do próprio utilizador (apenas profissionais)
-    fferias_intervalos = []
-if current_user.tipo_bombeiro == 'Profissional':
-    mes_ref = mes or date.today().month
-    ano_ref = date.today().year   # pode usar o ano do filtro se existir
-    ferias_mes = Ferias.query.filter(
-        Ferias.bombeiro_id == current_user.id,
-        Ferias.estado.in_(['Pendente', 'Aprovado']),
-        db.extract('month', Ferias.data_fim) >= mes_ref,
-        db.extract('month', Ferias.data_inicio) <= mes_ref,
-        db.extract('year', Ferias.data_inicio) == ano_ref,
-        db.extract('year', Ferias.data_fim) == ano_ref
-    ).order_by(Ferias.data_inicio).all()
-    ferias_intervalos = agrupar_ferias(ferias_mes)
-
+    # ---------- FÉRIAS DO PROFISSIONAL ----------
+    ferias_intervalos = []
+    if current_user.tipo_bombeiro == 'Profissional':
+        mes_ref = mes or date.today().month
+        ano_ref = date.today().year
+        ferias_mes = Ferias.query.filter(
+            Ferias.bombeiro_id == current_user.id,
+            Ferias.estado.in_(['Pendente', 'Aprovado']),
+            db.extract('month', Ferias.data_fim) >= mes_ref,
+            db.extract('month', Ferias.data_inicio) <= mes_ref,
+            db.extract('year', Ferias.data_inicio) == ano_ref,
+            db.extract('year', Ferias.data_fim) == ano_ref
+        ).order_by(Ferias.data_inicio).all()
+        # A função 'agrupar_ferias' deve estar definida no seu app.py
+        ferias_intervalos = agrupar_ferias(ferias_mes)
 
     return render_template('escala.html',
                            escalas=escalas,
@@ -1838,7 +1827,6 @@ if current_user.tipo_bombeiro == 'Profissional':
                            hoje=hoje,
                            tem_ecin=tem_ecin,
                            tem_elac=tem_elac,
-                           ferias_mes=ferias_mes,
                            ferias_intervalos=ferias_intervalos,
                            now=date.today())
 
@@ -1920,6 +1908,7 @@ def imprimir_escala_mes():
     dias = list(range(1, ultimo_dia + 1))
 
     # --- NOVO: Obter férias aprovadas do mês ---
+    # ---------- FÉRIAS APROVADAS ----------
     ferias = Ferias.query.filter(
         Ferias.estado == 'Aprovado',
         db.extract('month', Ferias.data_fim) >= mes,
@@ -1927,15 +1916,17 @@ def imprimir_escala_mes():
         db.extract('year', Ferias.data_inicio) == ano,
         db.extract('year', Ferias.data_fim) == ano
     ).all()
-    ferias_por_bombeiro = {}
+
+    ferias_intervalos_por_bombeiro = {}
     for f in ferias:
-        d = f.data_inicio
-        while d <= f.data_fim:
-            if d.month == mes and d.year == ano:  # apenas os dias deste mês/ano
-                if f.bombeiro_id not in ferias_por_bombeiro:
-                    ferias_por_bombeiro[f.bombeiro_id] = set()
-                ferias_por_bombeiro[f.bombeiro_id].add(d.day)
-            d += timedelta(days=1)
+        # Calcula os intervalos contínuos para este bombeiro
+        intervalos = agrupar_ferias([f])  # só uma férias de cada vez
+        if f.bombeiro_id not in ferias_intervalos_por_bombeiro:
+            ferias_intervalos_por_bombeiro[f.bombeiro_id] = []
+        for ini, fim in intervalos:
+            # Filtra apenas os dias que caem dentro do mês/ano
+            if ini.year == ano and ini.month == mes or fim.year == ano and fim.month == mes:
+                ferias_intervalos_por_bombeiro[f.bombeiro_id].append((ini, fim))
 
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
     return render_template('imprimir_escala_mes.html',
