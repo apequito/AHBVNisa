@@ -41,13 +41,11 @@
         <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
         <a href="{{ url_for('ferias') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
     </div>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
     <div class="col-auto ms-auto">
         <button class="btn btn-primary" data-bs-target="#modalNovoPedido" data-bs-toggle="modal">
             <i class="bi bi-plus-circle me-1"></i> Novo Pedido
         </button>
     </div>
-    {% endif %}
 </form>
 
 <!-- Tabela de pedidos -->

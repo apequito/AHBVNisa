@@ -3192,7 +3192,6 @@ def escalar_ecin(id):
         return redirect(url_for('listar_ecins'))
 
     ecin = Ecin.query.get_or_404(id)
-    # Permitir alteração mesmo que já não esteja 'Pendente'
     funcao_cod = request.args.get('funcao', 'X')
 
     mapeamento = {
@@ -3210,27 +3209,27 @@ def escalar_ecin(id):
 
     dados = mapeamento[funcao_cod]
 
-    # Se já tinha sido escalado anteriormente, remover a escala antiga
-    if ecin.estado not in ['Pendente', 'Não Escalado']:
-        escalas_antigas = Escala.query.filter_by(
-            bombeiro_id=ecin.bombeiro_id,
-            data_inicio=datetime.combine(ecin.data, datetime.strptime('07:00', '%H:%M').time())  # pode ser genérico
-        ).filter(
-            Escala.turno == ecin.turno,
-            Escala.categoria.in_(['ECIN', 'ELAC'])
-        ).all()
-        for esc in escalas_antigas:
-            db.session.delete(esc)
+    # ---------- REMOVER QUALQUER ESCALA ANTERIOR DESTE ECIN ----------
+    # Procura por data (ignorando horas) e turno, para o mesmo bombeiro
+    escala_antiga = Escala.query.filter(
+        Escala.bombeiro_id == ecin.bombeiro_id,
+        func.date(Escala.data_inicio) == ecin.data,
+        Escala.turno == ecin.turno,
+        Escala.categoria.in_(['ECIN', 'ELAC'])
+    ).first()
+    if escala_antiga:
+        db.session.delete(escala_antiga)
 
+    # ---------- SE FOR "NÃO ESCALAR", REMOVE SÓ A ESCALA E ATUALIZA O ESTADO ----------
     if funcao_cod == 'X':
         ecin.estado = dados['estado']
         ecin.funcao = None
         ecin.categoria = None
         db.session.commit()
-        flash('Marcado como Não Escalado.', 'info')
+        flash('Bombeiro removido da escala e marcado como Não Escalado.', 'info')
         return redirect(url_for('listar_ecins'))
 
-    # Criar nova escala
+    # ---------- CRIAR A NOVA ESCALA ----------
     try:
         partes = ecin.turno.split('-')[1].strip().split('/')
         inicio_str = partes[0].replace('h', ':00')
