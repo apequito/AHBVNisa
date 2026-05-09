@@ -6598,6 +6598,7 @@ def administrativo():
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
 
     query_ecin = Ecin.query.filter(
+        Ecin.estado != 'Não Escalado',  # ← NOVO FILTRO
         db.extract('month', Ecin.data) == mes_ecin,
         db.extract('year', Ecin.data) == ano_ecin
     )

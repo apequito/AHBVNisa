@@ -64,7 +64,7 @@
                 {% set current_cat.valor = cat %}
             {% endif %}
 
-            {% if cat == 'Motorista' and nome == 'Fábio Leirinha' %}
+            {% if cat == 'Motorista' and nome == 'David Charrinho' %}
             <tr class="linha-colorida" style="background-color: {{ cores_cat.get(cat, '#f0f0f0') }};">
                 <td colspan="{{ dias|length + 1 }}"></td>
             </tr>
@@ -77,12 +77,12 @@
                     {% set dia_ferias = ferias_por_bombeiro.get(id, []) %}
                     <td class="{% if dia in dia_ferias %}ferias-cell{% elif d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
                         {% if dia in dia_ferias %}
-    F
-{% elif turnos.get(dia) %}
-    {{ turnos[dia] }}
-{% else %}
-    D
-{% endif %}
+                            F
+                        {% elif turnos.get(dia) %}
+                            {{ turnos[dia] }}
+                        {% else %}
+                            D
+                        {% endif %}
                     </td>
                 {% endfor %}
             </tr>
@@ -92,5 +92,4 @@
 
 <script>window.print();</script>
 </body>
-
 </html>
