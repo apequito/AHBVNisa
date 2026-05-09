@@ -1784,7 +1784,7 @@ def escala():
 
     # Listas auxiliares
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Bombeiro']
+    categorias = ['Motorista','Socorrista','Centralista','EIP','ECIN','ELAC','Piquete','Férias']
     turnos = ['1 - 00h/08h','2 - 08h/16h','3 - 16h/24h','4 - 11h/19h','5 - 10h/18h','6 - 07h/19h','7 - 19h/07h','8 - 08h/20h','9 - 20h/08h']
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).all()
     mecanograficos_ativos = [b.mecanografico for b in bombeiros_ativos]
@@ -1804,6 +1804,19 @@ def escala():
         ).order_by(Ferias.data_inicio).all()
         # A função 'agrupar_ferias' deve estar definida no seu app.py
         ferias_intervalos = agrupar_ferias(ferias_mes)
+
+    if categoria == 'Férias':
+        # Obter bombeiros com férias no mês selecionado
+        ferias_do_mes = Ferias.query.filter(
+            Ferias.estado == 'Aprovado',
+            db.extract('month', Ferias.data_fim) >= mes,
+            db.extract('month', Ferias.data_inicio) <= mes,
+            db.extract('year', Ferias.data_inicio) == ano,
+            db.extract('year', Ferias.data_fim) == ano
+        ).all()
+        ids_ferias = [f.bombeiro_id for f in ferias_do_mes]
+        query = query.filter(Escala.bombeiro_id.in_(ids_ferias))
+
 
     return render_template('escala.html',
                            escalas=escalas,
