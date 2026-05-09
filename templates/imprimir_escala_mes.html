@@ -2,23 +2,73 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Escala {{ mes }}/{{ ano }}</title>
+    <title>Escala {{ meses[mes-1] }} {{ ano }}</title>
     <style>
-        @page { size: A3 landscape; margin: 10mm; }
-        body { font-family: Arial, sans-serif; font-size: 9px; }
-        .cabecalho { text-align: center; margin-bottom: 8px; }
-        .nome-assoc { font-weight: bold; font-size: 16px; }
-        .morada { font-weight: bold; font-size: 14px; }
-        .contactos { font-size: 12px; }
-        h2 { text-align: center; font-size: 13px; margin: 8px 0 5px 0; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #000; padding: 1.5px 2px; text-align: center; vertical-align: middle; }
-        th { background-color: #f2f2f2; font-size: 7px; }
-        .categoria-header { font-weight: bold; text-align: center; padding: 3px 4px; color: #fff; font-size: 9px; }
-        .linha-colorida { height: 3px; padding: 0; }
-        .nome-col { text-align: left; font-weight: bold; min-width: 130px; font-size: 8px; }
-        .feriado-weekend { background-color: #add8e6 !important; }
-        .ferias-cell { background-color: #006400; color: white; font-weight: bold; }
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9px;               /* +1 ponto */
+        }
+        .cabecalho {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .cabecalho .nome-assoc {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .cabecalho .morada {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .cabecalho .contactos {
+            font-size: 12px;
+        }
+        h2 {
+            text-align: center;
+            font-size: 14px;
+            margin: 8px 0 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 2px 3px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-size: 8px;
+        }
+        .categoria-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 4px 4px;
+            color: #fff;
+            font-size: 10px;
+        }
+        .linha-colorida {
+            height: 3px;
+            padding: 0;
+        }
+        .nome-col {
+            text-align: left;
+            font-weight: bold;
+            min-width: 130px;
+            font-size: 9px;
+        }
+        .turno-cell {
+            font-weight: bold;           /* ← números e "F" a negrito */
+        }
+        .feriado-weekend {
+            background-color: #add8e6 !important;
+        }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -26,6 +76,7 @@
 </head>
 <body>
 
+<!-- Cabeçalho da associação -->
 <div class="cabecalho">
     <div class="nome-assoc">Associação Humanitária de Bombeiros Voluntários de Nisa</div>
     <div class="morada">Rua Dr. Cruz Malpique - 6050 - 341</div>
@@ -56,6 +107,7 @@
         {% set current_cat = namespace(valor='') %}
         {% for (id, nome, mec, cat), turnos in estrutura.items() %}
             {% if cat != current_cat.valor %}
+                <!-- Cabeçalho da categoria (centrado e negrito) -->
                 <tr>
                     <td colspan="{{ dias|length + 1 }}" class="categoria-header" style="background-color: {{ cores_cat.get(cat, '#f0f0f0') }}; color: #fff;">
                         {{ cat }}
@@ -64,7 +116,8 @@
                 {% set current_cat.valor = cat %}
             {% endif %}
 
-            {% if cat == 'Motorista' and nome == 'David Charrinho' %}
+            <!-- Linha colorida extra depois de "David Charrinho" (Motorista) -->
+            {% if cat == 'Motorista' and nome == 'Fábio Leirinha' %}
             <tr class="linha-colorida" style="background-color: {{ cores_cat.get(cat, '#f0f0f0') }};">
                 <td colspan="{{ dias|length + 1 }}"></td>
             </tr>
@@ -74,14 +127,11 @@
                 <td class="nome-col">{{ nome }} ({{ mec }})</td>
                 {% for dia in dias %}
                     {% set d = date(ano, mes, dia) %}
-                    {% set dia_ferias = ferias_por_bombeiro.get(id, []) %}
-                    <td class="{% if dia in dia_ferias %}ferias-cell{% elif d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %}">
-                        {% if dia in dia_ferias %}
-                            F
-                        {% elif turnos.get(dia) %}
+                    <td class="{% if d.weekday() in (5,6) or d in feriados %}feriado-weekend{% endif %} turno-cell">
+                        {% if turnos.get(dia) %}
                             {{ turnos[dia] }}
                         {% else %}
-                            D
+                            F
                         {% endif %}
                     </td>
                 {% endfor %}
