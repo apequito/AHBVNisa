@@ -5571,6 +5571,8 @@ def backup_importar():
         db.session.flush()
 
     # ---------- 6. STOCK FARDAMENTO ----------
+
+    # ---------- 6. STOCK FARDAMENTO ----------
     if 'Stock Fardamento' in wb.sheetnames:
         ws = wb['Stock Fardamento']
         for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -5582,10 +5584,18 @@ def backup_importar():
             except Exception as e:
                 erros.append(f"Stock Fardamento linha {row_num}: {str(e)[:100]}")
         db.session.flush()
-        # Ajustar sequência no PostgreSQL
+
+        # Ajustar sequência no PostgreSQL (corrigido)
         if db.engine.dialect.name == 'postgresql':
             from sqlalchemy import text
-            db.session.execute(text("SELECT setval('stock_fardamento_id_seq', (SELECT COALESCE(MAX(id), 0) FROM stock_fardamento))"))
+            # Verifica se existe algum registo na tabela
+            max_id = db.session.query(db.func.max(StockFardamento.id)).scalar()
+            if max_id is not None:
+                db.session.execute(text("SELECT setval('stock_fardamento_id_seq', :max_id)"), {'max_id': max_id})
+            else:
+                # Se a tabela está vazia, a próxima chave deve ser 1
+                db.session.execute(text("SELECT setval('stock_fardamento_id_seq', 1, false)"))
+
 
     # ---------- 7. DISPONIBILIDADES ----------
     if 'Disponibilidades' in wb.sheetnames:
@@ -6087,13 +6097,6 @@ def backup_exportar():
     escrever_cabecalho(ws, ['Nome', 'Categoria'])
     for t in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
         ws.append([t.nome, t.categoria])
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return send_file(output, as_attachment=True, download_name='backup_quartel.xlsx',
-                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
 
 # ---- 26. Férias ----   ← ANTES ESTAVA FORA DA FUNÇÃO
     ws = wb.create_sheet("Ferias")
