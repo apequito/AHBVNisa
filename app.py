@@ -5542,7 +5542,7 @@ def backup_importar():
         Avaria, Disponibilidade, Deslocacao, Ferias,  # ← apenas "Ferias"
         Viatura, Bombeiro
     ]
-    ]
+
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
     db.session.flush()
