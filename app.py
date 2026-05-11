@@ -6095,18 +6095,23 @@ def backup_exportar():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
-# ---- 26. Férias ----
-ws = wb.create_sheet("Ferias")
-cabecalhos = ['Bombeiro ID', 'Início', 'Fim', 'Estado', 'Aprovado por', 'Data Pedido']
-ws.append(cabecalhos)
-for col in range(1, len(cabecalhos)+1):
-    ws.cell(row=1, column=col).fill = header_fill
-    ws.cell(row=1, column=col).font = header_font
-for f in Ferias.query.order_by(Ferias.data_inicio).all():
-    ws.append([f.bombeiro_id, f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
-               f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '', f.estado,
-               f.aprovado_por or '', f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''])
+# ---- 26. Férias ----   ← ANTES ESTAVA FORA DA FUNÇÃO
+    ws = wb.create_sheet("Ferias")
+    cabecalhos = ['Bombeiro ID', 'Início', 'Fim', 'Estado', 'Aprovado por', 'Data Pedido']
+    escrever_cabecalho(ws, cabecalhos)
+    for f in Ferias.query.order_by(Ferias.data_inicio).all():
+        ws.append([f.bombeiro_id,
+                   f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
+                   f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '',
+                   f.estado,
+                   f.aprovado_por or '',
+                   f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''])
 
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='backup_quartel.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 #----------------------Painel Comando__________________
