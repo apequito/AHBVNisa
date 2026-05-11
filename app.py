@@ -5885,7 +5885,13 @@ def backup_importar():
             else:
                 db.session.execute(text("SELECT setval('ferias_id_seq', 1, false)"))
 
-
+ # ---------- commit final e redireccionamento ----------
+    db.session.commit()
+    if erros:
+        flash(f'{total_importado} registos importados. {len(erros)} erro(s): ' + '; '.join(erros[:5]), 'warning')
+    else:
+        flash(f'{total_importado} registos importados com sucesso!', 'success')
+    return redirect(url_for('dashboard'))
 
 #-----------------Backup-----------------------
 @app.route('/backup/exportar')
