@@ -2947,8 +2947,10 @@ def     disponibilidades():
 
     # Lista de bombeiros ativos (apenas para Admin/Comando)
     bombeiros_ativos = []
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
-        bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'ECIN'):
+        # Lista de bombeiros que têm pelo menos uma disponibilidade (nos filtros atuais ou não)
+        subquery = db.session.query(Disponibilidade.bombeiro_id).distinct()
+        bombeiros_ativos = Bombeiro.query.filter(Bombeiro.id.in_(subquery)).order_by(Bombeiro.nome).all()
 
     now = date.today()
     return render_template('disponibilidades.html',
@@ -3330,39 +3332,25 @@ def modificar_ecin(id):
         return redirect(url_for('listar_ecins'))
 
     ecin = Ecin.query.get_or_404(id)
-    if ecin.estado == 'Pendente':
-        flash('Registo já está pendente.', 'info')
-        return redirect(url_for('listar_ecins'))
 
-    # Remover a escala correspondente (se existir)
-    # Pode procurar na tabela Escala pelo bombeiro, data, turno, categoria, função...
-    escala = Escala.query.filter_by(
-        bombeiro_id=ecin.bombeiro_id,
-        data_inicio=datetime.combine(ecin.data, datetime.strptime('00:00', '%H:%M').time()),  # pode ser aproximado
-        # Melhor: usar os campos que tem no ecin para identificar a escala.
-    ).first()
-    # Melhor: guardar no ecin o id da escala criada (opcional). Vamos fazer de forma mais simples:
-    # Apagar qualquer escala do mesmo bombeiro, data, turno, categoria = ecin.categoria e funcao = ecin.funcao
+    # Remove a escala associada (se existir)
     if ecin.categoria and ecin.funcao:
         escalas = Escala.query.filter_by(
             bombeiro_id=ecin.bombeiro_id,
             turno=ecin.turno,
             categoria=ecin.categoria,
             funcao=ecin.funcao
-        ).filter(
-            func.date(Escala.data_inicio) == ecin.data
-        ).all()
+        ).filter(func.date(Escala.data_inicio) == ecin.data).all()
         for escala in escalas:
             db.session.delete(escala)
-    elif ecin.categoria:
-        # se não tem função, pode ter ido para Não Escalado, sem escala
-        pass
 
+    # Força o estado para Pendente e limpa os campos de escalonamento
     ecin.estado = 'Pendente'
     ecin.funcao = None
     ecin.categoria = None
     db.session.commit()
-    flash('Registo modificado. Escolha novamente.', 'info')
+
+    flash('Registo modificado. O bombeiro voltou a ficar Pendente.', 'info')
     return redirect(url_for('listar_ecins'))
 
 # ---------- Imprimir Escala ECin----------

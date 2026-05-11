@@ -4,63 +4,101 @@
     <meta charset="UTF-8">
     <title>Escala ECINS - {{ meses[mes-1] }} {{ ano }}</title>
     <style>
+        /* Define o tamanho da página para A3 */
+        @page {
+            size: A3 landscape;  /* Paisagem para melhor visualização das colunas */
+            margin: 1cm;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            font-size: 10pt;     /* Tamanho base da fonte */
+            margin: 0;
+            padding: 0;
+            line-height: 1.2;
         }
+
         h2 {
             text-align: center;
+            font-size: 14pt;
+            margin-bottom: 0.5cm;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
+            font-size: 10pt;     /* Garante fonte pequena na tabela */
         }
+
         th, td {
             border: 1px solid #000;
-            padding: 6px;
+            padding: 4px 6px;
             text-align: left;
             vertical-align: top;
         }
+
         th {
             background-color: #f2f2f2;
             text-align: center;
+            font-weight: bold;
         }
+
         td {
-            min-width: 150px;
+            min-width: 120px;    /* Ajustável para A3 landscape */
         }
+
         .bombeiro-linha {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 2px;
+            font-size: 9pt;      /* Ligeiramente mais pequeno para caber várias linhas */
         }
+
         .checkboxes {
             display: flex;
-            gap: 6px;
+            gap: 4px;
         }
+
         .checkbox-item {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
-            border: 1.5px solid #000;
-            font-size: 12px;
+            width: 18px;
+            height: 18px;
+            border: 1px solid #000;
+            font-size: 9pt;
             font-weight: bold;
             background-color: #fff;
         }
+
         .legenda {
             margin-top: 20px;
-            font-size: 14px;
+            font-size: 9pt;
+            border-top: 1px solid #ccc;
+            padding-top: 8px;
         }
+
         .legenda-item {
             display: inline-block;
             margin-right: 20px;
         }
+
+        /* Ajustes para impressão */
         @media print {
-            body { margin: 10px; }
-            .checkbox-item { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .checkbox-item {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #fff;
+            }
+            th {
+                background-color: #e0e0e0;
+            }
         }
     </style>
 </head>
@@ -127,6 +165,9 @@
         <span class="legenda-item"><strong>N</strong> - Não Escalado</span>
     </div>
 
-    <script>window.print();</script>
+    <script>
+        // Chama a impressão automaticamente (opcional, pode ser removido)
+        window.print();
+    </script>
 </body>
 </html>
