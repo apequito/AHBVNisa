@@ -4,16 +4,18 @@
     <meta charset="UTF-8">
     <title>Pedido de Troca de Serviço</title>
     <style>
+        /* Define o tamanho da página como B5 (ISO) */
         @page {
-            size: A4;
-            margin: 2cm;
+            size: B5;
+            margin: 1.5cm;
         }
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.4;
+            font-size: 11pt;
+            line-height: 1.3;
             margin: 0;
             padding: 0;
+            background: white;
         }
         .container {
             max-width: 100%;
@@ -21,29 +23,30 @@
         }
         h1 {
             text-align: center;
-            font-size: 18pt;
-            margin-bottom: 30px;
+            font-size: 16pt;
+            margin-bottom: 20px;
             text-transform: uppercase;
             font-weight: bold;
         }
         .form-row {
-            margin-bottom: 25px;
+            margin-bottom: 18px;
             border-bottom: 1px solid #000;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
         }
         .label {
             font-weight: bold;
             display: inline-block;
-            width: 180px;
+            width: 160px;
+            font-size: 11pt;
         }
         .data-field {
             display: inline-block;
-            min-width: 250px;
+            min-width: 200px;
             border-bottom: 1px dotted #000;
-            padding-left: 10px;
+            padding-left: 8px;
         }
         .assinaturas {
-            margin-top: 50px;
+            margin-top: 40px;
             display: flex;
             justify-content: space-between;
         }
@@ -53,14 +56,20 @@
         }
         .linha-assinatura {
             border-top: 1px solid #000;
-            margin-top: 30px;
+            margin-top: 25px;
             padding-top: 5px;
-            font-size: 10pt;
+            font-size: 9pt;
         }
         .info-extra {
             margin-top: 20px;
-            font-size: 10pt;
+            font-size: 9pt;
             text-align: center;
+        }
+        .motivo {
+            margin-top: 20px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+            font-size: 10pt;
         }
         @media print {
             body {
@@ -149,7 +158,7 @@
             </div>
         </div>
 
-        <!-- Data do pedido e visto do comando -->
+        <!-- Data e visto -->
         <div class="info-extra">
             <p>Data do pedido: _________________________________</p>
             <p>Visto do Comando: _________________________________</p>
@@ -157,12 +166,13 @@
         </div>
 
         {% if troca and troca.motivo %}
-        <div class="info-extra" style="margin-top: 20px; text-align: left; border-top: 1px dashed #ccc; padding-top: 10px;">
+        <div class="motivo">
             <strong>Motivo apresentado:</strong><br>
             {{ troca.motivo }}
         </div>
         {% endif %}
 
+        <!-- Botões de impressão (não aparecem na impressão) -->
         <div class="no-print" style="margin-top: 30px; text-align: center;">
             <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
             <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
