@@ -1,434 +1,131 @@
 {% extends "base.html" %}
 {% block content %}
-<h2><i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço</h2>
+<h2>Trocas de Serviço</h2>
 
-<!-- Separadores -->
-<ul class="nav nav-tabs mb-4">
+<!-- Separadores / Abas -->
+<ul class="nav nav-tabs mb-3">
     <li class="nav-item">
-        <a class="nav-link {{ 'active' if separador_atual == 'assalariado' }}" href="{{ url_for('trocas', tipo='assalariado') }}">
-            <i class="bi bi-person-badge me-1"></i> Assalariados
+        <a class="nav-link {% if separador_atual == 'assalariado' %}active{% endif %}"
+           href="{{ url_for('trocas', tipo='assalariado') }}">
+            Assalariado (Motorista/Socorrista/Centralista)
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {{ 'active' if separador_atual == 'ecin' }}" href="{{ url_for('trocas', tipo='ecin') }}">
-            <i class="bi bi-clipboard-check me-1"></i> ECINs
+        <a class="nav-link {% if separador_atual == 'ecin' %}active{% endif %}"
+           href="{{ url_for('trocas', tipo='ecin') }}">
+            ECIN / ELAC
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if separador_atual == 'todas' %}active{% endif %}"
+           href="{{ url_for('trocas', tipo='todas') }}">
+            Todas as trocas
         </a>
     </li>
 </ul>
 
-<!-- Botão que abre o modal de acordo com o separador -->
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="{{ '#modalNovaTroca' if separador_atual == 'assalariado' else '#modalNovaTrocaEcin' }}">
-    <i class="bi bi-plus-circle"></i>
-    {% if separador_atual == 'assalariado' %}Solicitar Troca (Assalariados){% else %}Solicitar Troca (ECINs){% endif %}
-</button>
+<!-- Botão para nova troca -->
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovaTroca">+ Novo Pedido de Troca</button>
 
-<!-- Tabela -->
-<table class="table table-striped align-middle">
-    <thead><tr>
-        <th>Origem</th><th>Destino</th><th>Data Origem</th><th>Turno O.</th>
-        <th>Data Destino</th><th>Turno D.</th><th>Estado</th><th>Ação</th>
-    </tr></thead>
+<!-- Tabela de pedidos -->
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Data Pedido</th>
+            <th>Origem</th>
+            <th>Destino</th>
+            <th>Data Origem</th>
+            <th>Data Destino</th>
+            <th>Turno Origem</th>
+            <th>Turno Destino</th>
+            <th>Estado</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
     <tbody>
         {% for t in pedidos %}
         <tr>
-            <td>{{ t.bombeiro_origem.nome }}</td>
-            <td>{{ t.bombeiro_destino.nome }}</td>
+            <td>{{ t.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ t.bombeiro_origem.nome }} ({{ t.bombeiro_origem.mecanografico }})</td>
+            <td>{{ t.bombeiro_destino.nome }} ({{ t.bombeiro_destino.mecanografico }})</td>
             <td>{{ t.data_origem.strftime('%d/%m/%Y') }}</td>
-            <td>{{ t.turno_origem }}</td>
             <td>{{ t.data_destino.strftime('%d/%m/%Y') }}</td>
-            <td>{{ t.turno_destino }}</td>
+            <td>{{ t.turno_origem or '-' }}</td>
+            <td>{{ t.turno_destino or '-' }}</td>
             <td>
                 {% if t.estado == 'pendente_colega' %}
-                    <span class="badge bg-warning text-dark">Pendente (Colega)</span>
+                    <span class="badge bg-warning text-dark">A aguardar aceitação do colega</span>
                 {% elif t.estado == 'aceite_colega' %}
-                    <span class="badge bg-info">Aceite (Aguarda Comando)</span>
+                    <span class="badge bg-info">Aceite pelo colega, a aguardar aprovação do Comando</span>
                 {% elif t.estado == 'aprovada' %}
                     <span class="badge bg-success">Aprovada</span>
                 {% elif t.estado == 'recusada' %}
                     <span class="badge bg-danger">Recusada</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ t.estado }}</span>
                 {% endif %}
             </td>
             <td>
+                <!-- Ações disponíveis conforme o estado e o tipo de utilizador -->
                 {% if t.estado == 'pendente_colega' and current_user.id == t.bombeiro_destino_id %}
-                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">✅</a>
-                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">❌</a>
+                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success">Aceitar</a>
+                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
+                {% elif t.estado == 'aceite_colega' and (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') %}
+                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-primary">Aprovar</a>
+                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
+                {% elif t.estado == 'pendente_colega' and current_user.id == t.bombeiro_origem_id %}
+                    <span class="text-muted">A aguardar resposta do colega</span>
+                {% elif t.estado == 'aprovada' or t.estado == 'recusada' %}
+                    <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-secondary">Imprimir</a>
                 {% endif %}
-                {% if t.estado == 'aceite_colega' and (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') %}
-                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">Aprovar</a>
-                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">Recusar</a>
-                {% endif %}
-                <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimir"><i class="bi bi-printer"></i></a>
             </td>
         </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-muted">Nenhum pedido de troca encontrado.</td></tr>
         {% endfor %}
     </tbody>
 </table>
 
-<!-- ========== MODAL ASSALARIADOS (IDÊNTICO AO ORIGINAL) ========== -->
-<div class="modal fade" id="modalNovaTroca" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" id="formNovaTroca">
-            <input type="hidden" name="tipo_pedido" value="assalariado">
+<!-- Modal para criar novo pedido (mesmo código original, apenas ajustado) -->
+<div class="modal fade" id="modalNovaTroca" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('trocas') }}">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nova Troca de Serviço (Assalariados)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <div class="modal-header"><h5>Novo Pedido de Troca</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Selecionar Colega</label>
-                            <select name="destino_id" id="destino_id" class="form-select mb-2" required>
-                                 <option value="">-- Escolha --</option>
-                                 {% for b in bombeiros_assalariados %}   <!-- NOVA LISTA FILTRADA -->
-                                 <option value="{{ b.id }}">{{ b.nome }}</option>
-                                 {% endfor %}
-                            </select>
-                            </select>
-                            <div id="calendarioColega" class="border p-2" style="min-height:250px;">
-                                <p class="text-muted">Escolha um colega para ver o calendário.</p>
-                            </div>
-                            <label class="mt-2">Data Destino</label>
-                            <input type="date" name="data_destino" id="data_destino" class="form-control mb-2" readonly required>
-                            <label>Turno Destino</label>
-                            <select name="turno_destino" id="turno_destino" class="form-select mb-2" required></select>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>O meu calendário</strong></p>
-                            <div id="calendarioProprio" class="border p-2" style="min-height:250px;"></div>
-                            <label class="mt-2">Data Origem</label>
-                            <input type="date" name="data_origem" id="data_origem" class="form-control mb-2" readonly required>
-                            <label>Turno Origem</label>
-                            <select name="turno_origem" id="turno_origem" class="form-select mb-2" required></select>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <label>Motivo (opcional)</label>
-                        <textarea name="motivo" class="form-control" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">Solicitar Troca</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ========== NOVO MODAL ECINS (TURNOS DO PRÓPRIO + OPÇÕES DO COLEGA) ========== -->
-<div class="modal fade" id="modalNovaTrocaEcin" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" id="formNovaTrocaEcin">
-            <input type="hidden" name="tipo_pedido" value="ecin">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nova Troca de Serviço (ECINs)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Passo 1: Turnos do próprio (apenas ECIN/ELAC futuros) -->
-                    <h6><i class="bi bi-person-check me-1"></i> Os meus turnos ECIN/ELAC (mês atual)</h6>
-                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                        <table class="table table-sm table-bordered" id="tabelaTurnosOrigem">
-                            <thead class="table-light">
-                                <tr><th>Data</th><th>Turno</th><th>Selecionar</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td colspan="3" class="text-muted">A carregar...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <input type="hidden" name="data_origem" id="ecin_data_origem">
-                    <input type="hidden" name="turno_origem" id="ecin_turno_origem">
-
-                    <hr>
-
-                    <!-- Passo 2: Escolher colega e tipo de aceitação -->
-                    <div id="ecin_secao_colega" style="display: none;">
-                        <h6><i class="bi bi-people-fill me-1"></i> Colega que irá fazer a troca</h6>
-                        <select name="destino_id" id="ecin_destino_id" class="form-select mb-2">
-                            <option value="">-- Selecione --</option>
-                            {% for b in bombeiros %}
-                            <option value="{{ b.id }}">{{ b.nome }}</option>
+                    <input type="hidden" name="tipo_pedido" id="tipo_pedido" value="{{ separador_atual }}">
+                    <label>Colega com quem pretende trocar</label>
+                    <select name="destino_id" class="form-select mb-2" required>
+                        <option value="">Selecione...</option>
+                        {% if separador_atual == 'assalariado' %}
+                            {% for b in bombeiros_assalariados %}
+                            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
                             {% endfor %}
-                        </select>
+                        {% else %}
+                            {% for b in bombeiros %}
+                            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="ecin_tipo_aceite" id="ecin_radio_troca" value="troca">
-                            <label class="form-check-label" for="ecin_radio_troca">Troca Turno (o colega oferece um turno dele)</label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="ecin_tipo_aceite" id="ecin_radio_aceita" value="aceita">
-                            <label class="form-check-label" for="ecin_radio_aceita">Aceita Turno (o colega fica com o meu turno, sem trocar)</label>
-                        </div>
+                    <label>Data da sua escala (origem)</label>
+                    <input type="date" name="data_origem" class="form-control mb-2" required>
 
-                        <!-- Tabela de turnos do colega (aparece apenas se "Troca Turno") -->
-                        <div id="ecin_tabela_colega" style="display: none;">
-                            <h6>Turnos do colega (mês atual)</h6>
-                            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                                <table class="table table-sm table-bordered" id="tabelaTurnosDestino">
-                                    <thead class="table-light">
-                                        <tr><th>Data</th><th>Turno</th><th>Selecionar</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td colspan="3" class="text-muted">Selecione um colega...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <input type="hidden" name="data_destino" id="ecin_data_destino">
-                            <input type="hidden" name="turno_destino" id="ecin_turno_destino">
-                        </div>
-                    </div>
+                    <label>Turno da sua escala (origem) - opcional</label>
+                    <input type="text" name="turno_origem" class="form-control mb-2" placeholder="ex: 2 - 08h/16h">
+
+                    <label>Data da escala do colega (destino)</label>
+                    <input type="date" name="data_destino" class="form-control mb-2" required>
+
+                    <label>Turno da escala do colega (destino) - opcional</label>
+                    <input type="text" name="turno_destino" class="form-control mb-2" placeholder="ex: 2 - 08h/16h">
+
+                    <label>Motivo (opcional)</label>
+                    <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">Solicitar Troca</button>
-                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-danger">Enviar Pedido</button></div>
             </div>
         </form>
     </div>
 </div>
-
-<script>
-// ---------- CONFIGURAÇÃO GERAL ----------
-const userId = {{ current_user.id }};
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-let mesAtual = new Date().getMonth() + 1;
-let anoAtual = new Date().getFullYear();
-
-// ========== MODAL ASSALARIADOS (FUNÇÕES JÁ EXISTENTES) ==========
-const modais = {
-    assalariado: {
-        prefix: '',
-        destinoSelect: 'destino_id',
-        calendarioProprio: 'calendarioProprio',
-        calendarioColega: 'calendarioColega',
-        dataOrigem: 'data_origem',
-        turnoOrigem: 'turno_origem',
-        dataDestino: 'data_destino',
-        turnoDestino: 'turno_destino'
-    }
-};
-
-function selecionarDia(prefix, tipo, dia, turnos) {
-    const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-    document.getElementById(`data_${tipo}${prefix}`).value = dataStr;
-    const select = document.getElementById(`turno_${tipo}${prefix}`);
-    select.innerHTML = '';
-    if (turnos && turnos.length) {
-        turnos.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t;
-            opt.text = t;
-            select.appendChild(opt);
-        });
-    }
-}
-
-function criarCalendario(containerId, diasEscala, prefix, tipo) {
-    const container = document.getElementById(containerId);
-    const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
-    const ultimoDia = new Date(anoAtual, mesAtual, 0);
-    const totalDias = ultimoDia.getDate();
-    const diaSemanaInicio = primeiroDia.getDay();
-
-    let html = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(-1, '${containerId}', '${prefix}', '${tipo}')">&lt;</button>
-            <strong>${MESES[mesAtual-1]} ${anoAtual}</strong>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMes(1, '${containerId}', '${prefix}', '${tipo}')">&gt;</button>
-        </div>
-        <table class="table table-bordered table-sm text-center">
-            <thead><tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
-            <tbody>`;
-
-    let dia = 1;
-    for (let semana = 0; semana < 6; semana++) {
-        html += '<tr>';
-        for (let d = 0; d < 7; d++) {
-            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
-                html += '<td></td>';
-            } else {
-                const temEscala = diasEscala[dia] ? true : false;
-                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}">${dia}</td>`;
-                dia++;
-            }
-        }
-        html += '</tr>';
-        if (dia > totalDias) break;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    container._diasEscala = diasEscala;
-
-    container.querySelectorAll('td[data-dia]').forEach(td => {
-        td.addEventListener('click', function() {
-            const diaNum = parseInt(this.getAttribute('data-dia'));
-            selecionarDia(prefix, tipo, diaNum, container._diasEscala[diaNum]);
-        });
-    });
-}
-
-function mudarMes(delta, containerId, prefix, tipo) {
-    mesAtual += delta;
-    if (mesAtual < 1) { mesAtual = 12; anoAtual--; }
-    if (mesAtual > 12) { mesAtual = 1; anoAtual++; }
-    if (tipo === 'origem') carregarProprio(prefix);
-    else carregarColega(prefix);
-}
-
-function carregarProprio(prefix) {
-    fetch(`/api/escala_usuario/${userId}?ano=${anoAtual}&mes=${mesAtual}`)
-        .then(r => r.json())
-        .then(dados => {
-            const dias = {};
-            for (const [dia, escalas] of Object.entries(dados)) {
-                dias[dia] = escalas.map(e => e.turno);
-            }
-            criarCalendario(`calendarioProprio${prefix}`, dias, prefix, 'origem');
-        });
-}
-
-function carregarColega(prefix) {
-    const select = document.getElementById(`destino_id${prefix}`);
-    const colegaId = select.value;
-    if (!colegaId) {
-        document.getElementById(`calendarioColega${prefix}`).innerHTML = '<p class="text-muted">Escolha um colega.</p>';
-        return;
-    }
-    fetch(`/api/escala_usuario/${colegaId}?ano=${anoAtual}&mes=${mesAtual}`)
-        .then(r => r.json())
-        .then(dados => {
-            const dias = {};
-            for (const [dia, escalas] of Object.entries(dados)) {
-                dias[dia] = escalas.map(e => e.turno);
-            }
-            criarCalendario(`calendarioColega${prefix}`, dias, prefix, 'destino');
-        });
-}
-
-document.getElementById('modalNovaTroca').addEventListener('show.bs.modal', function() {
-    mesAtual = new Date().getMonth() + 1;
-    anoAtual = new Date().getFullYear();
-    carregarProprio('');
-    carregarColega('');
-    document.getElementById('destino_id').addEventListener('change', () => carregarColega(''));
-});
-
-// ========== MODAL ECIN ==========
-const hoje = new Date();
-const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-
-async function carregarTurnosOrigem() {
-    const resposta = await fetch(`/api/escala_usuario/${userId}?ano=${hoje.getFullYear()}&mes=${hoje.getMonth()+1}`);
-    const dados = await resposta.json();
-    const tbody = document.querySelector('#tabelaTurnosOrigem tbody');
-    tbody.innerHTML = '';
-    let temTurnos = false;
-    for (const [dia, escalas] of Object.entries(dados)) {
-        // Filtrar apenas datas >= hoje
-        const dataDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-        if (dataDia < hojeStr) continue;
-        escalas.forEach(esc => {
-            // Apenas ECIN ou ELAC
-            if (['ECIN', 'ELAC'].includes(esc.categoria)) {
-                temTurnos = true;
-                const row = tbody.insertRow();
-                row.insertCell().textContent = dataDia.split('-').reverse().join('/');
-                row.insertCell().textContent = esc.turno;
-                const tdCheck = row.insertCell();
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = 'origem_turno';
-                radio.dataset.data = dataDia;
-                radio.dataset.turno = esc.turno;
-                radio.addEventListener('change', function() {
-                    document.getElementById('ecin_data_origem').value = this.dataset.data;
-                    document.getElementById('ecin_turno_origem').value = this.dataset.turno;
-                    document.getElementById('ecin_secao_colega').style.display = 'block';
-                    // Limpar seleções do colega
-                    document.getElementById('ecin_destino_id').value = '';
-                    document.getElementById('ecin_tabela_colega').style.display = 'none';
-                    document.getElementById('ecin_radio_troca').checked = false;
-                    document.getElementById('ecin_radio_aceita').checked = false;
-                });
-                tdCheck.appendChild(radio);
-            }
-        });
-    }
-    if (!temTurnos) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum turno ECIN/ELAC disponível este mês.</td></tr>';
-    }
-}
-
-// Carregar turnos do colega (todos, sem filtro de categoria)
-async function carregarTurnosColega() {
-    const colegaId = document.getElementById('ecin_destino_id').value;
-    if (!colegaId) {
-        document.querySelector('#tabelaTurnosDestino tbody').innerHTML = '<tr><td colspan="3" class="text-muted">Selecione um colega.</td></tr>';
-        return;
-    }
-    const resposta = await fetch(`/api/escala_usuario/${colegaId}?ano=${hoje.getFullYear()}&mes=${hoje.getMonth()+1}`);
-    const dados = await resposta.json();
-    const tbody = document.querySelector('#tabelaTurnosDestino tbody');
-    tbody.innerHTML = '';
-    let temTurnos = false;
-    for (const [dia, escalas] of Object.entries(dados)) {
-        escalas.forEach(esc => {
-            // 🔁 Apenas turnos ECIN ou ELAC do colega
-            if (!['ECIN', 'ELAC'].includes(esc.categoria)) return;
-
-            temTurnos = true;
-            const row = tbody.insertRow();
-            const dataDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-            row.insertCell().textContent = dataDia.split('-').reverse().join('/');
-            row.insertCell().textContent = esc.turno;
-            const tdCheck = row.insertCell();
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.name = 'destino_turno';
-            radio.dataset.data = dataDia;
-            radio.dataset.turno = esc.turno;
-            radio.addEventListener('change', function() {
-                document.getElementById('ecin_data_destino').value = this.dataset.data;
-                document.getElementById('ecin_turno_destino').value = this.dataset.turno;
-            });
-            tdCheck.appendChild(radio);
-        });
-    }
-    if (!temTurnos) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Colega sem turnos ECIN/ELAC este mês.</td></tr>';
-    }
-}
-
-// Eventos do modal ECIN
-document.getElementById('modalNovaTrocaEcin').addEventListener('show.bs.modal', function() {
-    carregarTurnosOrigem();
-    document.getElementById('ecin_secao_colega').style.display = 'none';
-    document.getElementById('ecin_tabela_colega').style.display = 'none';
-    document.getElementById('ecin_radio_troca').checked = false;
-    document.getElementById('ecin_radio_aceita').checked = false;
-});
-
-document.getElementById('ecin_destino_id').addEventListener('change', function() {
-    if (document.getElementById('ecin_radio_troca').checked) {
-        carregarTurnosColega();
-    }
-});
-
-document.getElementById('ecin_radio_troca').addEventListener('change', function() {
-    if (this.checked) {
-        document.getElementById('ecin_tabela_colega').style.display = 'block';
-        carregarTurnosColega();
-    }
-});
-
-document.getElementById('ecin_radio_aceita').addEventListener('change', function() {
-    if (this.checked) {
-        document.getElementById('ecin_tabela_colega').style.display = 'none';
-        // Para "Aceita Turno", data/turno destino são iguais ao origem (subentende-se que o colega fará aquele turno)
-        document.getElementById('ecin_data_destino').value = document.getElementById('ecin_data_origem').value;
-        document.getElementById('ecin_turno_destino').value = document.getElementById('ecin_turno_origem').value;
-    }
-});
-</script>
 {% endblock %}

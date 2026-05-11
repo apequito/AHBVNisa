@@ -2206,7 +2206,7 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
-    separador = request.args.get('tipo', 'assalariado')
+    separador = request.args.get('tipo', 'assalariado')  # 'assalariado', 'ecin' ou 'todas'
 
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
@@ -2215,7 +2215,7 @@ def trocas():
         turno_origem = request.form.get('turno_origem', '')
         turno_destino = request.form.get('turno_destino', '')
         motivo = request.form.get('motivo', '')
-        tipo_pedido = request.form.get('tipo_pedido', 'assalariado')   # campo oculto
+        tipo_pedido = request.form.get('tipo_pedido', 'assalariado')
 
         # Validação extra para ECINs
         if tipo_pedido == 'ecin':
@@ -2244,34 +2244,36 @@ def trocas():
         flash('Pedido de troca enviado.', 'success')
         return redirect(url_for('trocas', tipo=tipo_pedido))
 
-    # --- GET ---
+    # --- GET: construir a query base ---
     query = TrocaServico.query
 
+    # Aplicar filtro por tipo de troca (apenas se não for 'todas')
     if separador == 'assalariado':
         # Profissionais que estejam escalados nas categorias Motorista/Socorrista/Centralista no dia de origem
         sub_assalariado = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
-            Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
-            func.date(Escala.data_inicio) <= TrocaServico.data_origem,
-            func.date(Escala.data_fim) >= TrocaServico.data_origem,
-            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-        )) \
+                Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
+                func.date(Escala.data_inicio) <= TrocaServico.data_origem,
+                func.date(Escala.data_fim) >= TrocaServico.data_origem,
+                Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+            )) \
             .join(Bombeiro, Bombeiro.id == TrocaServico.bombeiro_origem_id) \
             .filter(Bombeiro.tipo_bombeiro == 'Profissional') \
             .subquery()
         query = query.filter(TrocaServico.id.in_(sub_assalariado))
 
-
-    else:  # ecin
-        sub = db.session.query(TrocaServico.id)\
+    elif separador == 'ecin':
+        sub_ecin = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
                 Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
                 func.date(Escala.data_inicio) <= TrocaServico.data_origem,
                 func.date(Escala.data_fim) >= TrocaServico.data_origem,
                 Escala.categoria.in_(['ECIN', 'ELAC'])
             )).subquery()
-        query = query.filter(TrocaServico.id.in_(sub))
+        query = query.filter(TrocaServico.id.in_(sub_ecin))
+    # se separador == 'todas', não adiciona filtro extra
 
+    # Permissões: Admin/Comando vêem todas as trocas; os restantes vêem apenas as que lhes dizem respeito
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     else:
@@ -2280,22 +2282,24 @@ def trocas():
             (TrocaServico.bombeiro_destino_id == current_user.id)
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
+    # Listas de bombeiros para os formulários de criação
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
 
     # Bombeiros elegíveis para troca assalariada: profissionais com escalas nas categorias certas
     bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
         .filter(
-        Bombeiro.id != current_user.id,
-        Bombeiro.ativo == True,
-        Bombeiro.tipo_bombeiro == 'Profissional',
-        Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-    ).distinct().all()
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True,
+            Bombeiro.tipo_bombeiro == 'Profissional',
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        ).distinct().all()
 
     return render_template('trocas.html',
                            pedidos=pedidos,
                            bombeiros=bombeiros,
-                           bombeiros_assalariados=bombeiros_assalariados,  # nova variável
+                           bombeiros_assalariados=bombeiros_assalariados,
                            separador_atual=separador)
+
 
 
 @app.route('/trocas/imprimir/<int:id>')
