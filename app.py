@@ -6130,7 +6130,8 @@ def backup_exportar():
     for t in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
         ws.append([t.nome, t.categoria])
 
-        # ---- 26. Férias ----
+
+    # ---- 26. Férias ----
     ws = wb.create_sheet("Ferias")
     cabecalhos = ['Mecanográfico', 'Início', 'Fim', 'Estado', 'Aprovado por (nome)', 'Data Pedido']
     escrever_cabecalho(ws, cabecalhos)
@@ -6139,18 +6140,19 @@ def backup_exportar():
         mecanografico = f.bombeiro.mecanografico if f.bombeiro else ''
         nome_aprovador = ''
         if f.aprovado_por:
-        aprovador = Bombeiro.query.get(f.aprovado_por)
-        if aprovador:
-        nome_aprovador = aprovador.nome
+            aprovador = Bombeiro.query.get(f.aprovado_por)
+            if aprovador:
+                nome_aprovador = aprovador.nome
 
         ws.append([
-        mecanografico,
-        f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
-        f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '',
-        f.estado,
-        nome_aprovador,
-        f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''
+            mecanografico,
+            f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
+            f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '',
+            f.estado,
+            nome_aprovador,
+            f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''
         ])
+
 
     output = BytesIO()
     wb.save(output)
