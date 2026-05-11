@@ -6130,7 +6130,6 @@ def backup_exportar():
     for t in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
         ws.append([t.nome, t.categoria])
 
-
     # ---- 26. Férias ----
     ws = wb.create_sheet("Ferias")
     cabecalhos = ['Mecanográfico', 'Início', 'Fim', 'Estado', 'Aprovado por (nome)', 'Data Pedido']
