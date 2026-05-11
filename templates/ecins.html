@@ -81,7 +81,7 @@
                     <span class="badge bg-success">{{ r.estado }}</span>
                 {% endif %}
             </td>
-            <td>
+            <td class="acoes-ecin">
                 {% if r.estado == 'Pendente' %}
                     <div class="btn-group" role="group">
                         <a href="{{ url_for('escalar_ecin', id=r.id, funcao='M') }}" class="btn btn-sm btn-outline-primary" title="Motorista ECIN">M</a>
@@ -92,9 +92,9 @@
                         <a href="{{ url_for('escalar_ecin', id=r.id, funcao='X') }}" class="btn btn-sm btn-outline-danger" title="Não Escalar">✕</a>
                     </div>
                 {% else %}
-                    <button class="btn btn-sm btn-secondary btn-modificar" data-id="{{ r.id }}">
+                    <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">
                         Modificar
-                    </button>
+                    </a>
                 {% endif %}
             </td>
         </tr>
@@ -136,29 +136,6 @@
 </div>
 
 <script>
-// Botão Modificar - reaparecer os 6 botões
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.btn-modificar').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const td = this.closest('td');
-            this.remove();
-            const grupo = document.createElement('div');
-            grupo.className = 'btn-group';
-            grupo.role = 'group';
-            grupo.innerHTML = `
-                <a href="/ecins/escalar/${id}?funcao=M" class="btn btn-sm btn-outline-primary" title="Motorista ECIN">M</a>
-                <a href="/ecins/escalar/${id}?funcao=C" class="btn btn-sm btn-outline-primary" title="Chefe ECIN">C</a>
-                <a href="/ecins/escalar/${id}?funcao=G" class="btn btn-sm btn-outline-primary" title="Guarnição">G</a>
-                <a href="/ecins/escalar/${id}?funcao=Me" class="btn btn-sm btn-outline-warning" title="Motorista ELAC">Me</a>
-                <a href="/ecins/escalar/${id}?funcao=Ce" class="btn btn-sm btn-outline-warning" title="Chefe ELAC">Ce</a>
-                <a href="/ecins/escalar/${id}?funcao=X" class="btn btn-sm btn-outline-danger" title="Não Escalar">✕</a>
-            `;
-            td.appendChild(grupo);
-        });
-    });
-});
-
 // Funções de impressão
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;

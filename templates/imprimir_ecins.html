@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <title>Escala ECINS - {{ meses[mes-1] }} {{ ano }}</title>
     <style>
-        /* Define o tamanho da página para A3 */
+        /* A3 vertical (retrato) */
         @page {
-            size: A3 landscape;  /* Paisagem para melhor visualização das colunas */
+            size: A3;
             margin: 1cm;
         }
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 10pt;     /* Tamanho base da fonte */
+            font-size: 10pt;
             margin: 0;
             padding: 0;
             line-height: 1.2;
@@ -28,7 +28,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            font-size: 10pt;     /* Garante fonte pequena na tabela */
+            font-size: 10pt;
         }
 
         th, td {
@@ -45,7 +45,7 @@
         }
 
         td {
-            min-width: 120px;    /* Ajustável para A3 landscape */
+            min-width: 100px;
         }
 
         .bombeiro-linha {
@@ -53,7 +53,7 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 2px;
-            font-size: 9pt;      /* Ligeiramente mais pequeno para caber várias linhas */
+            font-size: 9pt;
         }
 
         .checkboxes {
@@ -85,7 +85,6 @@
             margin-right: 20px;
         }
 
-        /* Ajustes para impressão */
         @media print {
             body {
                 margin: 0;
@@ -94,10 +93,6 @@
             .checkbox-item {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                background-color: #fff;
-            }
-            th {
-                background-color: #e0e0e0;
             }
         }
     </style>
@@ -165,9 +160,6 @@
         <span class="legenda-item"><strong>N</strong> - Não Escalado</span>
     </div>
 
-    <script>
-        // Chama a impressão automaticamente (opcional, pode ser removido)
-        window.print();
-    </script>
+    <script>window.print();</script>
 </body>
 </html>
