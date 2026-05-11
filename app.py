@@ -5115,28 +5115,56 @@ def _importar_linha_stock_fardamento(row, row_num):
 
 
 def _importar_linha_ferias(row, row_num):
+    """
+    Espera uma linha com as colunas:
+    0 - Mecanográfico do bombeiro
+    1 - Data Início (dd/mm/aaaa)
+    2 - Data Fim (dd/mm/aaaa)
+    3 - Estado (Pendente/Aprovado/Rejeitado)
+    4 - Nome do aprovador (ou vazio)
+    5 - Data Pedido (dd/mm/aaaa HH:MM)
+    """
     try:
-        bomberio_id = int(row[0]) if row[0] else None
-        data_inicio = _parse_data(str(row[1]).strip()) if len(row) > 1 and row[1] else None
-        data_fim = _parse_data(str(row[2]).strip()) if len(row) > 2 and row[2] else None
+        mecanografico = str(row[0]).strip() if row[0] else None
+        inicio_str = str(row[1]).strip() if len(row) > 1 and row[1] else None
+        fim_str = str(row[2]).strip() if len(row) > 2 and row[2] else None
         estado = str(row[3]).strip() if len(row) > 3 and row[3] else 'Pendente'
-        aprovado_por = int(row[4]) if len(row) > 4 and row[4] else None
-        data_pedido = _parse_datetime(str(row[5]).strip()) if len(row) > 5 and row[5] else datetime.utcnow()
+        nome_aprovador = str(row[4]).strip() if len(row) > 4 and row[4] else None
+        data_pedido_str = str(row[5]).strip() if len(row) > 5 and row[5] else None
 
-        if not bomberio_id or not data_inicio or not data_fim:
+        if not mecanografico or not inicio_str or not fim_str:
             return None
 
-        f = Ferias(
-            bombeiro_id=bomberio_id,
+        bombeiro = Bombeiro.query.filter_by(mecanografico=mecanografico).first()
+        if not bombeiro:
+            raise ValueError(f"Mecanográfico {mecanografico} não encontrado")
+
+        data_inicio = _parse_data(inicio_str)
+        data_fim = _parse_data(fim_str)
+        if not data_inicio or not data_fim:
+            raise ValueError("Data inválida")
+
+        # Identificar o aprovador pelo nome (caso exista)
+        aprovado_por = None
+        if nome_aprovador:
+            aprovador = Bombeiro.query.filter_by(nome=nome_aprovador).first()
+            if aprovador:
+                aprovado_por = aprovador.id
+
+        data_pedido = _parse_datetime(data_pedido_str) or datetime.utcnow()
+
+        ferias = Ferias(
+            bombeiro_id=bombeiro.id,
             data_inicio=data_inicio,
             data_fim=data_fim,
             estado=estado,
             aprovado_por=aprovado_por,
             data_pedido=data_pedido
         )
-        return f
-    except Exception:
-        return None
+        return ferias
+    except Exception as e:
+        # A exceção será tratada no código chamador
+        raise
 
 
 def _importar_linha_disponibilidades(row, row_num):
@@ -5512,7 +5540,7 @@ def backup_importar():
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
         Avaria, Disponibilidade, Deslocacao, Ferias,
-        Viatura, Bombeiro
+        Viatura, Bombeiro, Férias
     ]
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
@@ -5832,6 +5860,7 @@ def backup_importar():
         db.session.flush()
 
     # ---------- 25. FÉRIAS ----------
+    # ---------- 25. FÉRIAS ----------
     if 'Ferias' in wb.sheetnames:
         ws = wb['Ferias']
         for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -5839,18 +5868,21 @@ def backup_importar():
                 continue
             try:
                 fer = _importar_linha_ferias(row, row_num)
-                if fer: db.session.add(fer); total_importado += 1
+                if fer:
+                    db.session.add(fer)
+                    total_importado += 1
             except Exception as e:
                 erros.append(f"Férias linha {row_num}: {str(e)[:100]}")
         db.session.flush()
 
-    db.session.commit()
-
-    if erros:
-        flash(f'{total_importado} registos importados. {len(erros)} erro(s): ' + '; '.join(erros[:5]), 'warning')
-    else:
-        flash(f'{total_importado} registos importados com sucesso!', 'success')
-    return redirect(url_for('dashboard'))
+        # Ajustar sequência no PostgreSQL (se necessário)
+        if db.engine.dialect.name == 'postgresql':
+            from sqlalchemy import text
+            max_id = db.session.query(db.func.max(Ferias.id)).scalar()
+            if max_id is not None:
+                db.session.execute(text("SELECT setval('ferias_id_seq', :max_id)"), {'max_id': max_id})
+            else:
+                db.session.execute(text("SELECT setval('ferias_id_seq', 1, false)"))
 
 
 
@@ -6098,17 +6130,29 @@ def backup_exportar():
     for t in TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all():
         ws.append([t.nome, t.categoria])
 
-# ---- 26. Férias ----   ← ANTES ESTAVA FORA DA FUNÇÃO
-    ws = wb.create_sheet("Ferias")
-    cabecalhos = ['Bombeiro ID', 'Início', 'Fim', 'Estado', 'Aprovado por', 'Data Pedido']
-    escrever_cabecalho(ws, cabecalhos)
-    for f in Ferias.query.order_by(Ferias.data_inicio).all():
-        ws.append([f.bombeiro_id,
-                   f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
-                   f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '',
-                   f.estado,
-                   f.aprovado_por or '',
-                   f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''])
+# ---- 26. Férias ----
+ws = wb.create_sheet("Ferias")
+cabecalhos = ['Mecanográfico', 'Início', 'Fim', 'Estado', 'Aprovado por (nome)', 'Data Pedido']
+escrever_cabecalho(ws, cabecalhos)
+
+for f in Ferias.query.order_by(Ferias.data_inicio).all():
+    # Obtém o mecanográfico do bombeiro
+    mecanografico = f.bombeiro.mecanografico if f.bombeiro else ''
+    # Obtém o nome do aprovador (se existir)
+    nome_aprovador = ''
+    if f.aprovado_por:
+        aprovador = Bombeiro.query.get(f.aprovado_por)
+        if aprovador:
+            nome_aprovador = aprovador.nome
+
+    ws.append([
+        mecanografico,
+        f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
+        f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '',
+        f.estado,
+        nome_aprovador,
+        f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''
+    ])
 
     output = BytesIO()
     wb.save(output)
