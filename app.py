@@ -5539,8 +5539,9 @@ def backup_importar():
         StockFardamento,
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
-        Avaria, Disponibilidade, Deslocacao, Ferias,
-        Viatura, Bombeiro, Férias
+        Avaria, Disponibilidade, Deslocacao, Ferias,  # ← apenas "Ferias"
+        Viatura, Bombeiro
+    ]
     ]
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
