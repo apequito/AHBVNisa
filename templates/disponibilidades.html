@@ -4,13 +4,13 @@
 
 <div class="mb-3">
     <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalNovaDisponibilidade">Indicar Disponibilidade</button>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
     <a href="{{ url_for('exportar_disponibilidades') }}" class="btn btn-outline-success btn-sm ms-2">📥 Exportar</a>
     {% endif %}
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
     <button class="btn btn-outline-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImprimir">🖨️ Imprimir Disponibilidade</button>
     {% endif %}
-    {% if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' %}
+    {% if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando', 'ECIN' %}
     <a href="{{ url_for('imprimir_disponibilidades') }}" target="_blank" class="btn btn-outline-secondary btn-sm ms-2">
         🖨️ Imprimir as Minhas Disponibilidades
     </a>
@@ -18,7 +18,7 @@
 </div>
 
 <!-- Filtros e ação de apagar (apenas Admin/Comando) -->
-{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
 <div class="row g-2 align-items-end mb-3">
     <div class="col-auto">
         <label class="form-label">Bombeiro</label>
@@ -62,7 +62,7 @@
 <table class="table table-sm">
     <thead>
         <tr>
-            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
             <th><input type="checkbox" id="selectAll" onclick="toggleCheckboxes()"></th>
             {% endif %}
             <th>Bombeiro</th>
@@ -75,7 +75,7 @@
     <tbody>
         {% for d in disponibilidades %}
         <tr class="{% if d.confirmada %}table-secondary{% endif %}">
-            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
             <td>
                 <input type="checkbox" class="check-disponibilidade" value="{{ d.id }}"
                        {% if d.confirmada %}checked disabled{% endif %}>
@@ -97,7 +97,7 @@
     </tbody>
 </table>
 
-{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
 <button class="btn btn-success btn-sm" onclick="aprovarSelecionadas()">Aprovar Selecionadas</button>
 {% endif %}
 
@@ -143,7 +143,7 @@
 </div>
 
 <!-- Modal Imprimir -->
-{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando', 'ECIN' %}
 <div class="modal fade" id="modalImprimir" tabindex="-1">
     <div class="modal-dialog">
         <form method="GET" action="{{ url_for('imprimir_disponibilidades') }}" target="_blank">

@@ -2947,7 +2947,7 @@ def     disponibilidades():
 
     # Lista de bombeiros ativos (apenas para Admin/Comando)
     bombeiros_ativos = []
-    if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
         bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
     now = date.today()
