@@ -5114,6 +5114,31 @@ def _importar_linha_stock_fardamento(row, row_num):
         return None
 
 
+def _importar_linha_ferias(row, row_num):
+    try:
+        bomberio_id = int(row[0]) if row[0] else None
+        data_inicio = _parse_data(str(row[1]).strip()) if len(row) > 1 and row[1] else None
+        data_fim = _parse_data(str(row[2]).strip()) if len(row) > 2 and row[2] else None
+        estado = str(row[3]).strip() if len(row) > 3 and row[3] else 'Pendente'
+        aprovado_por = int(row[4]) if len(row) > 4 and row[4] else None
+        data_pedido = _parse_datetime(str(row[5]).strip()) if len(row) > 5 and row[5] else datetime.utcnow()
+
+        if not bomberio_id or not data_inicio or not data_fim:
+            return None
+
+        f = Ferias(
+            bombeiro_id=bomberio_id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            estado=estado,
+            aprovado_por=aprovado_por,
+            data_pedido=data_pedido
+        )
+        return f
+    except Exception:
+        return None
+
+
 def _importar_linha_disponibilidades(row, row_num):
     mec = str(row[0]).strip() if row[0] else None
     data_str = str(row[1]).strip() if len(row) > 1 else None
@@ -5475,8 +5500,7 @@ def backup_importar():
     erros = []
     total_importado = 0
 
-
-
+    # ---------- 1. APAGAR TODOS OS DADOS EXISTENTES ----------
     modelos_para_apagar = [
         NotaComando, Reuniao, TipoFardaMaterial,
         Nota, MensagemCorreio,
@@ -5484,16 +5508,12 @@ def backup_importar():
         ChecklistAmbulanciaItem,
         ChecklistAmbulancia,
         StockFarmacia, CategoriaFarmacia,
-        StockFardamento,  # ← ADICIONE ESTA LINHA
+        StockFardamento,
         Fardamento, FardamentoAtribuido, Ecin, GestaoFrota, Oficina,
         CreditoDispensa, Dispensa, TrocaServico, Escala,
-        Avaria, Disponibilidade, Deslocacao,
+        Avaria, Disponibilidade, Deslocacao, Ferias,
         Viatura, Bombeiro
     ]
-
-
-
-
     for modelo in modelos_para_apagar:
         db.session.query(modelo).delete()
     db.session.flush()
@@ -5562,7 +5582,10 @@ def backup_importar():
             except Exception as e:
                 erros.append(f"Stock Fardamento linha {row_num}: {str(e)[:100]}")
         db.session.flush()
-
+        # Ajustar sequência no PostgreSQL
+        if db.engine.dialect.name == 'postgresql':
+            from sqlalchemy import text
+            db.session.execute(text("SELECT setval('stock_fardamento_id_seq', (SELECT COALESCE(MAX(id), 0) FROM stock_fardamento))"))
 
     # ---------- 7. DISPONIBILIDADES ----------
     if 'Disponibilidades' in wb.sheetnames:
@@ -5798,6 +5821,19 @@ def backup_importar():
                 erros.append(f"Tipos Farda Material linha {row_num}: {str(e)[:100]}")
         db.session.flush()
 
+    # ---------- 25. FÉRIAS ----------
+    if 'Ferias' in wb.sheetnames:
+        ws = wb['Ferias']
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(c is None for c in row):
+                continue
+            try:
+                fer = _importar_linha_ferias(row, row_num)
+                if fer: db.session.add(fer); total_importado += 1
+            except Exception as e:
+                erros.append(f"Férias linha {row_num}: {str(e)[:100]}")
+        db.session.flush()
+
     db.session.commit()
 
     if erros:
@@ -5807,193 +5843,6 @@ def backup_importar():
     return redirect(url_for('dashboard'))
 
 
-def _importar_linha_stock_farmacia(row, row_num):
-    try:
-        cat = str(row[1]).strip() if len(row) > 1 and row[1] else ''
-        nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
-        tamanho_val = str(row[3]).strip()[:100] if len(row) > 3 and row[3] else ''
-        stock_val = 0
-        if len(row) > 4 and row[4] is not None:
-            try:
-                stock_val = int(row[4])
-            except (ValueError, TypeError):
-                pass
-        infstock_val = 0
-        if len(row) > 5 and row[5] is not None:
-            try:
-                infstock_val = int(row[5])
-            except (ValueError, TypeError):
-                pass
-        if not nome:
-            return None
-        s = StockFarmacia(
-            categoria=cat,
-            nome=nome,
-            tamanho=tamanho_val if tamanho_val else None,
-            stock=stock_val,
-            infstock=infstock_val,
-            data_atualizacao=datetime.utcnow()
-        )
-        return s
-    except Exception:
-        return None
-
-
-def _importar_linha_ecins(row, row_num):
-    try:
-        mec = str(row[0]).strip() if row[0] else None
-        data_str = str(row[1]).strip() if len(row) > 1 else None
-        turno = str(row[2]).strip() if len(row) > 2 else ''
-        categoria = str(row[3]).strip() if len(row) > 3 else ''
-        funcao = str(row[4]).strip() if len(row) > 4 else None
-        estado = str(row[5]).strip() if len(row) > 5 else 'Pendente'
-        valor = float(row[6]) if len(row) > 6 and row[6] else 0.0
-
-        data = _parse_data(data_str)
-        if not mec or not data:
-            return None
-        bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
-        if not bombeiro:
-            return None
-        ec = Ecin(
-            bombeiro_id=bombeiro.id,
-            data=data,
-            turno=turno,
-            categoria=categoria,
-            funcao=funcao,
-            estado=estado,
-            valor=valor
-        )
-        return ec
-    except Exception:
-        return None
-
-def _importar_linha_fardamento_atribuido(row, row_num):
-        try:
-            mec = str(row[0]).strip() if row[0] else None
-            tipo = str(row[1]).strip() if len(row) > 1 else ''
-            nome = str(row[2]).strip() if len(row) > 2 else ''
-            tamanho = str(row[3]).strip() if len(row) > 3 else ''
-            data_entrega_str = str(row[4]).strip() if len(row) > 4 else None
-            estado = str(row[5]).strip() if len(row) > 5 else 'Entregue'
-            idpedido = int(row[6]) if len(row) > 6 and row[6] else None
-
-            data_entrega = _parse_data(data_entrega_str)
-            if not mec or not data_entrega:
-                return None
-            bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
-            if not bombeiro:
-                return None
-            fa = FardamentoAtribuido(
-                bombeiro_id=bombeiro.id,
-                tipo=tipo,
-                nome=nome,
-                tamanho=tamanho,
-                data_entrega=data_entrega,
-                estado=estado,
-                idpedido=idpedido
-            )
-            return fa
-        except Exception:
-            return None
-
-def _importar_linha_reunioes(row, row_num):
-        try:
-            data_str = str(row[0]).strip() if row[0] else None
-            hora = str(row[1]).strip() if len(row) > 1 else None
-            assunto = str(row[2]).strip() if len(row) > 2 else ''
-            descricao = str(row[3]).strip() if len(row) > 3 else ''
-            criador_mec = str(row[4]).strip() if len(row) > 4 else None
-
-            data = _parse_data(data_str)
-            if not data or not assunto:
-                return None
-            criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
-            r = Reuniao(
-                data=data,
-                hora=hora if hora else None,
-                assunto=assunto,
-                descricao=descricao,
-                criador_id=criador.id if criador else 1
-            )
-            return r
-        except Exception:
-            return None
-
-
-def _importar_linha_notas_comando(row, row_num):
-    try:
-        criador_mec = str(row[0]).strip() if row[0] else None
-        data_criacao_str = str(row[1]).strip() if len(row) > 1 else None
-        descricao = str(row[2]).strip() if len(row) > 2 else ''
-        data_evento_str = str(row[3]).strip() if len(row) > 3 else None
-
-        criador = Bombeiro.query.filter_by(mecanografico=criador_mec).first() if criador_mec else None
-        data_criacao = _parse_datetime(data_criacao_str) or datetime.utcnow()
-        data_evento = _parse_data(data_evento_str) if data_evento_str else None
-        nc = NotaComando(
-            criador_id=criador.id if criador else 1,
-            data_criacao=data_criacao,
-            descricao=descricao,
-            data_evento=data_evento
-        )
-        return nc
-    except Exception:
-        return None
-
-def _importar_linha_tipos_farda_material(row, row_num):
-    try:
-        nome = str(row[0]).strip() if row[0] else ''
-        categoria = str(row[1]).strip() if len(row) > 1 else 'Farda'
-        if not nome:
-            return None
-        if TipoFardaMaterial.query.filter_by(nome=nome, categoria=categoria).first():
-            return None   # já existe, ignorar
-        tf = TipoFardaMaterial(nome=nome, categoria=categoria)
-        return tf
-    except Exception:
-        return None
-    
-
-def _importar_linha_deslocacoes(row, row_num):
-    """Formato: Data, Hora, Serviço, Origem, Destino, Valor, Mecanográfico, Viatura Matrícula, Nº Serviço"""
-    try:
-        data_str = str(row[0]).strip() if row[0] else None
-        hora = str(row[1]).strip() if len(row) > 1 and row[1] else ''
-        servico = str(row[2]).strip() if len(row) > 2 else ''
-        origem = str(row[3]).strip() if len(row) > 3 else ''
-        destino = str(row[4]).strip() if len(row) > 4 else ''
-        valor = float(row[5]) if len(row) > 5 and row[5] else None
-        mec = str(row[6]).strip() if len(row) > 6 and row[6] else None
-        matricula = str(row[7]).strip() if len(row) > 7 and row[7] else None
-        n_servico = str(row[8]).strip() if len(row) > 8 and row[8] else None
-
-        data = _parse_data(data_str) if data_str else None
-        if not data or not servico:
-            return None  # sem data ou serviço, saltar
-
-        # Procurar bombeiro pelo mecanográfico
-        bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first() if mec else None
-        if not bombeiro:
-            return None  # sem bombeiro válido, saltar esta linha
-
-        # Procurar viatura pela matrícula (pode ser None)
-        viatura = Viatura.query.filter_by(matricula=matricula).first() if matricula else None
-
-        d = Deslocacao(
-            bombeiro_id=bombeiro.id,
-            data=data,
-            hora_inicio=hora,
-            servico=servico,
-            local_origem=origem,
-            local_destino=destino,
-            valor=valor,
-            viatura_id=viatura.id if viatura else None,
-            n_servico=n_servico
-        )
-        return d
-    except Exception:
-        return None
 
 #-----------------Backup-----------------------
 @app.route('/backup/exportar')
@@ -6244,6 +6093,21 @@ def backup_exportar():
     output.seek(0)
     return send_file(output, as_attachment=True, download_name='backup_quartel.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+# ---- 26. Férias ----
+ws = wb.create_sheet("Ferias")
+cabecalhos = ['Bombeiro ID', 'Início', 'Fim', 'Estado', 'Aprovado por', 'Data Pedido']
+ws.append(cabecalhos)
+for col in range(1, len(cabecalhos)+1):
+    ws.cell(row=1, column=col).fill = header_fill
+    ws.cell(row=1, column=col).font = header_font
+for f in Ferias.query.order_by(Ferias.data_inicio).all():
+    ws.append([f.bombeiro_id, f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '',
+               f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '', f.estado,
+               f.aprovado_por or '', f.data_pedido.strftime('%d/%m/%Y %H:%M') if f.data_pedido else ''])
+
+
 
 #----------------------Painel Comando__________________
 
