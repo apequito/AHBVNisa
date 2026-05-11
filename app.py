@@ -6514,17 +6514,19 @@ def administrativo():
     total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
-    # ---------- Filtros ECIN/ELAC ----------
+    # ---------- Filtros ECIN/ELAC (apenas registos com estado diferente de Pendente/Não Escalado) ----------
     mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
     ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
     cat_ecin = request.args.get('cat_ecin', 'todas')
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
 
     query_ecin = Ecin.query.filter(
-        Ecin.estado != 'Não Escalado',  # ← NOVO FILTRO
         db.extract('month', Ecin.data) == mes_ecin,
         db.extract('year', Ecin.data) == ano_ecin
     )
+    # --- EXCLUIR estados Pendente e Não Escalado ---
+    query_ecin = query_ecin.filter(~Ecin.estado.in_(['Pendente', 'Não Escalado']))
+
     if cat_ecin == 'ECIN':
         query_ecin = query_ecin.filter(Ecin.categoria == 'ECIN')
     elif cat_ecin == 'ELAC':
@@ -6537,10 +6539,12 @@ def administrativo():
     turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN').count()
     turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC').count()
 
+    # Lista de bombeiros que aparecem nos ECINs filtrados (para o dropdown)
     bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
         Ecin.bombeiro_id == Bombeiro.id,
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin
+        db.extract('year', Ecin.data) == ano_ecin,
+        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
     ).distinct().order_by(Bombeiro.nome).all()
 
     # Atribuir 42.00 € automaticamente a todos os ECINs do filtro que ainda não têm valor
@@ -6549,10 +6553,9 @@ def administrativo():
         for ec in ecins_sem_valor:
             ec.valor = 42.0
         db.session.commit()
-        # Atualizar a lista para refletir os novos valores
+        # Recarregar para refletir os novos valores
         ecins = query_ecin.order_by(Ecin.data.desc()).all()
         total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
-
 
     return render_template('administrativo.html',
                            deslocacoes=deslocacoes,
@@ -6571,6 +6574,8 @@ def administrativo():
                            cat_ecin=cat_ecin,
                            bombeiro_id_ecin=bombeiro_id_ecin,
                            now=date.today())
+
+
 
 @app.route('/administrativo/atualizar-valor-ecin', methods=['POST'])
 @login_required
