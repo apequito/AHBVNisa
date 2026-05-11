@@ -3061,6 +3061,7 @@ def imprimir_disponibilidades():
 
 
 
+
 # ---------- Confirmar Disponibiidade ----------
 @app.route('/disponibilidades/confirmar', methods=['POST'])
 @login_required
