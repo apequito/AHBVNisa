@@ -1,131 +1,182 @@
-{% extends "base.html" %}
-{% block content %}
-<h2>Trocas de Serviço</h2>
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido de Troca de Serviço</title>
+    <style>
+        /* Define o tamanho da página como B5 (ISO) */
+        @page {
+            size: B5;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 16pt;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .form-row {
+            margin-bottom: 18px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 6px;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 160px;
+            font-size: 11pt;
+        }
+        .data-field {
+            display: inline-block;
+            min-width: 200px;
+            border-bottom: 1px dotted #000;
+            padding-left: 8px;
+        }
+        .assinaturas {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .assinatura {
+            width: 45%;
+            text-align: center;
+        }
+        .linha-assinatura {
+            border-top: 1px solid #000;
+            margin-top: 25px;
+            padding-top: 5px;
+            font-size: 9pt;
+        }
+        .info-extra {
+            margin-top: 20px;
+            font-size: 9pt;
+            text-align: center;
+        }
+        .motivo {
+            margin-top: 20px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+            font-size: 10pt;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pedido de Troca de Serviço</h1>
 
-<!-- Separadores / Abas -->
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link {% if separador_atual == 'assalariado' %}active{% endif %}"
-           href="{{ url_for('trocas', tipo='assalariado') }}">
-            Assalariado (Motorista/Socorrista/Centralista)
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if separador_atual == 'ecin' %}active{% endif %}"
-           href="{{ url_for('trocas', tipo='ecin') }}">
-            ECIN / ELAC
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if separador_atual == 'todas' %}active{% endif %}"
-           href="{{ url_for('trocas', tipo='todas') }}">
-            Todas as trocas
-        </a>
-    </li>
-</ul>
-
-<!-- Botão para nova troca -->
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovaTroca">+ Novo Pedido de Troca</button>
-
-<!-- Tabela de pedidos -->
-<table class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>Data Pedido</th>
-            <th>Origem</th>
-            <th>Destino</th>
-            <th>Data Origem</th>
-            <th>Data Destino</th>
-            <th>Turno Origem</th>
-            <th>Turno Destino</th>
-            <th>Estado</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for t in pedidos %}
-        <tr>
-            <td>{{ t.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td>{{ t.bombeiro_origem.nome }} ({{ t.bombeiro_origem.mecanografico }})</td>
-            <td>{{ t.bombeiro_destino.nome }} ({{ t.bombeiro_destino.mecanografico }})</td>
-            <td>{{ t.data_origem.strftime('%d/%m/%Y') }}</td>
-            <td>{{ t.data_destino.strftime('%d/%m/%Y') }}</td>
-            <td>{{ t.turno_origem or '-' }}</td>
-            <td>{{ t.turno_destino or '-' }}</td>
-            <td>
-                {% if t.estado == 'pendente_colega' %}
-                    <span class="badge bg-warning text-dark">A aguardar aceitação do colega</span>
-                {% elif t.estado == 'aceite_colega' %}
-                    <span class="badge bg-info">Aceite pelo colega, a aguardar aprovação do Comando</span>
-                {% elif t.estado == 'aprovada' %}
-                    <span class="badge bg-success">Aprovada</span>
-                {% elif t.estado == 'recusada' %}
-                    <span class="badge bg-danger">Recusada</span>
+        <!-- Requerente -->
+        <div class="form-row">
+            <span class="label">Nome do Requerente:</span>
+            <span class="data-field">
+                {% if troca and troca.bombeiro_origem %}
+                    {{ troca.bombeiro_origem.nome }} ({{ troca.bombeiro_origem.mecanografico }})
                 {% else %}
-                    <span class="badge bg-secondary">{{ t.estado }}</span>
+                    _______________________________
                 {% endif %}
-            </td>
-            <td>
-                <!-- Ações disponíveis conforme o estado e o tipo de utilizador -->
-                {% if t.estado == 'pendente_colega' and current_user.id == t.bombeiro_destino_id %}
-                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success">Aceitar</a>
-                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
-                {% elif t.estado == 'aceite_colega' and (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') %}
-                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-primary">Aprovar</a>
-                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
-                {% elif t.estado == 'pendente_colega' and current_user.id == t.bombeiro_origem_id %}
-                    <span class="text-muted">A aguardar resposta do colega</span>
-                {% elif t.estado == 'aprovada' or t.estado == 'recusada' %}
-                    <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-secondary">Imprimir</a>
+            </span>
+        </div>
+
+        <div class="form-row">
+            <span class="label">Serviço no dia / Turno:</span>
+            <span class="data-field">
+                {% if troca and troca.data_origem and troca.turno_origem %}
+                    {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ troca.turno_origem }}
+                {% else %}
+                    ___/___/______  Turno: _______________
                 {% endif %}
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="9" class="text-center text-muted">Nenhum pedido de troca encontrado.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </span>
+        </div>
 
-<!-- Modal para criar novo pedido (mesmo código original, apenas ajustado) -->
-<div class="modal fade" id="modalNovaTroca" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{{ url_for('trocas') }}">
-            <div class="modal-content">
-                <div class="modal-header"><h5>Novo Pedido de Troca</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body">
-                    <input type="hidden" name="tipo_pedido" id="tipo_pedido" value="{{ separador_atual }}">
-                    <label>Colega com quem pretende trocar</label>
-                    <select name="destino_id" class="form-select mb-2" required>
-                        <option value="">Selecione...</option>
-                        {% if separador_atual == 'assalariado' %}
-                            {% for b in bombeiros_assalariados %}
-                            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
-                            {% endfor %}
-                        {% else %}
-                            {% for b in bombeiros %}
-                            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
-                            {% endfor %}
-                        {% endif %}
-                    </select>
+        <div class="form-row">
+            <span class="label">Vem requerer troca com:</span>
+            <span class="data-field">
+                {% if troca and troca.bombeiro_destino %}
+                    {{ troca.bombeiro_destino.nome }} ({{ troca.bombeiro_destino.mecanografico }})
+                {% else %}
+                    _______________________________
+                {% endif %}
+            </span>
+        </div>
 
-                    <label>Data da sua escala (origem)</label>
-                    <input type="date" name="data_origem" class="form-control mb-2" required>
+        <div class="form-row">
+            <span class="label">Serviço no dia / Turno:</span>
+            <span class="data-field">
+                {% if troca and troca.data_destino and troca.turno_destino %}
+                    {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ troca.turno_destino }}
+                {% else %}
+                    ___/___/______  Turno: _______________
+                {% endif %}
+            </span>
+        </div>
 
-                    <label>Turno da sua escala (origem) - opcional</label>
-                    <input type="text" name="turno_origem" class="form-control mb-2" placeholder="ex: 2 - 08h/16h">
+        <div class="form-row">
+            <span class="label">Dia de folga / Período:</span>
+            <span class="data-field">
+                {% if troca and troca.data_destino %}
+                    {{ troca.data_destino.strftime('%d/%m/%Y') }}
+                {% else %}
+                    ___/___/______
+                {% endif %}
+            </span>
+        </div>
 
-                    <label>Data da escala do colega (destino)</label>
-                    <input type="date" name="data_destino" class="form-control mb-2" required>
-
-                    <label>Turno da escala do colega (destino) - opcional</label>
-                    <input type="text" name="turno_destino" class="form-control mb-2" placeholder="ex: 2 - 08h/16h">
-
-                    <label>Motivo (opcional)</label>
-                    <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
+        <!-- Assinaturas -->
+        <div class="assinaturas">
+            <div class="assinatura">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Requerente
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-danger">Enviar Pedido</button></div>
             </div>
-        </form>
+            <div class="assinatura">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Aceitante
+                </div>
+            </div>
+        </div>
+
+        <!-- Data e visto -->
+        <div class="info-extra">
+            <p>Data do pedido: _________________________________</p>
+            <p>Visto do Comando: _________________________________</p>
+            <p>(Autorização obrigatória para validação da troca)</p>
+        </div>
+
+        {% if troca and troca.motivo %}
+        <div class="motivo">
+            <strong>Motivo apresentado:</strong><br>
+            {{ troca.motivo }}
+        </div>
+        {% endif %}
+
+        <!-- Botões de impressão (não aparecem na impressão) -->
+        <div class="no-print" style="margin-top: 30px; text-align: center;">
+            <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
+            <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+        </div>
     </div>
-</div>
-{% endblock %}
+</body>
+</html>
