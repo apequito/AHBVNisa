@@ -3036,21 +3036,24 @@ def aprovar_disponibilidades():
 @app.route('/disponibilidades/imprimir')
 @login_required
 def imprimir_disponibilidades():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'ECIN']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('disponibilidades'))
-
+    # Parâmetros opcionais (apenas relevantes para Admin/Comando/ECIN)
     bombeiro_id = request.args.get('bombeiro_id', type=int)
     mes = request.args.get('mes', type=int)
     ano = request.args.get('ano', type=int)
 
-    query = Disponibilidade.query
-    if bombeiro_id:
-        query = query.filter_by(bombeiro_id=bombeiro_id)
-    if mes and ano:
-        query = query.filter(db.extract('month', Disponibilidade.data) == mes,
-                             db.extract('year', Disponibilidade.data) == ano)
-    elif ano:
+    # Determinar qual o ID do bombeiro cujas disponibilidades vão ser impressas
+    if (current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'ECIN')) and bombeiro_id:
+        # Utilizador com privilégios e forneceu um bombeiro específico
+        user_id = bombeiro_id
+    else:
+        # Utilizador normal ou privilégio sem bombeiro específico → vê as suas próprias
+        user_id = current_user.id
+
+    # Construir a query
+    query = Disponibilidade.query.filter_by(bombeiro_id=user_id)
+    if mes:
+        query = query.filter(db.extract('month', Disponibilidade.data) == mes)
+    if ano:
         query = query.filter(db.extract('year', Disponibilidade.data) == ano)
 
     lista = query.order_by(Disponibilidade.data.asc()).all()
