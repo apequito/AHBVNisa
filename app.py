@@ -3148,11 +3148,33 @@ def listar_ecins():
 
     ordem = request.args.get('ordem', 'data')
     mec = request.args.get('mec', '').strip()
+    nome_filtro = request.args.get('nome', '')      # novo: bombeiro ID
+    data_filtro = request.args.get('data', '')      # novo: data específica (YYYY-MM-DD)
+    turno_filtro = request.args.get('turno', '')    # novo: '07h/19h' ou '19h/07h'
 
     query = Ecin.query
+
+    # Filtro por mecanográfico (pesquisa)
     if mec:
         query = query.join(Bombeiro).filter(Bombeiro.mecanografico.ilike(f'%{mec}%'))
 
+    # Filtro por nome (bombeiro específico)
+    if nome_filtro:
+        query = query.filter(Ecin.bombeiro_id == nome_filtro)
+
+    # Filtro por data (dia exato)
+    if data_filtro:
+        try:
+            data_obj = datetime.strptime(data_filtro, '%Y-%m-%d').date()
+            query = query.filter(Ecin.data == data_obj)
+        except ValueError:
+            pass
+
+    # Filtro por turno
+    if turno_filtro:
+        query = query.filter(Ecin.turno == turno_filtro)
+
+    # Ordenação
     if ordem == 'nome':
         query = query.join(Bombeiro).order_by(Bombeiro.nome.asc(), Ecin.data.asc())
     else:
@@ -3160,19 +3182,22 @@ def listar_ecins():
 
     registos = query.all()
 
-    # Para o modal "Novo Registo" vamos usar todos os bombeiros ativos
-    bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
+    # Lista de bombeiros que têm registos ECIN/ELAC (para o combobox)
+    bombeiros_com_registos = db.session.query(Bombeiro).join(Ecin).distinct().order_by(Bombeiro.nome).all()
 
-    # Turnos específicos para ECIN/ELAC
-    turnos_ecinelac = ['07h/19h', '19h/07h']
+    # Para o modal "Novo Registo" – todos os bombeiros ativos
+    bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
     return render_template('ecins.html',
                            registos=registos,
                            bombeiros_ativos=bombeiros_ativos,
-                           turnos=turnos_ecinelac,
+                           bombeiros_com_registos=bombeiros_com_registos,
                            agora=date.today(),
                            ordem_atual=ordem,
-                           mec_pesquisa=mec)
+                           mec_pesquisa=mec,
+                           nome_filtro=nome_filtro,
+                           data_filtro=data_filtro,
+                           turno_filtro=turno_filtro)
 
 # ---------- Adicionar Ecins ----------
 @app.route('/ecins/adicionar', methods=['POST'])

@@ -2,7 +2,7 @@
 {% block content %}
 <h2>ECINS – Gestão de Escalamentos</h2>
 
-<!-- Seletores e Botões de Impressão -->
+<!-- Seletores e Botões de Impressão (mantido) -->
 <div class="mb-3">
     <form method="GET" action="{{ url_for('imprimir_ecins') }}" target="_blank" class="row g-2 align-items-end">
         <div class="col-auto">
@@ -29,27 +29,56 @@
     </form>
 </div>
 
-<!-- Filtros de Ordenação e Pesquisa -->
-<div class="row g-2 align-items-end mb-3">
-    <div class="col-auto">
-        <label class="form-label">Ordenar por</label>
-        <select id="ordenarSelect" class="form-select form-select-sm" onchange="aplicarFiltros()">
-            <option value="data" {% if ordem_atual == 'data' %}selected{% endif %}>Data</option>
-            <option value="nome" {% if ordem_atual == 'nome' %}selected{% endif %}>Nome</option>
-        </select>
-    </div>
-    <div class="col-auto">
-        <label class="form-label">Mecanográfico</label>
-        <input type="text" id="mecInput" class="form-control form-control-sm" placeholder="Pesquisar..." value="{{ mec_pesquisa }}">
-    </div>
-    <div class="col-auto">
-        <button class="btn btn-sm btn-primary" onclick="aplicarFiltros()">Filtrar</button>
-        {% if mec_pesquisa %}
-        <a href="{{ url_for('listar_ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
-        {% endif %}
-    </div>
-    <div class="col-auto ms-auto">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoEcin">+ Novo Registo</button>
+<!-- Filtros melhorados -->
+<div class="card mb-3">
+    <div class="card-header bg-light">Filtros</div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('listar_ecins') }}" class="row g-3 align-items-end">
+            <!-- Ordenar -->
+            <div class="col-auto">
+                <label class="form-label">Ordenar por</label>
+                <select name="ordem" class="form-select form-select-sm">
+                    <option value="data" {% if ordem_atual == 'data' %}selected{% endif %}>Data</option>
+                    <option value="nome" {% if ordem_atual == 'nome' %}selected{% endif %}>Nome</option>
+                </select>
+            </div>
+            <!-- Mecanográfico -->
+            <div class="col-auto">
+                <label class="form-label">Mecanográfico</label>
+                <input type="text" name="mec" class="form-control form-control-sm" value="{{ mec_pesquisa }}" placeholder="Pesquisar...">
+            </div>
+            <!-- Nome (combobox) -->
+            <div class="col-auto">
+                <label class="form-label">Bombeiro</label>
+                <select name="nome" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for b in bombeiros_com_registos %}
+                    <option value="{{ b.id }}" {% if nome_filtro|int == b.id %}selected{% endif %}>{{ b.nome }} ({{ b.mecanografico }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Data específica -->
+            <div class="col-auto">
+                <label class="form-label">Data</label>
+                <input type="date" name="data" class="form-control form-control-sm" value="{{ data_filtro }}">
+            </div>
+            <!-- Turno -->
+            <div class="col-auto">
+                <label class="form-label">Turno</label>
+                <select name="turno" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="07h/19h" {% if turno_filtro == '07h/19h' %}selected{% endif %}>07h/19h</option>
+                    <option value="19h/07h" {% if turno_filtro == '19h/07h' %}selected{% endif %}>19h/07h</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                <a href="{{ url_for('listar_ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+            <div class="col-auto ms-auto">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoEcin">+ Novo Registo</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -98,11 +127,12 @@
                 {% endif %}
             </td>
         </tr>
-        {% endfor %}
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">Nenhum registo encontrado.{% endfor %}
     </tbody>
 </table>
 
-<!-- Modal Novo Registo -->
+<!-- Modal Novo Registo (mantido) -->
 <div class="modal fade" id="modalNovoEcin" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('adicionar_ecin') }}">
@@ -136,28 +166,16 @@
 </div>
 
 <script>
-// Funções de impressão
+// Funções de impressão (mantidas)
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
 }
-
 function imprimirEscalaELAC() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
-}
-
-// Aplicar filtros de ordenação e pesquisa
-function aplicarFiltros() {
-    const ordem = document.getElementById('ordenarSelect').value;
-    const mec = document.getElementById('mecInput').value.trim();
-    let url = '/ecins?ordem=' + ordem;
-    if (mec) {
-        url += '&mec=' + encodeURIComponent(mec);
-    }
-    window.location.href = url;
 }
 </script>
 {% endblock %}
