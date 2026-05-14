@@ -21,10 +21,10 @@
         <tr>
             <td>{{ r.id }}</td>
             <td>{{ r.data.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td>{{ r.ambulancia.matricula }}</td>
-            <td>{{ r.produto_stock.nome }}</td>
+            <td>{{ r.ambulancia.matricula if r.ambulancia else '-' }}</td>
+            <td>{{ r.produto.nome if r.produto else '-' }}</td>
             <td>{{ r.quantidade }}</td>
-            <td>{{ r.solicitante.nome }}</td>
+            <td>{{ r.solicitante.nome if r.solicitante else '-' }}</td>
             <td>{{ r.responsavel.nome if r.responsavel else '-' }}</td>
             <td>
                 {% if r.confirmado %}
