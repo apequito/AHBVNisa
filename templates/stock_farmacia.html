@@ -185,4 +185,10 @@ modalEditar.addEventListener('show.bs.modal', function (event) {
     document.getElementById('edit_codigo').value = btn.getAttribute('data-codigo') || '';
     document.getElementById('edit_categoria').value = btn.getAttribute('data-categoria');
     document.getElementById('edit_nome').value = btn.getAttribute('data-nome');
-    document.getElementById('edit_tamanho').value = btn.getAttribute('data-taman
+    document.getElementById('edit_tamanho').value = btn.getAttribute('data-tamanho') || '';
+    document.getElementById('edit_stock').value = btn.getAttribute('data-stock');
+    document.getElementById('edit_infstock').value = btn.getAttribute('data-infstock') || '0';
+    document.getElementById('edit_data_validade').value = btn.getAttribute('data-validade') || '';
+});
+</script>
+{% endblock %}
