@@ -25,11 +25,13 @@
         <table class="table table-hover table-bordered mb-0">
             <thead class="table-light">
                 <tr>
+                    <th>Código</th>
                     <th>Categoria</th>
                     <th>Nome</th>
                     <th>Tamanho</th>
                     <th>Stock</th>
                     <th>Stock Mín.</th>
+                    <th>Data Validade</th>
                     <th>Atualização</th>
                     <th>Ações</th>
                 </tr>
@@ -37,20 +39,24 @@
             <tbody>
                 {% for i in itens %}
                 <tr>
+                    <td>{{ i.codigo }}</td>
                     <td>{{ i.categoria }}</td>
                     <td>{{ i.nome }}</td>
                     <td>{{ i.tamanho or '-' }}</td>
                     <td>{{ i.stock }}</td>
                     <td>{{ i.infstock if i.infstock else '-' }}</td>
+                    <td>{{ i.data_validade.strftime('%d/%m/%Y') if i.data_validade else '-' }}</td>
                     <td>{{ i.data_atualizacao.strftime('%d/%m/%Y %H:%M') if i.data_atualizacao else '-' }}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-warning btn-editar-farmacia"
                                 data-id="{{ i.id }}"
+                                data-codigo="{{ i.codigo }}"
                                 data-categoria="{{ i.categoria }}"
                                 data-nome="{{ i.nome }}"
                                 data-tamanho="{{ i.tamanho or '' }}"
                                 data-stock="{{ i.stock }}"
                                 data-infstock="{{ i.infstock or 0 }}"
+                                data-validade="{{ i.data_validade.strftime('%Y-%m-%d') if i.data_validade else '' }}"
                                 data-bs-toggle="modal" data-bs-target="#modalEditarProduto">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -96,6 +102,9 @@
                             <input type="number" name="infstock" class="form-control mb-2" value="0">
                         </div>
                     </div>
+                    <label>Data de Validade</label>
+                    <input type="date" name="data_validade" class="form-control mb-2">
+                    <small class="text-muted">O código será gerado automaticamente (ex: SF0001).</small>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Adicionar</button>
@@ -115,6 +124,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <label>Código</label>
+                    <input type="text" id="edit_codigo" class="form-control mb-2" readonly disabled>
                     <label>Categoria</label>
                     <select name="categoria" id="edit_categoria" class="form-select mb-3" required>
                         {% for cat in categorias %}
@@ -133,6 +144,8 @@
                             <input type="number" name="infstock" id="edit_infstock" class="form-control mb-2">
                         </div>
                     </div>
+                    <label>Data de Validade</label>
+                    <input type="date" name="data_validade" id="edit_data_validade" class="form-control mb-2">
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-warning">Guardar</button>
@@ -153,6 +166,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
+                    <small class="text-muted">Formato esperado: Código, Categoria, Nome, Tamanho, Stock, Stock Mínimo, Data Validade (opcional).</small>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Importar</button>
@@ -165,13 +179,10 @@
 <script>
 const modalEditar = document.getElementById('modalEditarProduto');
 modalEditar.addEventListener('show.bs.modal', function (event) {
-    const b = event.relatedTarget;
-    document.getElementById('formEditarFarmacia').action = '/stock-farmacia/editar/' + b.getAttribute('data-id');
-    document.getElementById('edit_categoria').value = b.getAttribute('data-categoria');
-    document.getElementById('edit_nome').value = b.getAttribute('data-nome');
-    document.getElementById('edit_tamanho').value = b.getAttribute('data-tamanho') || '';
-    document.getElementById('edit_stock').value = b.getAttribute('data-stock');
-    document.getElementById('edit_infstock').value = b.getAttribute('data-infstock') || '0';
-});
-</script>
-{% endblock %}
+    const btn = event.relatedTarget;
+    const id = btn.getAttribute('data-id');
+    document.getElementById('formEditarFarmacia').action = '/stock-farmacia/editar/' + id;
+    document.getElementById('edit_codigo').value = btn.getAttribute('data-codigo') || '';
+    document.getElementById('edit_categoria').value = btn.getAttribute('data-categoria');
+    document.getElementById('edit_nome').value = btn.getAttribute('data-nome');
+    document.getElementById('edit_tamanho').value = btn.getAttribute('data-taman

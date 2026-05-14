@@ -4318,9 +4318,21 @@ def resposta_fardamento(id):
     return redirect(url_for('fardamento', tab='pedidos'))
 
 
+def gerar_codigo_stock_farmacia():
+    ultimo = StockFarmacia.query.order_by(StockFarmacia.codigo.desc()).first()
+    if ultimo and ultimo.codigo and ultimo.codigo.startswith('SF'):
+        try:
+            num = int(ultimo.codigo[2:]) + 1
+        except:
+            num = 1
+    else:
+        num = 1
+    return f"SF{num:04d}"
+
+
+
 
 #----------- Stock Farmácia--------------
-
 @app.route('/stock-farmacia', methods=['GET', 'POST'])
 @login_required
 def stock_farmacia():
@@ -4333,19 +4345,31 @@ def stock_farmacia():
         nome = request.form['nome']
         tamanho = request.form.get('tamanho', '')
         stock = request.form.get('stock', 0, type=int)
-        infstock = request.form.get('infstock', 0, type=int)        # NOVO
+        infstock = request.form.get('infstock', 0, type=int)
+        data_validade_str = request.form.get('data_validade', '')
+
+        data_validade = None
+        if data_validade_str:
+            try:
+                data_validade = datetime.strptime(data_validade_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        codigo = gerar_codigo_stock_farmacia()
 
         novo = StockFarmacia(
+            codigo=codigo,
             categoria=categoria,
             nome=nome,
-            tamanho=tamanho,
+            tamanho=tamanho if tamanho else None,
             stock=stock,
-            infstock=infstock,            # NOVO
+            infstock=infstock,
+            data_validade=data_validade,
             data_atualizacao=datetime.utcnow()
         )
         db.session.add(novo)
         db.session.commit()
-        flash('Produto de farmácia adicionado.', 'success')
+        flash(f'Produto {codigo} adicionado.', 'success')
         return redirect(url_for('stock_farmacia'))
 
     itens = StockFarmacia.query.order_by(StockFarmacia.categoria, StockFarmacia.nome).all()
@@ -4364,13 +4388,22 @@ def editar_stock_farmacia(id):
     item.nome = request.form['nome']
     item.tamanho = request.form.get('tamanho', '')
     novo_stock = request.form.get('stock', 0, type=int)
-    novo_infstock = request.form.get('infstock', 0, type=int)    # NOVO
+    novo_infstock = request.form.get('infstock', 0, type=int)
+    data_validade_str = request.form.get('data_validade', '')
+
+    if data_validade_str:
+        try:
+            item.data_validade = datetime.strptime(data_validade_str, '%Y-%m-%d').date()
+        except ValueError:
+            item.data_validade = None
+    else:
+        item.data_validade = None
 
     if novo_stock != item.stock or novo_infstock != item.infstock:
         item.data_atualizacao = datetime.utcnow()
 
     item.stock = novo_stock
-    item.infstock = novo_infstock                                    # NOVO
+    item.infstock = novo_infstock
     db.session.commit()
     flash('Produto atualizado.', 'success')
     return redirect(url_for('stock_farmacia'))
@@ -4517,31 +4550,75 @@ def importar_stock_farmacia():
 
     linhas_importadas = 0
     erros = []
+
+    # Assumindo que o cabeçalho tem as colunas na seguinte ordem:
+    # 0: Código, 1: Categoria, 2: Nome, 3: Tamanho, 4: Stock, 5: Stock Mínimo, 6: Data Validade, 7: Atualização (ignorada)
     for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if not row or all(cell is None for cell in row):
             continue
+
+        # Extrair valores (com segurança)
         try:
+            codigo = str(row[0]).strip() if len(row) > 0 and row[0] else ''
             categoria = str(row[1]).strip() if len(row) > 1 and row[1] else ''
             nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
             tamanho = str(row[3]).strip() if len(row) > 3 and row[3] else ''
-            stock = int(row[4]) if len(row) > 4 and row[4] else 0
-        except Exception:
-            erros.append(f'Linha {row_num}: dados inválidos.')
+            stock = int(row[4]) if len(row) > 4 and row[4] is not None else 0
+            infstock = int(row[5]) if len(row) > 5 and row[5] is not None else 0
+            data_validade_str = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+        except Exception as e:
+            erros.append(f'Linha {row_num}: erro ao interpretar dados - {str(e)}')
             continue
-        if not nome:
-            erros.append(f'Linha {row_num}: nome obrigatório.')
+
+        # Validação de campos obrigatórios
+        if not categoria or not nome:
+            erros.append(f'Linha {row_num}: categoria e nome são obrigatórios.')
             continue
-        novo = StockFarmacia(categoria=categoria, nome=nome, tamanho=tamanho, stock=stock,
-                             data_atualizacao=datetime.utcnow())
+
+        # Se o código não for fornecido, gerar automaticamente
+        if not codigo:
+            codigo = gerar_codigo_stock_farmacia()
+        else:
+            # Verificar se o código já existe na base de dados
+            if StockFarmacia.query.filter_by(codigo=codigo).first():
+                erros.append(f'Linha {row_num}: código {codigo} já existe. Ignorado.')
+                continue
+
+        # Converter data de validade
+        data_validade = None
+        if data_validade_str and data_validade_str.lower() != 'none':
+            try:
+                data_validade = datetime.strptime(data_validade_str, '%d/%m/%Y').date()
+            except ValueError:
+                try:
+                    data_validade = datetime.strptime(data_validade_str, '%Y-%m-%d').date()
+                except ValueError:
+                    erros.append(f'Linha {row_num}: data de validade inválida "{data_validade_str}". Ignorada.')
+                    data_validade = None
+
+        # Criar novo produto
+        novo = StockFarmacia(
+            codigo=codigo,
+            categoria=categoria,
+            nome=nome,
+            tamanho=tamanho if tamanho else None,
+            stock=stock,
+            infstock=infstock,
+            data_validade=data_validade,
+            data_atualizacao=datetime.utcnow()
+        )
         db.session.add(novo)
         linhas_importadas += 1
 
     db.session.commit()
+
     if erros:
-        flash(f'{linhas_importadas} importados. {len(erros)} erro(s): ' + '; '.join(erros), 'warning')
+        flash(f'{linhas_importadas} produtos importados. {len(erros)} erro(s): ' + '; '.join(erros[:5]), 'warning')
     else:
-        flash(f'{linhas_importadas} produtos importados com sucesso.', 'success')
+        flash(f'{linhas_importadas} produtos importados com sucesso!', 'success')
     return redirect(url_for('stock_farmacia'))
+
+
 
 #------------Imprimir Stock Farmacia----------
 @app.route('/stock-farmacia/imprimir')
