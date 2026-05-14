@@ -259,14 +259,17 @@ class Ecin(db.Model):
 class StockFarmacia(db.Model):
     __tablename__ = 'stock_farmacia'
     id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(20), unique=True, nullable=False, default='SF0000')  # NOVO
+    codigo = db.Column(db.String(20), unique=True, nullable=False, default='SF0000')
     categoria = db.Column(db.String(100), nullable=False)
     nome = db.Column(db.String(200), nullable=False)
     tamanho = db.Column(db.String(50))
     stock = db.Column(db.Integer, default=0)
     infstock = db.Column(db.Integer, default=0)
-    data_validade = db.Column(db.Date, nullable=True)  # NOVO
+    data_validade = db.Column(db.Date, nullable=True)
     data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relação com StockAmbulancia (sem backref problemático)
+    saidas = db.relationship('StockAmbulancia', back_populates='produto', cascade='all, delete-orphan')
 
 
 
@@ -282,21 +285,21 @@ class CategoriaFarmacia(db.Model):
 class StockAmbulancia(db.Model):
     __tablename__ = 'stock_ambulancia'
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.DateTime, default=datetime.utcnow)
-    ambulancia_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=False)
-    produto_id = db.Column(db.Integer, db.ForeignKey('stock_farmacia.id'), nullable=False)
-    quantidade = db.Column(db.Integer, nullable=False)
-    solicitante_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    ambulancia_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'))
+    produto_id = db.Column(db.Integer, db.ForeignKey('stock_farmacia.id'))
+    quantidade = db.Column(db.Integer, default=0)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     responsavel_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
     checklist_id = db.Column(db.Integer, db.ForeignKey('checklist_ambulancia.id'), nullable=True)
     confirmado = db.Column(db.Boolean, default=False)
+    data = db.Column(db.DateTime, default=datetime.utcnow)
 
-    ambulancia = db.relationship('Viatura', backref='reposicoes')
-    produto_stock = db.relationship('StockFarmacia', back_populates='saidas')
-    solicitante = db.relationship('Bombeiro', foreign_keys=[solicitante_id], backref='pedidos_reposicao')
-    responsavel = db.relationship('Bombeiro', foreign_keys=[responsavel_id], backref='confirmacoes_reposicao')
-    checklist = db.relationship('ChecklistAmbulancia', back_populates='reposicoes')   # <-- back_populates='reposicoes'
-
+    # Relações
+    ambulancia = db.relationship('Viatura', backref='reposicoes_stock')
+    produto = db.relationship('StockFarmacia', back_populates='saidas')
+    solicitante = db.relationship('Bombeiro', foreign_keys=[solicitante_id])
+    responsavel = db.relationship('Bombeiro', foreign_keys=[responsavel_id])
+    checklist = db.relationship('ChecklistAmbulancia', backref='reposicoes')
 
 # ---------- Checklist Ambulancia ----------
 
