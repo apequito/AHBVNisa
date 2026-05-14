@@ -294,12 +294,11 @@ class StockAmbulancia(db.Model):
     confirmado = db.Column(db.Boolean, default=False)
     data = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relações
     ambulancia = db.relationship('Viatura', backref='reposicoes_stock')
     produto = db.relationship('StockFarmacia', back_populates='saidas')
     solicitante = db.relationship('Bombeiro', foreign_keys=[solicitante_id])
     responsavel = db.relationship('Bombeiro', foreign_keys=[responsavel_id])
-    checklist = db.relationship('ChecklistAmbulancia', backref='reposicoes')
+    checklist = db.relationship('ChecklistAmbulancia')  # ← sem backref
 
 # ---------- Checklist Ambulancia ----------
 
