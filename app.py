@@ -4788,6 +4788,8 @@ def stock_ambulancia():
     reposicoes = StockAmbulancia.query.order_by(StockAmbulancia.data.desc()).all()
     return render_template('stock_ambulancia.html', reposicoes=reposicoes)
 
+
+
 @app.route('/stock-ambulancia/confirmar/<int:id>')
 @login_required
 def confirmar_reposicao(id):
@@ -4800,8 +4802,8 @@ def confirmar_reposicao(id):
         flash('Reposição já confirmada.', 'warning')
         return redirect(url_for('stock_ambulancia'))
 
-    # Verificar stock e abater
-    produto = reposicao.produto_stock
+    # CORREÇÃO: usar 'produto' em vez de 'produto_stock'
+    produto = reposicao.produto
     if produto.stock < reposicao.quantidade:
         flash(f'Stock insuficiente de "{produto.nome}" (disponível: {produto.stock}).', 'danger')
         return redirect(url_for('stock_ambulancia'))
