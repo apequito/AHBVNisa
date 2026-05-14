@@ -259,14 +259,14 @@ class Ecin(db.Model):
 class StockFarmacia(db.Model):
     __tablename__ = 'stock_farmacia'
     id = db.Column(db.Integer, primary_key=True)
-    categoria = db.Column(db.String(50), nullable=False)
-    nome = db.Column(db.String(100), nullable=False)
-    tamanho = db.Column(db.String(100), nullable=True)
+    codigo = db.Column(db.String(20), unique=True, nullable=False, default='SF0000')  # NOVO
+    categoria = db.Column(db.String(100), nullable=False)
+    nome = db.Column(db.String(200), nullable=False)
+    tamanho = db.Column(db.String(50))
     stock = db.Column(db.Integer, default=0)
-    infstock = db.Column(db.Integer, default=0)   # NOVO CAMPO – stock mínimo
-    data_atualizacao = db.Column(db.DateTime, nullable=True)
-
-    saidas = db.relationship('StockAmbulancia', back_populates='produto_stock', lazy=True)
+    infstock = db.Column(db.Integer, default=0)
+    data_validade = db.Column(db.Date, nullable=True)  # NOVO
+    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 
