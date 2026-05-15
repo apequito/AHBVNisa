@@ -246,7 +246,7 @@
         {% endif %}
     </a>
 {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista', 'Centralista'] %}
+                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista', 'Central'] %}
                         <a href="{{ url_for('stock_ambulancia') }}" class="btn btn-sm rounded-pill text-white position-relative"
                            style="background-color: #6f42c1; border-color: #6f42c1;">
                             <i class="bi bi-truck-flatbed me-1"></i>Stock Ambulância
