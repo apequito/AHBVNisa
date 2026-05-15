@@ -24,8 +24,10 @@ class Bombeiro(db.Model, UserMixin):
 
     # Relações (todas com back_populates)
     escalas = db.relationship('Escala', back_populates='bombeiro')
-    trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', back_populates='bombeiro_origem')
-    trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', back_populates='bombeiro_destino')
+    trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id',
+                                    back_populates='bombeiro_origem')
+    trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id',
+                                     back_populates='bombeiro_destino')
     dispensas = db.relationship('Dispensa', back_populates='bombeiro', cascade='all, delete-orphan')
     creditos = db.relationship('CreditoDispensa', back_populates='bombeiro')
     disponibilidades = db.relationship('Disponibilidade', back_populates='bombeiro')
@@ -33,17 +35,23 @@ class Bombeiro(db.Model, UserMixin):
     fardamentos_atribuidos = db.relationship('FardamentoAtribuido', back_populates='bombeiro')
     ecins = db.relationship('Ecin', back_populates='bombeiro')
     deslocacoes = db.relationship('Deslocacao', back_populates='bombeiro')
-    ferias = db.relationship('Ferias', back_populates='bombeiro')
+
+    # Férias: especificar a chave estrangeira correta (bombeiro_id)
+    ferias = db.relationship('Ferias', foreign_keys='Ferias.bombeiro_id', back_populates='bombeiro')
+    # Relação para as férias que este bombeiro aprovou
+    ferias_aprovadas = db.relationship('Ferias', foreign_keys='Ferias.aprovado_por', back_populates='aprovador')
+
     notas_criadas = db.relationship('Nota', back_populates='criador')
-    mensagens_enviadas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.remetente_id', back_populates='remetente')
-    mensagens_recebidas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.destinatario_id', back_populates='destinatario')
+    mensagens_enviadas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.remetente_id',
+                                         back_populates='remetente')
+    mensagens_recebidas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.destinatario_id',
+                                          back_populates='destinatario')
     checklists = db.relationship('Checklist', back_populates='bombeiro')
     reunioes_criadas = db.relationship('Reuniao', back_populates='criador')
     notas_comando = db.relationship('NotaComando', back_populates='criador')
 
     def get_id(self):
         return str(self.id)
-
 
 # ---------- Viatura ----------
 class Viatura(db.Model):
@@ -139,12 +147,13 @@ class Ferias(db.Model):
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data_inicio = db.Column(db.Date, nullable=False)
     data_fim = db.Column(db.Date, nullable=False)
-    estado = db.Column(db.String(20), default='Pendente')  # Pendente, Aprovado, Rejeitado
-    data_pedido = db.Column(db.DateTime, default=datetime.utcnow)
+    estado = db.Column(db.String(20), default='Pendente')
     aprovado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    data_pedido = db.Column(db.DateTime, default=datetime.utcnow)
 
-    bombeiro = db.relationship('Bombeiro', foreign_keys=[bombeiro_id], backref='ferias_pedidas')
-    aprovador = db.relationship('Bombeiro', foreign_keys=[aprovado_por])
+    # Relações
+    bombeiro = db.relationship('Bombeiro', foreign_keys=[bombeiro_id], back_populates='ferias')
+    aprovador = db.relationship('Bombeiro', foreign_keys=[aprovado_por], back_populates='ferias_aprovadas')
 
 
 
