@@ -217,7 +217,8 @@ async function executarAcao(id, funcao, btnElement) {
 
             // Substituir os botões de ação pelo botão "Modificar" se o estado já não for Pendente
             if (!data.mostrar_botoes) {
-                acoesDiv.innerHTML = `<a href="{{ url_for('modificar_ecin', id=id) }}" class="btn btn-sm btn-secondary">Modificar</a>`;
+                // CORREÇÃO: usar URL direta em vez de url_for (que é executado no servidor)
+                acoesDiv.innerHTML = `<a href="/ecins/modificar/${id}" class="btn btn-sm btn-secondary">Modificar</a>`;
             } else {
                 // Se voltar a Pendente (improvável), recarregar a página para recuperar os botões
                 location.reload();
