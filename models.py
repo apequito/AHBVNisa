@@ -476,9 +476,9 @@ class Mobilidade(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     ecin_original_id = db.Column(db.Integer, db.ForeignKey('ecins.id', ondelete='CASCADE'), nullable=False)
-    bombeiro_substituto_id = db.Column(db.Integer, db.ForeignKey('bombeiro.id'), nullable=False)
-    horas = db.Column(db.Numeric(5,2), nullable=False)          # horas trabalhadas pelo substituto
-    valor_pago = db.Column(db.Numeric(10,2), nullable=False)    # = 3.75 * horas
+    bombeiro_substituto_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)   # ← corrigido
+    horas = db.Column(db.Numeric(5,2), nullable=False)
+    valor_pago = db.Column(db.Numeric(10,2), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relações
