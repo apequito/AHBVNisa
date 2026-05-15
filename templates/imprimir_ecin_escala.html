@@ -4,42 +4,25 @@
 <meta charset="UTF-8">
 <title>Escala ECIN - {{ meses[mes-1] }} {{ ano }}</title>
 <style>
-/* Regras gerais */
+/* Mesmo CSS do ELAC, apenas ajustando larguras das colunas para 3 por turno */
 @page {
     size: A3;
     margin: 12mm;
     @top-center { content: none; }
     @bottom-center { content: none; }
 }
-
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
     color: #000;
 }
-
-/* Esconde elementos do sistema (data/hora, URL, número de página) */
 @media print {
-    .no-print {
-        display: none;
-    }
-    header, footer, .page-break, .page-number, .print-date, .print-url {
-        display: none;
-    }
-    body {
-        margin: 0;
-        padding: 0;
-    }
+    .no-print { display: none; }
+    header, footer, .page-break, .page-number, .print-date, .print-url { display: none; }
+    body { margin: 0; padding: 0; }
 }
-
-/* Botão de imprimir (só visível no ecrã) */
-.no-print {
-    margin: 15px;
-    text-align: right;
-}
-
-/* Cabeçalho com imagem à esquerda e texto centralizado */
+.no-print { margin: 15px; text-align: right; }
 .header {
     display: flex;
     align-items: center;
@@ -47,112 +30,77 @@ body {
     margin-bottom: 15px;
     flex-wrap: wrap;
 }
-
 .logo {
     width: 95px;
     height: auto;
     margin-right: 20px;
 }
-
 .header-text {
     flex: 1;
     text-align: center;
 }
-
 .associacao {
     font-size: 15px;
     font-weight: bold;
     text-transform: uppercase;
 }
-
 .contactos {
     font-size: 10px;
     margin-top: 4px;
 }
-
 .titulo-principal {
     font-size: 14px;
     font-weight: bold;
     margin-top: 10px;
     text-transform: uppercase;
 }
-
 .subtitulo {
     font-size: 13px;
     font-weight: bold;
     margin-top: 3px;
 }
-
-/* Tabela */
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
     margin-top: 15px;
 }
-
 th, td {
     border: 1px solid #000;
     padding: 3px 4px;
     vertical-align: middle;
 }
-
 th {
     background-color: #f2f2f2;
     font-weight: bold;
     text-align: center;
 }
-
 .subcol {
     background-color: #f9f9f9;
 }
-
 .col-dia {
     width: 7%;
     text-align: center;
     font-weight: bold;
 }
-
-.col-motorista,
-.col-chefe,
-.col-guarnicao {
-    width: 23.25%;
+/* Para 3 colunas por turno, distribuir o restante (100% - 7% = 93%) / 6 = 15.5% cada */
+.col-motorista, .col-chefe, .col-guarnicao {
+    width: 15.5%;
     text-align: center;
 }
-
-/* Estilo para fins de semana */
 tr.weekend {
     background-color: #f0f0f0 !important;
 }
-
 .bombeiro-linha {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.4;
 }
-
-.posto-abrev {
-    font-weight: bold;
-}
-
-.nome-bombeiro {
-    font-weight: bold;
-    margin: 0 2px;
-}
-
-.mecanografico {
-    font-size: 9px;
-    color: #333;
-}
-
-hr {
-    margin: 2px 0;
-    border: none;
-    border-top: 1px solid #ccc;
-}
-
-/* Rodapé */
+.posto-abrev { font-weight: bold; }
+.nome-bombeiro { font-weight: bold; margin: 0 2px; }
+.mecanografico { font-size: 9px; color: #333; }
+hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
 .footer {
     margin-top: 28px;
     font-size: 11px;
@@ -160,14 +108,12 @@ hr {
     justify-content: space-between;
     align-items: flex-start;
 }
-
 .assinatura {
     text-align: center;
     min-width: 260px;
 }
 </style>
 </head>
-
 <body>
 
 <div class="no-print">
@@ -180,9 +126,7 @@ hr {
          alt="Bombeiros Voluntários de Nisa"
          onerror="this.style.display='none'">
     <div class="header-text">
-        <div class="associacao">
-            Associação Humanitária dos Bombeiros Voluntários de Nisa
-        </div>
+        <div class="associacao">Associação Humanitária dos Bombeiros Voluntários de Nisa</div>
         <div class="contactos">
             Email: comandonisa@gmail.com &nbsp;|&nbsp;
             Rua Prof. Cruz Malpique S/N &nbsp;|&nbsp;
@@ -192,9 +136,7 @@ hr {
         <div class="titulo-principal">
             Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
         </div>
-        <div class="subtitulo">
-            ESCALA ECIN
-        </div>
+        <div class="subtitulo">ESCALA ECIN</div>
     </div>
     <div style="width: 95px;"></div>
 </div>
@@ -241,7 +183,7 @@ hr {
                     {% else %}
                         -
                     {% endif %}
-                </table>
+                </td>
                 {% endfor %}
             {% endfor %}
         </tr>
@@ -250,14 +192,8 @@ hr {
 </table>
 
 <div class="footer">
-    <div>
-        Nisa, ____ de ___________________ de _______
-    </div>
-    <div class="assinatura">
-        O Comandante Em Substituição
-        <br><br><br>
-        __________________________________
-    </div>
+    <div>Nisa, ____ de ___________________ de _______</div>
+    <div class="assinatura">O Comandante Em Substituição<br><br><br>__________________________________</div>
 </div>
 
 </body>
