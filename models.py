@@ -16,13 +16,13 @@ class Bombeiro(db.Model, UserMixin):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     posto = db.Column(db.String(50), default='Bombeiro')
-    tipo_bombeiro = db.Column(db.String(20), default='Voluntário')  # Profissional ou Voluntário
-    tipo_user = db.Column(db.String(20), default='User')  # Admin ou User
+    tipo_bombeiro = db.Column(db.String(20), default='Voluntário')
+    tipo_user = db.Column(db.String(20), default='User')
     telemovel = db.Column(db.String(20))
     resp_departamento = db.Column(db.String(50))
     ativo = db.Column(db.Boolean, default=True)
 
-    # Relações (sem backref – usar back_populates)
+    # Relações (todas com back_populates)
     escalas = db.relationship('Escala', back_populates='bombeiro')
     trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', back_populates='bombeiro_origem')
     trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', back_populates='bombeiro_destino')
@@ -153,16 +153,19 @@ class Ferias(db.Model):
 class TrocaServico(db.Model):
     __tablename__ = 'trocas_servico'
     id = db.Column(db.Integer, primary_key=True)
-    bombeiro_origem_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-    bombeiro_destino_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    bombeiro_origem_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
+    bombeiro_destino_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_origem = db.Column(db.Date, nullable=False)
     data_destino = db.Column(db.Date, nullable=False)
-    turno_origem = db.Column(db.String(20))
-    turno_destino = db.Column(db.String(20))
-    aprovada = db.Column(db.Boolean, default=False)
-    motivo = db.Column(db.Text)
-    estado = db.Column(db.String(20), default='pendente_colega')  # pendente_colega, aceite_colega, aprovada, recusada
+    turno_origem = db.Column(db.String(30))
+    turno_destino = db.Column(db.String(30))
+    motivo = db.Column(db.String(200))
+    estado = db.Column(db.String(30), default='pendente_colega')
     data_pedido = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relações
+    bombeiro_origem = db.relationship('Bombeiro', foreign_keys=[bombeiro_origem_id], back_populates='trocas_origem')
+    bombeiro_destino = db.relationship('Bombeiro', foreign_keys=[bombeiro_destino_id], back_populates='trocas_destino')
 
 
 # ---------- Dispensa de serviço ----------
@@ -174,10 +177,10 @@ class Dispensa(db.Model):
     data_fim = db.Column(db.Date, nullable=False)
     motivo = db.Column(db.String(200))
     aprovada = db.Column(db.Boolean, default=False)
-    categoria = db.Column(db.String(50))   # NOVO
-    turno = db.Column(db.String(30))       # NOVO
+    categoria = db.Column(db.String(50))
+    turno = db.Column(db.String(30))
 
-    # Relações (sem backref – usar back_populates)
+    # Relações
     bombeiro = db.relationship('Bombeiro', back_populates='dispensas')
     creditos = db.relationship('CreditoDispensa', back_populates='dispensa')
 
