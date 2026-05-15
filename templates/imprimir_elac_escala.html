@@ -3,123 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <title>Escala ELAC - {{ meses[mes-1] }} {{ ano }}</title>
-
 <style>
+/* Mesmo CSS de impressão do ECIN */
 @page {
     size: A3;
     margin: 12mm;
+    @top-center { content: none; }
+    @bottom-center { content: none; }
 }
-
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
     color: #000;
 }
-
-.no-print {
-    margin: 15px;
-    text-align: right;
+@media print {
+    .no-print { display: none; }
+    header, footer, .page-break, .page-number, .print-date, .print-url { display: none; }
+    body { margin: 0; padding: 0; }
 }
+.no-print { margin: 15px; text-align: right; }
 
+/* Cabeçalho com imagem à esquerda */
 .header {
-    text-align: center;
-    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
-
 .logo {
     width: 95px;
     height: auto;
-    margin-bottom: 4px;
+    margin-right: 20px;
 }
-
+.header-text {
+    flex: 1;
+    text-align: center;
+}
 .associacao {
     font-size: 15px;
     font-weight: bold;
     text-transform: uppercase;
 }
-
 .contactos {
     font-size: 10px;
-    margin-top: 2px;
+    margin-top: 4px;
 }
-
 .titulo-principal {
     font-size: 14px;
     font-weight: bold;
     margin-top: 10px;
     text-transform: uppercase;
 }
-
 .subtitulo {
     font-size: 13px;
     font-weight: bold;
     margin-top: 3px;
 }
-
+/* Tabela */
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
-    margin-top: 10px;
+    margin-top: 15px;
 }
-
 th, td {
     border: 1px solid #000;
     padding: 3px 4px;
     vertical-align: middle;
 }
-
 th {
     background-color: #f2f2f2;
     font-weight: bold;
-    font-size: 10px;
     text-align: center;
 }
-
 .subcol {
     background-color: #f9f9f9;
 }
-
 .col-dia {
     width: 7%;
     text-align: center;
     font-weight: bold;
 }
-
-.col-motorista,
-.col-chefe {
+.col-motorista, .col-chefe {
     width: 23.25%;
     text-align: center;
 }
-
 .bombeiro-linha {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.4;
 }
-
-.posto-abrev {
-    font-weight: bold;
-}
-
-.nome-bombeiro {
-    font-weight: bold;
-    margin: 0 2px;
-}
-
-.mecanografico {
-    font-size: 9px;
-    color: #333;
-}
-
-hr {
-    margin: 2px 0;
-    border: none;
-    border-top: 1px solid #ccc;
-}
-
+.posto-abrev { font-weight: bold; }
+.nome-bombeiro { font-weight: bold; margin: 0 2px; }
+.mecanografico { font-size: 9px; color: #333; }
+hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
 .footer {
     margin-top: 28px;
     font-size: 11px;
@@ -127,25 +107,12 @@ hr {
     justify-content: space-between;
     align-items: flex-start;
 }
-
 .assinatura {
     text-align: center;
     min-width: 260px;
 }
-
-@media print {
-    body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .no-print {
-        display: none;
-    }
-}
 </style>
 </head>
-
 <body>
 
 <div class="no-print">
@@ -153,30 +120,24 @@ hr {
 </div>
 
 <div class="header">
-    <img
-        class="logo"
-        src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}"
-        alt="Bombeiros Voluntários de Nisa"
-    >
-
-    <div class="associacao">
-        Associação Humanitária dos Bombeiros Voluntários de Nisa
+    <img class="logo"
+         src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}"
+         alt="Bombeiros Voluntários de Nisa"
+         onerror="this.style.display='none'">
+    <div class="header-text">
+        <div class="associacao">Associação Humanitária dos Bombeiros Voluntários de Nisa</div>
+        <div class="contactos">
+            Email: comandonisa@gmail.com &nbsp;|&nbsp;
+            Rua Prof. Cruz Malpique S/N &nbsp;|&nbsp;
+            Código Postal 6050-341 &nbsp;|&nbsp;
+            Telefone 245412303
+        </div>
+        <div class="titulo-principal">
+            Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
+        </div>
+        <div class="subtitulo">ESCALA ELAC</div>
     </div>
-
-    <div class="contactos">
-        Email: comandonisa@gmail.com &nbsp;|&nbsp;
-        Rua Prof. Cruz Malpique S/N &nbsp;|&nbsp;
-        Código Postal 6050-341 &nbsp;|&nbsp;
-        Telefone 245412303
-    </div>
-
-    <div class="titulo-principal">
-        Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
-    </div>
-
-    <div class="subtitulo">
-        ESCALA ELAC
-    </div>
+    <div style="width: 95px;"></div>
 </div>
 
 <table>
@@ -193,33 +154,18 @@ hr {
             <th class="subcol col-chefe">Chefe</th>
         </tr>
     </thead>
-
     <tbody>
-        {% set abrev = {
-            'Comandante': 'Cmd',
-            '2º Comandante': '2ºCmdt',
-            'Adjunto Comando': 'Adj Com',
-            'Of. Bomb. 1ª': 'Of1',
-            'Of. Bomb. 2ª': 'Of2',
-            'Chefe': 'Chf',
-            'Sub Chefe': 'SChf',
-            'Bomb. 1ª': '1ª',
-            'Bomb. 2ª': '2ª',
-            'Bomb. 3ª': '3ª',
-            'Bombeiro Especialista': 'B.Esp',
-            'Estagiário': 'Estg',
-            'Cadete': 'Cad'
-        } %}
-
+        {% set abrev = { 'Comandante': 'Cmd', '2º Comandante': '2ºCmdt', 'Adjunto Comando': 'Adj Com',
+            'Of. Bomb. 1ª': 'Of1', 'Of. Bomb. 2ª': 'Of2', 'Chefe': 'Chf', 'Sub Chefe': 'SChf',
+            'Bomb. 1ª': '1ª', 'Bomb. 2ª': '2ª', 'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp',
+            'Estagiário': 'Estg', 'Cadete': 'Cad' } %}
         {% for dia in dias %}
         <tr>
             <td class="col-dia">{{ dia }}</td>
-
             {% for turno in ['07h/19h', '19h/07h'] %}
                 {% for funcao in ['Motorista', 'Chefe'] %}
                 <td class="col-{{ funcao|lower }}">
                     {% set bombeiros = escala[dia].get(turno, {}).get(funcao, []) %}
-
                     {% if bombeiros %}
                         {% for b in bombeiros %}
                         <div class="bombeiro-linha">
@@ -229,9 +175,7 @@ hr {
                         </div>
                         {% if not loop.last %}<hr>{% endif %}
                         {% endfor %}
-                    {% else %}
-                        -
-                    {% endif %}
+                    {% else %} - {% endif %}
                 </td>
                 {% endfor %}
             {% endfor %}
@@ -241,15 +185,8 @@ hr {
 </table>
 
 <div class="footer">
-    <div>
-        Nisa, ____ de ___________________ de _______
-    </div>
-
-    <div class="assinatura">
-        O Comandante Em Substituição
-        <br><br><br>
-        __________________________________
-    </div>
+    <div>Nisa, ____ de ___________________ de _______</div>
+    <div class="assinatura">O Comandante Em Substituição<br><br><br>__________________________________</div>
 </div>
 
 </body>

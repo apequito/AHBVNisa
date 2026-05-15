@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <title>Escala ECIN - {{ meses[mes-1] }} {{ ano }}</title>
-
 <style>
+/* Regras gerais */
 @page {
     size: A3;
     margin: 12mm;
+    /* Remove cabeçalho/rodapé automático do navegador */
+    @top-center { content: none; }
+    @bottom-center { content: none; }
 }
 
 body {
@@ -17,20 +20,46 @@ body {
     color: #000;
 }
 
+/* Esconde elementos do sistema (data/hora, URL, número de página) */
+@media print {
+    .no-print {
+        display: none;
+    }
+    /* Remove qualquer conteúdo extra que o navegador possa adicionar */
+    header, footer, .page-break, .page-number, .print-date, .print-url {
+        display: none;
+    }
+    /* Garante que o conteúdo impresso não tenha margens extras */
+    body {
+        margin: 0;
+        padding: 0;
+    }
+}
+
+/* Botão de imprimir (só visível no ecrã) */
 .no-print {
     margin: 15px;
     text-align: right;
 }
 
+/* Cabeçalho com imagem à esquerda e texto centralizado */
 .header {
-    text-align: center;
-    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .logo {
     width: 95px;
     height: auto;
-    margin-bottom: 4px;
+    margin-right: 20px;
+}
+
+.header-text {
+    flex: 1;
+    text-align: center;
 }
 
 .associacao {
@@ -41,7 +70,7 @@ body {
 
 .contactos {
     font-size: 10px;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 .titulo-principal {
@@ -57,11 +86,12 @@ body {
     margin-top: 3px;
 }
 
+/* Tabela */
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 th, td {
@@ -73,7 +103,6 @@ th, td {
 th {
     background-color: #f2f2f2;
     font-weight: bold;
-    font-size: 10px;
     text-align: center;
 }
 
@@ -121,6 +150,7 @@ hr {
     border-top: 1px solid #ccc;
 }
 
+/* Rodapé */
 .footer {
     margin-top: 28px;
     font-size: 11px;
@@ -133,17 +163,6 @@ hr {
     text-align: center;
     min-width: 260px;
 }
-
-@media print {
-    body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .no-print {
-        display: none;
-    }
-}
 </style>
 </head>
 
@@ -154,31 +173,29 @@ hr {
 </div>
 
 <div class="header">
-    <img
-        class="logo"
-        src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}"
-        alt="Bombeiros Voluntários de Nisa"
-        onerror="this.style.display='none'"
-    >
-
-    <div class="associacao">
-        Associação Humanitária dos Bombeiros Voluntários de Nisa
+    <img class="logo"
+         src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}"
+         alt="Bombeiros Voluntários de Nisa"
+         onerror="this.style.display='none'">
+    <div class="header-text">
+        <div class="associacao">
+            Associação Humanitária dos Bombeiros Voluntários de Nisa
+        </div>
+        <div class="contactos">
+            Email: comandonisa@gmail.com &nbsp;|&nbsp;
+            Rua Prof. Cruz Malpique S/N &nbsp;|&nbsp;
+            Código Postal 6050-341 &nbsp;|&nbsp;
+            Telefone 245412303
+        </div>
+        <div class="titulo-principal">
+            Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
+        </div>
+        <div class="subtitulo">
+            ESCALA ECIN
+        </div>
     </div>
-
-    <div class="contactos">
-        Email: comandonisa@gmail.com &nbsp;|&nbsp;
-        Rua Prof. Cruz Malpique S/N &nbsp;|&nbsp;
-        Código Postal 6050-341 &nbsp;|&nbsp;
-        Telefone 245412303
-    </div>
-
-    <div class="titulo-principal">
-        Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
-    </div>
-
-    <div class="subtitulo">
-        ESCALA ECIN
-    </div>
+    <!-- Espaço vazio para equilibrar o flex (opcional) -->
+    <div style="width: 95px;"></div>
 </div>
 
 <table>
@@ -197,33 +214,20 @@ hr {
             <th class="subcol col-guarnicao">Guarnição</th>
         </tr>
     </thead>
-
     <tbody>
         {% set abrev = {
-            'Comandante': 'Cmd',
-            '2º Comandante': '2ºCmdt',
-            'Adjunto Comando': 'Adj Com',
-            'Of. Bomb. 1ª': 'Of1',
-            'Of. Bomb. 2ª': 'Of2',
-            'Chefe': 'Chf',
-            'Sub Chefe': 'SChf',
-            'Bomb. 1ª': '1ª',
-            'Bomb. 2ª': '2ª',
-            'Bomb. 3ª': '3ª',
-            'Bombeiro Especialista': 'B.Esp',
-            'Estagiário': 'Estg',
-            'Cadete': 'Cad'
+            'Comandante': 'Cmd', '2º Comandante': '2ºCmdt', 'Adjunto Comando': 'Adj Com',
+            'Of. Bomb. 1ª': 'Of1', 'Of. Bomb. 2ª': 'Of2', 'Chefe': 'Chf',
+            'Sub Chefe': 'SChf', 'Bomb. 1ª': '1ª', 'Bomb. 2ª': '2ª',
+            'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp', 'Estagiário': 'Estg', 'Cadete': 'Cad'
         } %}
-
         {% for dia in dias %}
         <tr>
             <td class="col-dia">{{ dia }}</td>
-
             {% for turno in ['07h/19h', '19h/07h'] %}
                 {% for funcao in ['Motorista', 'Chefe', 'Guarnição'] %}
                 <td class="col-{{ funcao|lower }}">
                     {% set bombeiros = escala[dia].get(turno, {}).get(funcao, []) %}
-
                     {% if bombeiros %}
                         {% for b in bombeiros %}
                         <div class="bombeiro-linha">
@@ -248,7 +252,6 @@ hr {
     <div>
         Nisa, ____ de ___________________ de _______
     </div>
-
     <div class="assinatura">
         O Comandante Em Substituição
         <br><br><br>
