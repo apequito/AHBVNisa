@@ -25,7 +25,6 @@ class Bombeiro(UserMixin, db.Model):
     # Relações
     trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', backref='bombeiro_origem', lazy=True)
     trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', backref='bombeiro_destino', lazy=True)
-    dispensas = db.relationship('Dispensa', backref='bombeiro', lazy=True)
     fardamentos = db.relationship('Fardamento', back_populates='bombeiro', lazy=True)
     disponibilidades = db.relationship('Disponibilidade', back_populates='bombeiro', lazy=True)
     dispensas = db.relationship('Dispensa', back_populates='bombeiro', cascade='all, delete-orphan')
