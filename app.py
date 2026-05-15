@@ -4586,8 +4586,28 @@ def listar_farmacia_central():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    itens = FarmaciaCentral.query.order_by(FarmaciaCentral.nome).all()
-    return render_template('farmacia_central.html', itens=itens)
+    # Obter parâmetros de filtro
+    categoria_filtro = request.args.get('categoria', '')
+    pesquisa = request.args.get('pesquisa', '').strip()
+
+    query = FarmaciaCentral.query
+
+    # Filtro por categoria (case-insensitive)
+    if categoria_filtro:
+        query = query.filter(FarmaciaCentral.categoria.ilike(categoria_filtro))
+
+    # Filtro por nome (pesquisa textual, case-insensitive, contém)
+    if pesquisa:
+        query = query.filter(FarmaciaCentral.nome.ilike(f'%{pesquisa}%'))
+
+    # Ordenação por código ascendente
+    itens = query.order_by(FarmaciaCentral.codigo.asc()).all()
+
+    # Obter lista de categorias distintas (para o dropdown)
+    categorias = db.session.query(FarmaciaCentral.categoria).distinct().order_by(FarmaciaCentral.categoria).all()
+    categorias = [c[0] for c in categorias]
+
+    return render_template('farmacia_central.html', itens=itens, categorias=categorias, categoria_filtro=categoria_filtro, pesquisa=pesquisa)
 
 
 

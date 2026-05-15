@@ -6,6 +6,33 @@
     <a href="{{ url_for('stock_farmacia') }}" class="btn btn-secondary">← Voltar ao Stock Farmácia</a>
 </div>
 
+<!-- Formulário de filtros -->
+<div class="card mb-4">
+    <div class="card-header bg-light">Filtros</div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('listar_farmacia_central') }}" class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Categoria</label>
+                <select name="categoria" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat }}" {% if categoria_filtro == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Pesquisar (nome)</label>
+                <input type="text" name="pesquisa" class="form-control form-control-sm" value="{{ pesquisa }}" placeholder="Ex: nasofaríngea">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                <a href="{{ url_for('listar_farmacia_central') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabela de stock -->
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
@@ -36,11 +63,12 @@
                 </button>
             </td>
         </tr>
-        {% endfor %}
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted">Nenhum produto encontrado.{% endfor %}
     </tbody>
 </table>
 
-<!-- Modal Transferir -->
+<!-- Modal Transferir (mantido igual) -->
 <div class="modal fade" id="modalTransferir" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('transferir_para_central') }}">
