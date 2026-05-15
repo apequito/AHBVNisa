@@ -4586,29 +4586,37 @@ def listar_farmacia_central():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Obter parâmetros de filtro
+    # Obter parâmetros da query string
     categoria_filtro = request.args.get('categoria', '')
     pesquisa = request.args.get('pesquisa', '').strip()
 
+    # Query base
     query = FarmaciaCentral.query
 
-    # Filtro por categoria (case-insensitive)
+    # Filtro por categoria (correspondência exata)
     if categoria_filtro:
-        query = query.filter(FarmaciaCentral.categoria.ilike(categoria_filtro))
+        query = query.filter(FarmaciaCentral.categoria == categoria_filtro)
 
-    # Filtro por nome (pesquisa textual, case-insensitive, contém)
+    # Filtro por nome (case‑insensitive + ignorando acentos, usando unaccent)
     if pesquisa:
-        query = query.filter(FarmaciaCentral.nome.ilike(f'%{pesquisa}%'))
+        # Remove acentos tanto da coluna como do termo de pesquisa
+        query = query.filter(
+            func.unaccent(FarmaciaCentral.nome).ilike(f'%{pesquisa}%')
+        )
 
     # Ordenação por código ascendente
     itens = query.order_by(FarmaciaCentral.codigo.asc()).all()
 
-    # Obter lista de categorias distintas (para o dropdown)
-    categorias = db.session.query(FarmaciaCentral.categoria).distinct().order_by(FarmaciaCentral.categoria).all()
-    categorias = [c[0] for c in categorias]
+    # Lista de categorias distintas para o combobox (já ordenada)
+    categorias = db.session.query(FarmaciaCentral.categoria).distinct() \
+                           .order_by(FarmaciaCentral.categoria).all()
+    categorias = [c[0] for c in categorias]  # converte tuplas em lista simples
 
-    return render_template('farmacia_central.html', itens=itens, categorias=categorias, categoria_filtro=categoria_filtro, pesquisa=pesquisa)
-
+    return render_template('farmacia_central.html',
+                           itens=itens,
+                           categorias=categorias,
+                           categoria_filtro=categoria_filtro,
+                           pesquisa=pesquisa)
 
 
 
