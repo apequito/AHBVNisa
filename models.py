@@ -6,28 +6,40 @@ db = SQLAlchemy()
 
 
 # ---------- Bombeiro (utilizador do sistema) ----------
-class Bombeiro(UserMixin, db.Model):
+class Bombeiro(db.Model, UserMixin):
     __tablename__ = 'bombeiros'
     id = db.Column(db.Integer, primary_key=True)
-    numero_interno = db.Column(db.String(10), unique=True, nullable=False)
+    numero_interno = db.Column(db.String(20), unique=True, nullable=False)
     mecanografico = db.Column(db.String(20), unique=True, nullable=False)
     nome = db.Column(db.String(100), nullable=False)
-    nomecompleto = db.Column(db.String(200), nullable=True)  # ← NOVO CAMPO
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    telemovel = db.Column(db.String(20), unique=True, nullable=True)
-    resp_departamento = db.Column(db.String(50), nullable=True)
-    posto = db.Column(db.String(50))
+    nomecompleto = db.Column(db.String(200))
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    posto = db.Column(db.String(50), default='Bombeiro')
+    tipo_bombeiro = db.Column(db.String(20), default='Voluntário')  # Profissional ou Voluntário
+    tipo_user = db.Column(db.String(20), default='User')  # Admin ou User
+    telemovel = db.Column(db.String(20))
+    resp_departamento = db.Column(db.String(50))
     ativo = db.Column(db.Boolean, default=True)
-    tipo_user = db.Column(db.String(10), default='User')
-    tipo_bombeiro = db.Column(db.String(20), default='Voluntário')
 
-    # Relações
-    trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', backref='bombeiro_origem', lazy=True)
-    trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', backref='bombeiro_destino', lazy=True)
-    fardamentos = db.relationship('Fardamento', back_populates='bombeiro', lazy=True)
-    disponibilidades = db.relationship('Disponibilidade', back_populates='bombeiro', lazy=True)
+    # Relações (sem backref – usar back_populates)
+    escalas = db.relationship('Escala', back_populates='bombeiro')
+    trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', back_populates='bombeiro_origem')
+    trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', back_populates='bombeiro_destino')
     dispensas = db.relationship('Dispensa', back_populates='bombeiro', cascade='all, delete-orphan')
+    creditos = db.relationship('CreditoDispensa', back_populates='bombeiro')
+    disponibilidades = db.relationship('Disponibilidade', back_populates='bombeiro')
+    fardamentos = db.relationship('Fardamento', back_populates='bombeiro')
+    fardamentos_atribuidos = db.relationship('FardamentoAtribuido', back_populates='bombeiro')
+    ecins = db.relationship('Ecin', back_populates='bombeiro')
+    deslocacoes = db.relationship('Deslocacao', back_populates='bombeiro')
+    ferias = db.relationship('Ferias', back_populates='bombeiro')
+    notas_criadas = db.relationship('Nota', back_populates='criador')
+    mensagens_enviadas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.remetente_id', back_populates='remetente')
+    mensagens_recebidas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.destinatario_id', back_populates='destinatario')
+    checklists = db.relationship('Checklist', back_populates='bombeiro')
+    reunioes_criadas = db.relationship('Reuniao', back_populates='criador')
+    notas_comando = db.relationship('NotaComando', back_populates='criador')
 
     def get_id(self):
         return str(self.id)
@@ -165,21 +177,23 @@ class Dispensa(db.Model):
     categoria = db.Column(db.String(50))   # NOVO
     turno = db.Column(db.String(30))       # NOVO
 
+    # Relações (sem backref – usar back_populates)
     bombeiro = db.relationship('Bombeiro', back_populates='dispensas')
-    creditos = db.relationship('CreditoDispensa', backref='dispensa')  # já deve existir
+    creditos = db.relationship('CreditoDispensa', back_populates='dispensa')
 
 class CreditoDispensa(db.Model):
     __tablename__ = 'creditos_dispensa'
     id = db.Column(db.Integer, primary_key=True)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data = db.Column(db.Date, nullable=False)
-    descricao = db.Column(db.Text)
-    horas = db.Column(db.Integer, default=8)                 # NOVO
-    observacao = db.Column(db.String(20), default='Não Gozado')
+    descricao = db.Column(db.String(200))
+    horas = db.Column(db.Integer, default=8)
+    observacao = db.Column(db.String(50), default='Não Gozado')
     dispensa_id = db.Column(db.Integer, db.ForeignKey('dispensas.id'), nullable=True)
 
-    bombeiro = db.relationship('Bombeiro', backref='creditos_dispensa')
-    dispensa = db.relationship('Dispensa', backref='creditos_usados')
+    # Relações
+    bombeiro = db.relationship('Bombeiro', back_populates='creditos')
+    dispensa = db.relationship('Dispensa', back_populates='creditos')
 
 
 # ---------- Checklist ----------
