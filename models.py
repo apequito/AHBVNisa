@@ -22,6 +22,7 @@ class Bombeiro(db.Model, UserMixin):
     resp_departamento = db.Column(db.String(50))
     ativo = db.Column(db.Boolean, default=True)
 
+    # Relações com back_populates (todas bidirecionais)
     escalas = db.relationship('Escala', back_populates='bombeiro')
     trocas_origem = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_origem_id', back_populates='bombeiro_origem')
     trocas_destino = db.relationship('TrocaServico', foreign_keys='TrocaServico.bombeiro_destino_id', back_populates='bombeiro_destino')
@@ -38,11 +39,14 @@ class Bombeiro(db.Model, UserMixin):
     mensagens_enviadas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.remetente_id', back_populates='remetente')
     mensagens_recebidas = db.relationship('MensagemCorreio', foreign_keys='MensagemCorreio.destinatario_id', back_populates='destinatario')
     checklists = db.relationship('Checklist', back_populates='bombeiro')
+    checklists_feitos = db.relationship('ChecklistAmbulancia', back_populates='bombeiro')
     reunioes_criadas = db.relationship('Reuniao', back_populates='criador')
-    notas_comando = db.relationship('NotaComando', back_populates='criador')
+    notas_comando_criadas = db.relationship('NotaComando', back_populates='criador')
+    avarias_reportadas = db.relationship('Avaria', back_populates='reportador')
 
     def get_id(self):
         return str(self.id)
+
 
 # ---------- Viatura ----------
 class Viatura(db.Model):
@@ -56,15 +60,20 @@ class Viatura(db.Model):
     ano = db.Column(db.Integer)
     estado = db.Column(db.String(20), default='operacional')
 
-    avarias = db.relationship('Avaria', backref='viatura', lazy=True)
-    checklists = db.relationship('Checklist', backref='viatura', lazy=True)
+    avarias = db.relationship('Avaria', back_populates='viatura')
+    checklists = db.relationship('Checklist', back_populates='viatura')
+    oficina_registos = db.relationship('Oficina', back_populates='viatura')
+    gestao_frota = db.relationship('GestaoFrota', back_populates='viatura', uselist=False)
+    reposicoes_stock = db.relationship('StockAmbulancia', back_populates='ambulancia')
+    checklists_ambulancia = db.relationship('ChecklistAmbulancia', back_populates='viatura')
+    deslocacoes = db.relationship('Deslocacao', back_populates='viatura')
 
 
-# ---------- Avaria de viatura ----------
+# ---------- Avaria ----------
 class Avaria(db.Model):
     __tablename__ = 'avarias'
     id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(10), unique=True, nullable=False)  # novo campo
+    codigo = db.Column(db.String(10), unique=True, nullable=False)
     viatura_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=False)
     descricao = db.Column(db.Text, nullable=False)
     data_reporte = db.Column(db.DateTime, default=datetime.utcnow)
@@ -75,7 +84,9 @@ class Avaria(db.Model):
     responsavel_oficina = db.Column(db.Boolean, default=False)
     comando_verificado = db.Column(db.Boolean, default=False)
 
-    reportador = db.relationship('Bombeiro', backref='avarias_reportadas')
+    viatura = db.relationship('Viatura', back_populates='avarias')
+    reportador = db.relationship('Bombeiro', back_populates='avarias_reportadas')
+    oficina_registos = db.relationship('Oficina', back_populates='avaria')
 
 
 # ---------- Oficina ----------
@@ -97,12 +108,13 @@ class Oficina(db.Model):
     chefe_oficina = db.Column(db.Boolean, default=False)
     comando = db.Column(db.Boolean, default=False)
     operacional = db.Column(db.Boolean, default=False)
-    estado = db.Column(db.String(20), default='Oficina')  # 'Oficina' ou 'Resolvido'
+    estado = db.Column(db.String(20), default='Oficina')
 
-    avaria = db.relationship('Avaria', backref='oficina_registos')
-    viatura = db.relationship('Viatura', backref='oficina_registos')
+    avaria = db.relationship('Avaria', back_populates='oficina_registos')
+    viatura = db.relationship('Viatura', back_populates='oficina_registos')
 
-# ---------- GestaoFrota ----------
+
+# ---------- Gestão Frota ----------
 class GestaoFrota(db.Model):
     __tablename__ = 'gestao_frota'
     id = db.Column(db.Integer, primary_key=True)
@@ -115,10 +127,10 @@ class GestaoFrota(db.Model):
     kms_correia = db.Column(db.Integer)
     outros_apontamentos = db.Column(db.Text)
 
-    viatura = db.relationship('Viatura', backref=db.backref('gestao_frota', uselist=False))
+    viatura = db.relationship('Viatura', back_populates='gestao_frota')
 
 
-# ---------- Escala de serviço ----------
+# ---------- Escala ----------
 class Escala(db.Model):
     __tablename__ = 'escalas'
     id = db.Column(db.Integer, primary_key=True)
@@ -132,6 +144,8 @@ class Escala(db.Model):
 
     bombeiro = db.relationship('Bombeiro', back_populates='escalas')
 
+
+# ---------- Férias ----------
 class Ferias(db.Model):
     __tablename__ = 'ferias'
     id = db.Column(db.Integer, primary_key=True)
@@ -146,8 +160,7 @@ class Ferias(db.Model):
     aprovador = db.relationship('Bombeiro', foreign_keys=[aprovado_por], back_populates='ferias_aprovadas')
 
 
-
-# ---------- Troca de serviço ----------
+# ---------- Troca de Serviço ----------
 class TrocaServico(db.Model):
     __tablename__ = 'trocas_servico'
     id = db.Column(db.Integer, primary_key=True)
@@ -165,8 +178,7 @@ class TrocaServico(db.Model):
     bombeiro_destino = db.relationship('Bombeiro', foreign_keys=[bombeiro_destino_id], back_populates='trocas_destino')
 
 
-
-# ---------- Dispensa de serviço ----------
+# ---------- Dispensa ----------
 class Dispensa(db.Model):
     __tablename__ = 'dispensas'
     id = db.Column(db.Integer, primary_key=True)
@@ -182,7 +194,7 @@ class Dispensa(db.Model):
     creditos = db.relationship('CreditoDispensa', back_populates='dispensa')
 
 
-
+# ---------- Créditos de Dispensa ----------
 class CreditoDispensa(db.Model):
     __tablename__ = 'creditos_dispensa'
     id = db.Column(db.Integer, primary_key=True)
@@ -197,7 +209,7 @@ class CreditoDispensa(db.Model):
     dispensa = db.relationship('Dispensa', back_populates='creditos')
 
 
-# ---------- Checklist ----------
+# ---------- Checklist de Viatura ----------
 class Checklist(db.Model):
     __tablename__ = 'checklists'
     id = db.Column(db.Integer, primary_key=True)
@@ -207,8 +219,8 @@ class Checklist(db.Model):
     itens_verificados = db.Column(db.Text)
     observacoes = db.Column(db.Text)
 
-    bombeiro = db.relationship('Bombeiro', backref='checklists')
-
+    viatura = db.relationship('Viatura', back_populates='checklists')
+    bombeiro = db.relationship('Bombeiro', back_populates='checklists')
 
 
 # ---------- Fardamento ----------
@@ -234,6 +246,7 @@ class Fardamento(db.Model):
     stock = db.relationship('StockFardamento', back_populates='fardamentos')
     atribuicao = db.relationship('FardamentoAtribuido', back_populates='pedido', uselist=False)
 
+
 # ---------- Stock Fardamento ----------
 class StockFardamento(db.Model):
     __tablename__ = 'stock_fardamento'
@@ -244,8 +257,32 @@ class StockFardamento(db.Model):
     tipo = db.Column(db.String(50), default='Outro')
     stock = db.Column(db.Integer, default=0)
 
-    fardamentos = db.relationship('Fardamento', back_populates='stock', lazy=True)
+    fardamentos = db.relationship('Fardamento', back_populates='stock')
 
+
+# ---------- Fardamento Atribuído ----------
+class FardamentoAtribuido(db.Model):
+    __tablename__ = 'fardamento_atribuido'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    tipo = db.Column(db.String(50))
+    nome = db.Column(db.String(100))
+    tamanho = db.Column(db.String(20))
+    data_entrega = db.Column(db.Date, nullable=False)
+    data_devolucao = db.Column(db.Date, nullable=True)
+    estado = db.Column(db.String(20), default='Entregue')
+    idpedido = db.Column(db.Integer, db.ForeignKey('fardamentos.id'), nullable=True)
+
+    bombeiro = db.relationship('Bombeiro', back_populates='fardamentos_atribuidos')
+    pedido = db.relationship('Fardamento', back_populates='atribuicao')
+
+
+# ---------- Tipo de Farda/Material ----------
+class TipoFardaMaterial(db.Model):
+    __tablename__ = 'tipos_farda_material'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)
+    categoria = db.Column(db.String(20), nullable=False, default='Farda')
 
 
 # ---------- Disponibilidade ----------
@@ -255,27 +292,28 @@ class Disponibilidade(db.Model):
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
     turno_extra = db.Column(db.String(20))
-    categoria = db.Column(db.String(30), nullable=True)   # novo campo
+    categoria = db.Column(db.String(30), nullable=True)
     confirmada = db.Column(db.Boolean, default=False)
 
     bombeiro = db.relationship('Bombeiro', back_populates='disponibilidades')
 
-# ---------- Ecin ----------
 
+# ---------- ECIN / ELAC ----------
 class Ecin(db.Model):
     __tablename__ = 'ecins'
     id = db.Column(db.Integer, primary_key=True)
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
     turno = db.Column(db.String(20), nullable=False)
-    estado = db.Column(db.String(20), default='Pendente')   # agora guarda a legenda após escalamento
-    funcao = db.Column(db.String(20), nullable=True)        # Motorista, Chefe, Guarnição
-    categoria = db.Column(db.String(30), nullable=True)     # ECIN, ELAC
-    valor = db.Column(db.Float, nullable=True)  # novo campo
+    estado = db.Column(db.String(20), default='Pendente')
+    funcao = db.Column(db.String(20), nullable=True)
+    categoria = db.Column(db.String(30), nullable=True)
+    valor = db.Column(db.Float, nullable=True)
 
-    bombeiro = db.relationship('Bombeiro', backref='ecins')
+    bombeiro = db.relationship('Bombeiro', back_populates='ecins')
 
-    # ---------- Stock Farmácia ----------
+
+# ---------- Stock Farmácia ----------
 class StockFarmacia(db.Model):
     __tablename__ = 'stock_farmacia'
     id = db.Column(db.Integer, primary_key=True)
@@ -288,20 +326,19 @@ class StockFarmacia(db.Model):
     data_validade = db.Column(db.Date, nullable=True)
     data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relação com StockAmbulancia (sem backref problemático)
     saidas = db.relationship('StockAmbulancia', back_populates='produto', cascade='all, delete-orphan')
+    checklist_itens = db.relationship('ChecklistAmbulanciaItem', back_populates='produto')
 
 
-
+# ---------- Categoria Farmácia ----------
 class CategoriaFarmacia(db.Model):
     __tablename__ = 'categorias_farmacia'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), unique=True, nullable=False)
-    checklist = db.Column(db.Boolean, default=False)   # novo campo
+    checklist = db.Column(db.Boolean, default=False)
 
 
-
-    # ---------- Stock Ambulancia ----------
+# ---------- Stock Ambulância ----------
 class StockAmbulancia(db.Model):
     __tablename__ = 'stock_ambulancia'
     id = db.Column(db.Integer, primary_key=True)
@@ -314,103 +351,84 @@ class StockAmbulancia(db.Model):
     confirmado = db.Column(db.Boolean, default=False)
     data = db.Column(db.DateTime, default=datetime.utcnow)
 
-    ambulancia = db.relationship('Viatura', backref='reposicoes_stock')
+    ambulancia = db.relationship('Viatura', back_populates='reposicoes_stock')
     produto = db.relationship('StockFarmacia', back_populates='saidas')
     solicitante = db.relationship('Bombeiro', foreign_keys=[solicitante_id])
     responsavel = db.relationship('Bombeiro', foreign_keys=[responsavel_id])
-    checklist = db.relationship('ChecklistAmbulancia')  # ← sem backref
+    checklist = db.relationship('ChecklistAmbulancia', back_populates='reposicoes')
 
-# ---------- Checklist Ambulancia ----------
 
+# ---------- Checklist Ambulância ----------
 class ChecklistAmbulancia(db.Model):
     __tablename__ = 'checklist_ambulancia'
     id = db.Column(db.Integer, primary_key=True)
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
     viatura_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=False)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)   # quem fez a checklist
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     finalizado = db.Column(db.Boolean, default=False)
 
-    viatura = db.relationship('Viatura', backref='checklists_ambulancia')
-    bombeiro = db.relationship('Bombeiro', backref='checklists_feitos')
-    itens = db.relationship('ChecklistAmbulanciaItem', back_populates='checklist', lazy=True, cascade='all, delete-orphan')
+    viatura = db.relationship('Viatura', back_populates='checklists_ambulancia')
+    bombeiro = db.relationship('Bombeiro', back_populates='checklists_feitos')
+    itens = db.relationship('ChecklistAmbulanciaItem', back_populates='checklist', cascade='all, delete-orphan')
     reposicoes = db.relationship('StockAmbulancia', back_populates='checklist')
 
 
+# ---------- Itens do Checklist Ambulância ----------
 class ChecklistAmbulanciaItem(db.Model):
     __tablename__ = 'checklist_ambulancia_itens'
     id = db.Column(db.Integer, primary_key=True)
     checklist_id = db.Column(db.Integer, db.ForeignKey('checklist_ambulancia.id'), nullable=False)
     produto_id = db.Column(db.Integer, db.ForeignKey('stock_farmacia.id'), nullable=False)
-    quantidade = db.Column(db.Integer, default=0)   # preenchido depois
+    quantidade = db.Column(db.Integer, default=0)
 
     checklist = db.relationship('ChecklistAmbulancia', back_populates='itens')
-    produto = db.relationship('StockFarmacia', backref='checklist_itens')
+    produto = db.relationship('StockFarmacia', back_populates='checklist_itens')
 
+
+# ---------- Notas da Central ----------
 class Nota(db.Model):
-        __tablename__ = 'notas'
-        id = db.Column(db.Integer, primary_key=True)
-        criador_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-        data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
-        descricao = db.Column(db.Text, nullable=False)
-        data_evento = db.Column(db.Date, nullable=True)  # data do evento, opcional
+    __tablename__ = 'notas'
+    id = db.Column(db.Integer, primary_key=True)
+    criador_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    descricao = db.Column(db.Text, nullable=False)
+    data_evento = db.Column(db.Date, nullable=True)
 
-        criador = db.relationship('Bombeiro', backref='notas_criadas')
+    criador = db.relationship('Bombeiro', back_populates='notas_criadas')
 
 
+# ---------- Mensagens do Correio ----------
 class MensagemCorreio(db.Model):
     __tablename__ = 'mensagens_correio'
     id = db.Column(db.Integer, primary_key=True)
     remetente_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-    destinatario_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)   # se for para um bombeiro
-    departamento = db.Column(db.String(50), nullable=True)   # se for para um departamento inteiro
+    destinatario_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    departamento = db.Column(db.String(50), nullable=True)
     assunto = db.Column(db.String(150), nullable=False, default='Sem assunto')
     corpo = db.Column(db.Text, nullable=False)
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
     lida = db.Column(db.Boolean, default=False)
-    apagada_remetente = db.Column(db.Boolean, default=False)   # para o remetente poder apagar da vista
-    apagada_destinatario = db.Column(db.Boolean, default=False) # para o destinatário poder apagar
+    apagada_remetente = db.Column(db.Boolean, default=False)
+    apagada_destinatario = db.Column(db.Boolean, default=False)
 
-    remetente = db.relationship('Bombeiro', foreign_keys=[remetente_id], backref='mensagens_enviadas')
-    destinatario = db.relationship('Bombeiro', foreign_keys=[destinatario_id], backref='mensagens_recebidas')
-    # Sem a linha de relationship – o acesso a bombeiro será feito via backref da classe Bombeiro
-
-
-#-------------------Fardamento--------------
-class FardamentoAtribuido(db.Model):
-    __tablename__ = 'fardamento_atribuido'
-    id = db.Column(db.Integer, primary_key=True)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-    tipo = db.Column(db.String(50))
-    nome = db.Column(db.String(100))
-    tamanho = db.Column(db.String(20))
-    data_entrega = db.Column(db.Date, nullable=False)
-    data_devolucao = db.Column(db.Date, nullable=True)
-    estado = db.Column(db.String(20), default='Entregue')
-    idpedido = db.Column(db.Integer, db.ForeignKey('fardamentos.id'), nullable=True)   # NOVO CAMPO
-
-    bombeiro = db.relationship('Bombeiro', backref='fardamentos_atribuidos')
-    pedido = db.relationship('Fardamento', backref='atribuicao')   # relação com o pedido original
-    pedido = db.relationship('Fardamento', back_populates='atribuicao')
+    remetente = db.relationship('Bombeiro', foreign_keys=[remetente_id], back_populates='mensagens_enviadas')
+    destinatario = db.relationship('Bombeiro', foreign_keys=[destinatario_id], back_populates='mensagens_recebidas')
 
 
-class TipoFardaMaterial(db.Model):
-    __tablename__ = 'tipos_farda_material'
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), unique=True, nullable=False)
-    categoria = db.Column(db.String(20), nullable=False, default='Farda')  # 'Farda' ou 'Material'
-
-
+# ---------- Reuniões ----------
 class Reuniao(db.Model):
     __tablename__ = 'reunioes'
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.Date, nullable=False)
-    hora = db.Column(db.String(10), nullable=True)          # Formato HH:MM, opcional
+    hora = db.Column(db.String(10), nullable=True)
     assunto = db.Column(db.String(200), nullable=False)
     descricao = db.Column(db.Text, nullable=True)
     criador_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
 
-    criador = db.relationship('Bombeiro', backref='reunioes_criadas')
+    criador = db.relationship('Bombeiro', back_populates='reunioes_criadas')
 
+
+# ---------- Notas do Comando ----------
 class NotaComando(db.Model):
     __tablename__ = 'notas_comando'
     id = db.Column(db.Integer, primary_key=True)
@@ -419,21 +437,22 @@ class NotaComando(db.Model):
     descricao = db.Column(db.Text, nullable=False)
     data_evento = db.Column(db.Date, nullable=True)
 
-    criador = db.relationship('Bombeiro', backref='notas_comando_criadas')
+    criador = db.relationship('Bombeiro', back_populates='notas_comando_criadas')
 
 
+# ---------- Deslocações ----------
 class Deslocacao(db.Model):
     __tablename__ = 'deslocacoes'
     id = db.Column(db.Integer, primary_key=True)
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
-    hora_inicio = db.Column(db.String(10), nullable=False)  # HH:MM
-    servico = db.Column(db.String(50), nullable=False)  # "C. Doentes", "Evacuação", "Retorno", "Urgência"
+    hora_inicio = db.Column(db.String(10), nullable=False)
+    servico = db.Column(db.String(50), nullable=False)
     local_origem = db.Column(db.String(200))
     local_destino = db.Column(db.String(200))
-    valor = db.Column(db.Float, nullable=True)  # visível apenas a Admin/Comando/Secretaria
+    valor = db.Column(db.Float, nullable=True)
     viatura_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
     n_servico = db.Column(db.String(20), nullable=True)
 
-    bombeiro = db.relationship('Bombeiro', backref='deslocacoes')
-    viatura = db.relationship('Viatura', backref='deslocacoes')
+    bombeiro = db.relationship('Bombeiro', back_populates='deslocacoes')
+    viatura = db.relationship('Viatura', back_populates='deslocacoes')
