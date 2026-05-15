@@ -4976,7 +4976,7 @@ def imprimir_checklist(checklist_id):
 @app.route('/stock-ambulancia')
 @login_required
 def stock_ambulancia():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia', 'Socorrista']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia', 'Socorrista', 'Central']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -4988,7 +4988,7 @@ def stock_ambulancia():
 @app.route('/stock-ambulancia/confirmar/<int:id>')
 @login_required
 def confirmar_reposicao(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia']:
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia', 'Socorrista', 'Central']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('stock_ambulancia'))
 
