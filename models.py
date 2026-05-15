@@ -28,6 +28,7 @@ class Bombeiro(UserMixin, db.Model):
     dispensas = db.relationship('Dispensa', backref='bombeiro', lazy=True)
     fardamentos = db.relationship('Fardamento', back_populates='bombeiro', lazy=True)
     disponibilidades = db.relationship('Disponibilidade', back_populates='bombeiro', lazy=True)
+    dispensas = db.relationship('Dispensa', back_populates='bombeiro', cascade='all, delete-orphan')
 
     def get_id(self):
         return str(self.id)
@@ -165,7 +166,7 @@ class Dispensa(db.Model):
     categoria = db.Column(db.String(50))   # NOVO
     turno = db.Column(db.String(30))       # NOVO
 
-    bombeiro = db.relationship('Bombeiro', backref='dispensas')
+    bombeiro = db.relationship('Bombeiro', back_populates='dispensas')
     creditos = db.relationship('CreditoDispensa', backref='dispensa')  # já deve existir
 
 class CreditoDispensa(db.Model):
