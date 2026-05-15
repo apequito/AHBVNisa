@@ -2517,11 +2517,11 @@ def aprovar_troca(id):
 @login_required
 def dispensas():
     if request.method == 'POST':
-        # Dados da dispensa
         data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
         data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date()
         motivo = request.form.get('motivo', '')
-        # IDs dos créditos selecionados (vem como string separada por vírgulas)
+        categoria = request.form.get('categoria_disp', '')   # NOVO
+        turno = request.form.get('turno_disp', '')           # NOVO
         creditos_ids_str = request.form.get('creditos_selecionados', '')
         creditos_ids = [int(x.strip()) for x in creditos_ids_str.split(',') if x.strip().isdigit()] if creditos_ids_str else []
 
@@ -2529,31 +2529,59 @@ def dispensas():
             bombeiro_id=current_user.id,
             data_inicio=data_inicio,
             data_fim=data_fim,
-            motivo=motivo
+            motivo=motivo,
+            categoria=categoria,
+            turno=turno
         )
         db.session.add(nova)
-        db.session.commit()  # para obter o id
+        db.session.commit()
 
-        # Se foram selecionados créditos, associa-os provisoriamente (só serão efetivados na aprovação)
-        # Podemos guardar os ids numa coluna de texto ou criar tabela associativa, mas vou optar por já associar
-        # e na aprovação apenas mudamos o estado. Mas o pedido é "quando aprovada pelo comandante, os dias selecionados na listbox mudam para Gozado".
-        # Portanto, vamos já associar desde já, mas mantendo o estado 'Não Gozado' até aprovação.
         for cid in creditos_ids:
             credito = CreditoDispensa.query.get(cid)
             if credito and credito.bombeiro_id == current_user.id and credito.observacao == 'Não Gozado':
                 credito.dispensa_id = nova.id
-                # Ainda não mudamos a observacao; só na aprovação.
         db.session.commit()
 
         flash('Pedido de dispensa enviado.', 'success')
         return redirect(url_for('dispensas'))
 
-    # GET – listagem de dispensas (já existente, com lógica admin/user)
+    # GET – listagem (igual ao seu código)
     if current_user.tipo_user == 'Admin':
         dispensas_lista = Dispensa.query.order_by(Dispensa.id.desc()).all()
     else:
         dispensas_lista = Dispensa.query.filter_by(bombeiro_id=current_user.id).order_by(Dispensa.id.desc()).all()
     return render_template('dispensas.html', dispensas=dispensas_lista)
+
+
+@app.route('/dispensas/detalhes/<int:id>')
+@login_required
+def detalhes_dispensa(id):
+    dispensa = Dispensa.query.get_or_404(id)
+    # Permissão: só o próprio, Admin ou Comando
+    if current_user.id != dispensa.bombeiro_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'erro': 'Acesso negado'}), 403
+
+    creditos = []
+    for cred in dispensa.creditos:
+        creditos.append({
+            'data': cred.data.strftime('%d/%m/%Y'),
+            'descricao': cred.descricao,
+            'horas': cred.horas
+        })
+
+    dados = {
+        'bombeiro': dispensa.bombeiro.nome,
+        'mecanografico': dispensa.bombeiro.mecanografico,
+        'data_inicio': dispensa.data_inicio.strftime('%d/%m/%Y'),
+        'data_fim': dispensa.data_fim.strftime('%d/%m/%Y'),
+        'categoria': dispensa.categoria or '-',
+        'turno': dispensa.turno or '-',
+        'motivo': dispensa.motivo or '-',
+        'aprovada': dispensa.aprovada,
+        'creditos': creditos
+    }
+    return jsonify(dados)
+
 
 @app.route('/api/creditos_nao_gozados/<int:user_id>')
 @login_required

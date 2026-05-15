@@ -157,11 +157,16 @@ class TrocaServico(db.Model):
 class Dispensa(db.Model):
     __tablename__ = 'dispensas'
     id = db.Column(db.Integer, primary_key=True)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_inicio = db.Column(db.Date, nullable=False)
     data_fim = db.Column(db.Date, nullable=False)
-    motivo = db.Column(db.Text)
+    motivo = db.Column(db.String(200))
     aprovada = db.Column(db.Boolean, default=False)
+    categoria = db.Column(db.String(50))   # NOVO
+    turno = db.Column(db.String(30))       # NOVO
+
+    bombeiro = db.relationship('Bombeiro', backref='dispensas')
+    creditos = db.relationship('CreditoDispensa', backref='dispensa')  # já deve existir
 
 class CreditoDispensa(db.Model):
     __tablename__ = 'creditos_dispensa'
