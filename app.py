@@ -3187,8 +3187,8 @@ def listar_ecins():
         query = query.join(Bombeiro).filter(Bombeiro.mecanografico.ilike(f'%{mec}%'))
 
     # Filtro por nome (bombeiro específico)
-    if nome_filtro:
-        query = query.filter(Ecin.bombeiro_id == nome_filtro)
+    if nome_filtro and nome_filtro.isdigit():
+        query = query.filter(Ecin.bombeiro_id == int(nome_filtro))
 
     # Filtro por data (dia exato)
     if data_filtro:
