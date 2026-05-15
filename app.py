@@ -3518,54 +3518,50 @@ def imprimir_escala_ecin():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    mes = request.args.get('mes', type=int)
-    ano = request.args.get('ano', type=int)
-    if not mes or not ano:
-        hoje = date.today()
-        mes = hoje.month
-        ano = hoje.year
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
 
-    # Filtrar apenas ECINs com categoria 'ECIN' e estados Motorista/Chefe/Guarnição
+    # Buscar todos os ECINs do mês/ano com categoria ECIN e estado que indique escalado (Motorista/Chefe/Guarnição)
     ecins = Ecin.query.filter(
         Ecin.categoria == 'ECIN',
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN']),
         db.extract('month', Ecin.data) == mes,
         db.extract('year', Ecin.data) == ano
-    ).order_by(Ecin.data).all()
+    ).order_by(Ecin.data, Ecin.turno, Ecin.funcao).all()
 
+    # Estrutura: escala[dia][turno][funcao] = lista de dicionários com nome, mecanografico, posto
     from collections import defaultdict
-    escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))  # dia -> turno -> funcao -> nomes
+    escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     for ec in ecins:
-        dia_str = ec.data.strftime('%d/%m/%Y')
-        turno_str = ec.turno
-        if turno_str in ['07h/19h', '19h/07h']:
-            funcao = ec.funcao if ec.funcao else 'Outro'
-            escala[dia_str][turno_str][funcao].append({
-                'nome': ec.bombeiro.nome,
-                'mecanografico': ec.bombeiro.mecanografico,
-                'posto': ec.bombeiro.posto
-            })
+        dia = ec.data.day
+        turno = ec.turno   # "07h/19h" ou "19h/07h"
+        funcao = ec.funcao  # "Motorista", "Chefe", "Guarnição"
+        bombeiro = {
+            'nome': ec.bombeiro.nome,
+            'mecanografico': ec.bombeiro.mecanografico,
+            'posto': ec.bombeiro.posto
+        }
+        escala[dia][turno][funcao].append(bombeiro)
 
-    dias_ordenados = sorted(escala.keys(), key=lambda d: datetime.strptime(d, '%d/%m/%Y'))
-    meses_nomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro',
-                   'Novembro', 'Dezembro']
-    # Calcular dias de fim de semana no mês
-    import calendar
-    from datetime import date
+    # Ordenar dias
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    dias = list(range(1, ultimo_dia + 1))
+
+    # Calcular fins de semana
     weekend_days = []
-    for dia in range(1, ultimo_dia + 1):
-        data = date(ano, mes, dia)
-        if data.weekday() >= 5:  # 5=sábado, 6=domingo
+    for dia in dias:
+        if date(ano, mes, dia).weekday() >= 5:
             weekend_days.append(dia)
 
+    meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
     return render_template('imprimir_ecin_escala.html',
                            escala=escala,
-                           dias=dias_ordenados,
+                           dias=dias,
                            mes=mes,
                            ano=ano,
-                           meses=meses_nomes,
+                           meses=meses,
                            weekend_days=weekend_days)
 
 
@@ -3576,45 +3572,51 @@ def imprimir_escala_elac():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    mes = request.args.get('mes', type=int)
-    ano = request.args.get('ano', type=int)
-    if not mes or not ano:
-        hoje = date.today()
-        mes = hoje.month
-        ano = hoje.year
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
 
-    # Filtrar apenas ELACs com categoria 'ELAC' e estados Motorista/Chefe
+    # Buscar ELACs do mês/ano com categoria ELAC e estado que indique escalado (Motorista ELAC, Chefe ELAC)
     elacs = Ecin.query.filter(
         Ecin.categoria == 'ELAC',
         Ecin.estado.in_(['Motorista ELAC', 'Chefe ELAC']),
         db.extract('month', Ecin.data) == mes,
         db.extract('year', Ecin.data) == ano
-    ).order_by(Ecin.data).all()
+    ).order_by(Ecin.data, Ecin.turno, Ecin.funcao).all()
 
+    # Estrutura: escala[dia][turno][funcao] = lista de dicionários (funções: Motorista, Chefe)
     from collections import defaultdict
-    escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))  # dia -> turno -> funcao -> lista de bombeiros
+    escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     for ec in elacs:
-        dia_str = ec.data.strftime('%d/%m/%Y')
-        turno_str = ec.turno
-        if turno_str in ['07h/19h', '19h/07h']:
-            funcao = ec.funcao if ec.funcao else 'Outro'
-            escala[dia_str][turno_str][funcao].append({
-                'nome': ec.bombeiro.nome,
-                'mecanografico': ec.bombeiro.mecanografico,
-                'posto': ec.bombeiro.posto
-            })
+        dia = ec.data.day
+        turno = ec.turno   # "07h/19h" ou "19h/07h"
+        funcao = ec.funcao  # "Motorista" ou "Chefe"
+        bombeiro = {
+            'nome': ec.bombeiro.nome,
+            'mecanografico': ec.bombeiro.mecanografico,
+            'posto': ec.bombeiro.posto
+        }
+        escala[dia][turno][funcao].append(bombeiro)
 
-    dias_ordenados = sorted(escala.keys(), key=lambda d: datetime.strptime(d, '%d/%m/%Y'))
-    meses_nomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro',
-                   'Novembro', 'Dezembro']
+    # Ordenar dias
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    dias = list(range(1, ultimo_dia + 1))
+
+    # Calcular fins de semana
+    weekend_days = []
+    for dia in dias:
+        if date(ano, mes, dia).weekday() >= 5:
+            weekend_days.append(dia)
+
+    meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
     return render_template('imprimir_elac_escala.html',
                            escala=escala,
-                           dias=dias_ordenados,
+                           dias=dias,
                            mes=mes,
                            ano=ano,
-                           meses=meses_nomes)
+                           meses=meses,
+                           weekend_days=weekend_days)
 
 # ---------- Bombeiro Perfil ----------
 
@@ -7408,9 +7410,10 @@ def imprimir_contabilidade_ecin():
             subtotal_valor = 0.0
 
     return render_template('imprimir_contabilidade_ecin.html',
-                           mes=mes, ano=ano, categoria='ECIN',
+                           mes=mes, ano=ano,
                            paginas=paginas,
-                           total_geral_turnos=total_geral_turnos,
+                           total_geral_turnos_int=total_geral_turnos_int,
+                           total_geral_horas_rest=total_geral_horas_rest,
                            total_geral_valor=total_geral_valor)
 
 @app.route('/administrativo/imprimir-contabilidade-elac')
