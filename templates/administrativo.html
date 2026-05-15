@@ -22,7 +22,7 @@
     <!-- Aba Deslocações -->
     <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'deslocacoes' }}"
          id="deslocacoes" role="tabpanel">
-        <!-- ... (mantém igual ao original) ... -->
+        <!-- Cartões resumo -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="card text-white bg-primary shadow-sm">
@@ -50,7 +50,7 @@
             </div>
         </div>
 
-        <!-- Filtros -->
+        <!-- Filtros Deslocações -->
         <form method="GET" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="deslocacoes">
             <div class="col-auto">
@@ -89,7 +89,7 @@
             </div>
         </form>
 
-        <!-- Tabela -->
+        <!-- Tabela Deslocações -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <table class="table table-hover table-bordered mb-0">
@@ -128,7 +128,7 @@
         </div>
     </div>
 
-    <!-- Aba ECINs / ELACs -->
+    <!-- Aba ECINs / ELACs (com Mobilidade) -->
     <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
          id="ecins" role="tabpanel">
         <!-- Cartões resumo -->
@@ -151,8 +151,8 @@
             </div>
         </div>
 
-        <!-- Filtros -->
-        <form method="GET" class="row g-2 align-items-end mb-3" id="filtrosEcin">
+        <!-- Filtros ECINs -->
+        <form method="GET" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="ecins">
             <div class="col-auto">
                 <label class="form-label">Mês</label>
@@ -195,11 +195,11 @@
                     <i class="bi bi-download me-1"></i> Exportar Excel
                 </a>
                 <a href="{{ url_for('imprimir_contabilidade_ecin', mes=mes_ecin, ano=ano_ecin) }}"
-                    target="_blank" class="btn btn-sm btn-outline-warning">
+                   target="_blank" class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-printer me-1"></i> Contab. ECIN
                 </a>
                 <a href="{{ url_for('imprimir_contabilidade_elac', mes=mes_ecin, ano=ano_ecin) }}"
-                    target="_blank" class="btn btn-sm btn-outline-warning">
+                   target="_blank" class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-printer me-1"></i> Contab. ELAC
                 </a>
                 {% if cat_ecin == 'ECIN' %}
@@ -222,32 +222,33 @@
         <!-- Tabela ECINs / ELACs com coluna Mobilidade -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
-                <table class="table table-hover table-bordered mb-0" id="tabelaEcins">
+                <table class="table table-hover table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th>
-                            <th>Função</th><th>Estado</th><th>Valor</th><th>Mobilidade</th>
+                            <th>Função</th><th>Estado</th><th>Valor</th>
+                            <th>Mobilidade</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="ecins-tbody">
                         {% for ec in ecins %}
-                        <tr> data-ecin-id="{{ ec.id }}" class="ecin-row">
+                        <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
                             <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
                             <td>{{ ec.turno }}</td>
                             <td>{{ ec.categoria or '-' }}</td>
                             <td>{{ ec.bombeiro.nome }}</td>
                             <td>{{ ec.funcao or '-' }}</td>
                             <td>{{ ec.estado }}</td>
-                            <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else "0.00" }} €</td>
+                            <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €</td>
                             <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
                                 {% set mobilidade = ec.mobilidades[0] if ec.mobilidades else None %}
                                 {% if mobilidade %}
                                     <span class="substituto-nome">{{ mobilidade.bombeiro_substituto.nome }}</span>
                                     <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2" data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
-                                        <i class="bi bi-x-circle"></i> X
+                                        <i class="bi bi-x-circle"></i>
                                     </button>
                                 {% else %}
-                                    <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="{{ ec.id }}" data-toggle="modal" data-target="#modalMobilidade">
+                                    <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="{{ ec.id }}">
                                         <i class="bi bi-check-circle"></i> Visto
                                     </button>
                                 {% endif %}
@@ -260,7 +261,7 @@
                     <tfoot>
                         <tr class="fw-bold bg-light">
                             <td colspan="6" class="text-end">Total:</td>
-                            <td id="totalValorEcins">{{ "%.2f"|format(total_valor_ecin) }} €</td>
+                            <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -292,7 +293,7 @@
                 <div class="mb-3">
                     <label class="form-label">Número de horas</label>
                     <input type="number" id="mobilidadeHoras" class="form-control" step="0.5" min="0" value="8" required>
-                    <small class="text-muted">Valor a pagar: 3.75 €/hora</small>
+                    <small class="text-muted">Valor a pagar: 3,75 €/hora</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -304,7 +305,7 @@
 </div>
 
 <script>
-// Função para enviar contagem (original)
+// Função para enviar contagem (existente)
 function enviarContagem() {
     const form = document.createElement('form');
     form.method = 'POST';
@@ -318,89 +319,76 @@ function enviarContagem() {
     form.submit();
 }
 
-// Função para actualizar o total na tabela
-function actualizarTotal() {
-    let total = 0;
-    document.querySelectorAll('#tabelaEcins tbody .valor-cell').forEach(cell => {
-        let val = parseFloat(cell.innerText.replace('€', '').trim());
-        if (!isNaN(val)) total += val;
-    });
-    document.getElementById('totalValorEcins').innerText = total.toFixed(2) + ' €';
-}
+// ------------- MOBILIDADE AJAX -------------
+// Actualizar linha original e adicionar linha do substituto
+function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome, novoRegisto) {
+    const linhaOriginal = document.querySelector(`tr.ecin-row[data-ecin-id="${ecinId}"]`);
+    if (!linhaOriginal) return;
 
-// Função para adicionar uma nova linha (substituto) à tabela
-function adicionarLinhaSubstituto(registo, ecinOriginalId) {
-    const tbody = document.querySelector('#tabelaEcins tbody');
+    // Actualizar célula de mobilidade
+    const mobilidadeCell = linhaOriginal.querySelector('.mobilidade-cell');
+    mobilidadeCell.innerHTML = `
+        <span class="substituto-nome">${escapeHtml(substitutoNome)}</span>
+        <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2" data-ecin-id="${ecinId}" title="Apagar mobilidade">
+            <i class="bi bi-x-circle"></i>
+        </button>
+    `;
+
+    // Actualizar valor do original
+    const valorCell = linhaOriginal.querySelector('.valor-cell');
+    if (valorCell) {
+        valorCell.innerHTML = novoValorOriginal.toFixed(2) + ' €';
+    }
+
+    // Adicionar nova linha do substituto
+    const tbody = document.getElementById('ecins-tbody');
     const novaLinha = document.createElement('tr');
     novaLinha.className = 'ecin-row';
-    novaLinha.setAttribute('data-ecin-id', registo.id);
+    novaLinha.setAttribute('data-ecin-id', novoRegisto.id);
     novaLinha.innerHTML = `
-        <td>${registo.data}</td>
-        <td>${registo.turno}</td>
-        <td>${registo.categoria}</td>
-        <td>${registo.bombeiro}</td>
-        <td>${registo.funcao}</td>
-        <td>${registo.estado}</td>
-        <td class="valor-cell">${registo.valor.toFixed(2)} €</td>
-        <td class="mobilidade-cell" data-ecin-id="${registo.id}">
-            <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="${registo.id}" data-toggle="modal" data-target="#modalMobilidade">
+        <td>${novoRegisto.data}</td>
+        <td>${novoRegisto.turno}</td>
+        <td>${novoRegisto.categoria}</td>
+        <td>${escapeHtml(novoRegisto.bombeiro)}</td>
+        <td>${novoRegisto.funcao}</td>
+        <td>${novoRegisto.estado}</td>
+        <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €</td>
+        <td class="mobilidade-cell" data-ecin-id="${novoRegisto.id}">
+            <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="${novoRegisto.id}">
                 <i class="bi bi-check-circle"></i> Visto
             </button>
         </td>
     `;
     tbody.appendChild(novaLinha);
+
     // Reatribuir eventos aos novos botões
     atribuirEventosMobilidade();
-    actualizarTotal();
+
+    // Actualizar total
+    let totalSpan = document.getElementById('total-valor-ecin');
+    let totalAtual = parseFloat(totalSpan.innerText.replace('€', '').trim());
+    let novoTotal = totalAtual + novoRegisto.valor;
+    totalSpan.innerText = novoTotal.toFixed(2) + ' €';
 }
 
-// Função para actualizar a linha do ECIN original após criar mobilidade
-function actualizarLinhaOriginal(ecinId, novoValor, substitutoNome) {
-    const linha = document.querySelector(`#tabelaEcins tbody tr[data-ecin-id="${ecinId}"]`);
-    if (!linha) return;
-    // Actualizar célula de valor
-    const valorCell = linha.querySelector('.valor-cell');
-    if (valorCell) valorCell.innerText = novoValor.toFixed(2) + ' €';
-    // Actualizar célula de mobilidade
-    const mobilidadeCell = linha.querySelector('.mobilidade-cell');
-    mobilidadeCell.innerHTML = `
-        <span class="substituto-nome">${substitutoNome}</span>
-        <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2" data-ecin-id="${ecinId}" title="Apagar mobilidade">
-            <i class="bi bi-x-circle"></i> X
-        </button>
-    `;
-    actualizarTotal();
+// Apagar mobilidade
+function apagarMobilidade(ecinId) {
+    if (!confirm('Tem a certeza que deseja apagar esta mobilidade? O registo do substituto será removido e o valor restaurado.')) return;
+
+    fetch(`/administrativo/mobilidade/apagar/${ecinId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.erro || 'Falha ao apagar'));
+            }
+        })
+        .catch(err => alert('Erro de comunicação'));
 }
 
-// Função para remover uma linha (após apagar mobilidade)
-function removerLinha(ecinId) {
-    const linha = document.querySelector(`#tabelaEcins tbody tr[data-ecin-id="${ecinId}"]`);
-    if (linha) linha.remove();
-    actualizarTotal();
-}
-
-// Função para restaurar a linha original (apagar mobilidade)
-function restaurarLinhaOriginal(ecinId, novoValorOriginal) {
-    const linha = document.querySelector(`#tabelaEcins tbody tr[data-ecin-id="${ecinId}"]`);
-    if (!linha) return;
-    // Actualizar valor
-    const valorCell = linha.querySelector('.valor-cell');
-    if (valorCell) valorCell.innerText = novoValorOriginal.toFixed(2) + ' €';
-    // Restaurar botão Visto
-    const mobilidadeCell = linha.querySelector('.mobilidade-cell');
-    mobilidadeCell.innerHTML = `
-        <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="${ecinId}" data-toggle="modal" data-target="#modalMobilidade">
-            <i class="bi bi-check-circle"></i> Visto
-        </button>
-    `;
-    actualizarTotal();
-    atribuirEventosMobilidade();
-}
-
-// Eventos AJAX
-function abrirModalHandler(e) {
-    const btn = e.currentTarget;
-    const ecinId = btn.getAttribute('data-ecin-id');
+// Abrir modal
+function abrirModal(ecinId) {
     document.getElementById('mobilidadeEcinId').value = ecinId;
     document.getElementById('mobilidadeBombeiroId').value = '';
     document.getElementById('mobilidadeHoras').value = '8';
@@ -408,46 +396,14 @@ function abrirModalHandler(e) {
     modal.show();
 }
 
-function apagarHandler(e) {
-    const btn = e.currentTarget;
-    const ecinId = btn.getAttribute('data-ecin-id');
-    if (confirm('Tem a certeza que deseja apagar esta mobilidade? O registo do substituto será removido e o valor restaurado.')) {
-        fetch(`/administrativo/mobilidade/apagar/${ecinId}`, { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.sucesso) {
-                    // data.ecin_substituto_id é o id do registo do substituto (precisa ser retornado pela rota)
-                    if (data.ecin_substituto_id) {
-                        removerLinha(data.ecin_substituto_id);
-                    }
-                    restaurarLinhaOriginal(ecinId, data.novo_valor_original);
-                } else {
-                    alert('Erro: ' + (data.erro || 'Falha ao apagar'));
-                }
-            })
-            .catch(err => alert('Erro de comunicação'));
-    }
-}
-
-function atribuirEventosMobilidade() {
-    document.querySelectorAll('.btn-mobilidade').forEach(btn => {
-        btn.removeEventListener('click', abrirModalHandler);
-        btn.addEventListener('click', abrirModalHandler);
-    });
-    document.querySelectorAll('.btn-apagar-mobilidade').forEach(btn => {
-        btn.removeEventListener('click', apagarHandler);
-        btn.addEventListener('click', apagarHandler);
-    });
-}
-
-// Submeter nova mobilidade
+// Gravar mobilidade
 document.getElementById('btnGravarMobilidade').addEventListener('click', function() {
     const ecinId = document.getElementById('mobilidadeEcinId').value;
     const bombeiroId = document.getElementById('mobilidadeBombeiroId').value;
-    const horas = document.getElementById('mobilidadeHoras').value;
+    const horas = parseFloat(document.getElementById('mobilidadeHoras').value);
 
-    if (!ecinId || !bombeiroId || !horas) {
-        alert('Preencha todos os campos.');
+    if (!ecinId || !bombeiroId || isNaN(horas) || horas <= 0) {
+        alert('Preencha todos os campos corretamente.');
         return;
     }
 
@@ -461,10 +417,7 @@ document.getElementById('btnGravarMobilidade').addEventListener('click', functio
         .then(data => {
             if (data.sucesso) {
                 bootstrap.Modal.getInstance(document.getElementById('modalMobilidade')).hide();
-                // Actualizar linha original
-                actualizarLinhaOriginal(ecinId, data.novo_valor_original, data.substituto_nome);
-                // Adicionar linha do substituto
-                adicionarLinhaSubstituto(data.novo_registo, ecinId);
+                atualizarLinhaAposMobilidade(ecinId, data.novo_valor_original, data.substituto_nome, data.novo_registo);
             } else {
                 alert('Erro: ' + (data.erro || 'Falha ao criar mobilidade'));
             }
@@ -472,7 +425,41 @@ document.getElementById('btnGravarMobilidade').addEventListener('click', functio
         .catch(err => alert('Erro de comunicação'));
 });
 
-// Inicializar eventos após carregamento
+// Atribuir eventos aos botões (visto e apagar)
+function atribuirEventosMobilidade() {
+    // Botões "Visto"
+    document.querySelectorAll('.btn-mobilidade').forEach(btn => {
+        btn.removeEventListener('click', handlerVisto);
+        btn.addEventListener('click', handlerVisto);
+    });
+    // Botões "Apagar"
+    document.querySelectorAll('.btn-apagar-mobilidade').forEach(btn => {
+        btn.removeEventListener('click', handlerApagar);
+        btn.addEventListener('click', handlerApagar);
+    });
+}
+
+function handlerVisto(e) {
+    const ecinId = e.currentTarget.getAttribute('data-ecin-id');
+    abrirModal(ecinId);
+}
+function handlerApagar(e) {
+    const ecinId = e.currentTarget.getAttribute('data-ecin-id');
+    apagarMobilidade(ecinId);
+}
+
+// Função auxiliar para escapar HTML
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// Inicializar eventos quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     atribuirEventosMobilidade();
 });
