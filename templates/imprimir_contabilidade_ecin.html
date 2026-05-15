@@ -11,7 +11,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #000; padding: 5px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; }
-        .assinatura { width: 150px; }
         .subtotal { font-weight: bold; background-color: #e0e0e0; }
         .quebra { page-break-after: always; }
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
@@ -26,20 +25,46 @@
 
     {% for pagina in paginas %}
     <table>
-        <thead><tr><th>Mec.</th><th>Nome</th><th>Nº Turnos</th><th>Valor Total (€)</th><th>Assinatura</th></tr></thead>
+        <thead>
+            <tr><th>Mec.</th><th>Nome</th><th>Nº Turnos / Horas</th><th>Valor Total (€)</th><th>Assinatura</th></tr>
+        </thead>
         <tbody>
         {% for bombeiro, info in pagina.bombeiros %}
         <tr>
             <td>{{ bombeiro.mecanografico }}</td>
             <td>{{ bombeiro.nome }}</td>
-            <td>{{ info.turnos }}</td>
+            <td>
+                {% set ti = info.turnos_int %}
+                {% set hr = info.horas_rest %}
+                {% if ti > 0 and hr > 0 %}
+                    {{ ti }} T + {{ hr }} H
+                {% elif ti > 0 %}
+                    {{ ti }} T
+                {% elif hr > 0 %}
+                    {{ hr }} H
+                {% else %}
+                    0
+                {% endif %}
+            </td>
             <td>{{ "%.2f"|format(info.valor) }}</td>
             <td></td>
         </tr>
         {% endfor %}
         <tr class="subtotal">
             <td colspan="2">Subtotal desta página</td>
-            <td>{{ pagina.subtotal_turnos }}</td>
+            <td>
+                {% set st = pagina.subtotal_turnos_int %}
+                {% set sh = pagina.subtotal_horas_rest %}
+                {% if st > 0 and sh > 0 %}
+                    {{ st }} T + {{ sh }} H
+                {% elif st > 0 %}
+                    {{ st }} T
+                {% elif sh > 0 %}
+                    {{ sh }} H
+                {% else %}
+                    0
+                {% endif %}
+            </td>
             <td>{{ "%.2f"|format(pagina.subtotal_valor) }} €</td>
             <td></td>
         </tr>
@@ -48,7 +73,21 @@
     {% if not loop.last %}<div class="quebra"></div>{% endif %}
     {% endfor %}
 
-    <p style="text-align:right; margin-top:10px;"><strong>Total Geral: {{ total_geral_turnos }} turnos, {{ "%.2f"|format(total_geral_valor) }} €</strong></p>
+    <p style="text-align:right; margin-top:10px;">
+        <strong>Total Geral:
+        {% set tt = total_geral_turnos_int %}
+        {% set th = total_geral_horas_rest %}
+        {% if tt > 0 and th > 0 %}
+            {{ tt }} T + {{ th }} H
+        {% elif tt > 0 %}
+            {{ tt }} T
+        {% elif th > 0 %}
+            {{ th }} H
+        {% else %}
+            0
+        {% endif %}
+        , {{ "%.2f"|format(total_geral_valor) }} €</strong>
+    </p>
     <script>window.print();</script>
 </body>
 </html>

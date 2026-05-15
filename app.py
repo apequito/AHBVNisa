@@ -7080,7 +7080,7 @@ def apagar_mobilidade(ecin_id):
 
     # Restaurar o valor original (somar o valor pago de volta)
     valor_pago = mobilidade.valor_pago
-    original.valor = (original.valor or 0) + valor_pago
+    original.valor = (original.valor or 0) + float(valor_pago)
 
     # Eliminar a mobilidade
     db.session.delete(mobilidade)
@@ -7362,14 +7362,24 @@ def imprimir_contabilidade_ecin():
     ).order_by(Ecin.bombeiro_id, Ecin.data).all()
 
     from collections import defaultdict
-    dados = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
+    dados = defaultdict(lambda: {'valor': 0.0})
+
     for ec in ecins:
-        if ec.bombeiro:
-            dados[ec.bombeiro]['turnos'] += 1
-            dados[ec.bombeiro]['valor'] += ec.valor or 0.0
+        if ec.bombeiro and ec.valor:
+            dados[ec.bombeiro]['valor'] += ec.valor
 
+    # Converter valor em horas e depois em turnos + horas
+    for bombeiro, info in dados.items():
+        horas_totais = info['valor'] / 3.5
+        info['turnos_int'] = int(horas_totais // 12)
+        info['horas_rest'] = round(horas_totais % 12, 1)
+        # Se a sobra for muito próxima de 12 (ex: 11.9), arredondar para turno inteiro
+        if info['horas_rest'] > 11.9:
+            info['turnos_int'] += 1
+            info['horas_rest'] = 0
+
+    # Ordenar e paginar (código existente mantido)
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
-
     POR_PAGINA = 25
     paginas = []
     pagina_atual = []
@@ -7380,9 +7390,11 @@ def imprimir_contabilidade_ecin():
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        subtotal_turnos += info['turnos']
+        # Para o subtotal, somamos turnos completos e consideramos horas residuais como mais um turno (ou fração)
+        turnos_equivalentes = info['turnos_int'] + (1 if info['horas_rest'] > 0 else 0)
+        subtotal_turnos += turnos_equivalentes
         subtotal_valor += info['valor']
-        total_geral_turnos += info['turnos']
+        total_geral_turnos += turnos_equivalentes
         total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
@@ -7401,7 +7413,6 @@ def imprimir_contabilidade_ecin():
                            total_geral_turnos=total_geral_turnos,
                            total_geral_valor=total_geral_valor)
 
-
 @app.route('/administrativo/imprimir-contabilidade-elac')
 @login_required
 def imprimir_contabilidade_elac():
@@ -7412,50 +7423,77 @@ def imprimir_contabilidade_elac():
     mes = request.args.get('mes', type=int, default=date.today().month)
     ano = request.args.get('ano', type=int, default=date.today().year)
 
-    elacs = Ecin.query.filter(
-        Ecin.categoria == 'ELAC',
+    registos = Ecin.query.filter(
+        Ecin.categoria == 'ELAC',   # ← única diferença
         db.extract('month', Ecin.data) == mes,
         db.extract('year', Ecin.data) == ano
     ).order_by(Ecin.bombeiro_id, Ecin.data).all()
 
     from collections import defaultdict
-    dados = defaultdict(lambda: {'turnos': 0, 'valor': 0.0})
-    for ec in elacs:
-        if ec.bombeiro:
-            dados[ec.bombeiro]['turnos'] += 1
-            dados[ec.bombeiro]['valor'] += ec.valor or 0.0
+    dados = defaultdict(lambda: {'valor': 0.0})
 
+    for ec in registos:
+        if ec.bombeiro and ec.valor:
+            dados[ec.bombeiro]['valor'] += ec.valor
+
+    # Mesmo cálculo de horas e turnos
+    for bombeiro, info in dados.items():
+        horas_totais = info['valor'] / 3.5
+        turnos_int = int(horas_totais // 12)
+        horas_rest = round(horas_totais % 12, 1)
+        if horas_rest > 11.9:
+            turnos_int += 1
+            horas_rest = 0
+        info['turnos_int'] = turnos_int
+        info['horas_rest'] = horas_rest
+
+    # Paginação (idêntica)
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
-
     POR_PAGINA = 25
     paginas = []
     pagina_atual = []
-    subtotal_turnos = 0
+    subtotal_turnos_int = 0
+    subtotal_horas_rest = 0
     subtotal_valor = 0.0
-    total_geral_turnos = 0
+    total_geral_turnos_int = 0
+    total_geral_horas_rest = 0
     total_geral_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        subtotal_turnos += info['turnos']
+        subtotal_turnos_int += info['turnos_int']
+        subtotal_horas_rest += info['horas_rest']
+        if subtotal_horas_rest >= 12:
+            extra = int(subtotal_horas_rest // 12)
+            subtotal_turnos_int += extra
+            subtotal_horas_rest = round(subtotal_horas_rest % 12, 1)
         subtotal_valor += info['valor']
-        total_geral_turnos += info['turnos']
+
+        total_geral_turnos_int += info['turnos_int']
+        total_geral_horas_rest += info['horas_rest']
+        if total_geral_horas_rest >= 12:
+            extra_geral = int(total_geral_horas_rest // 12)
+            total_geral_turnos_int += extra_geral
+            total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
         total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
             paginas.append({
                 'bombeiros': pagina_atual,
-                'subtotal_turnos': subtotal_turnos,
+                'subtotal_turnos_int': subtotal_turnos_int,
+                'subtotal_horas_rest': subtotal_horas_rest,
                 'subtotal_valor': subtotal_valor
             })
             pagina_atual = []
-            subtotal_turnos = 0
+            subtotal_turnos_int = 0
+            subtotal_horas_rest = 0
             subtotal_valor = 0.0
 
     return render_template('imprimir_contabilidade_elac.html',
-                           mes=mes, ano=ano, categoria='ELAC',
+                           mes=mes, ano=ano,
                            paginas=paginas,
-                           total_geral_turnos=total_geral_turnos,
+                           total_geral_turnos_int=total_geral_turnos_int,
+                           total_geral_horas_rest=total_geral_horas_rest,
                            total_geral_valor=total_geral_valor)
 
 
