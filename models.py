@@ -311,8 +311,7 @@ class Ecin(db.Model):
     valor = db.Column(db.Float, nullable=True)
 
     bombeiro = db.relationship('Bombeiro', back_populates='ecins')
-    mobilidades = db.relationship('Mobilidade', backref='ecin_original', cascade='all, delete-orphan',
-                                  foreign_keys='Mobilidade.ecin_original_id')
+    mobilidades = db.relationship('Mobilidade', back_populates='ecin_original', cascade='all, delete-orphan')
 
 
 class FarmaciaCentral(db.Model):
@@ -476,11 +475,11 @@ class Mobilidade(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     ecin_original_id = db.Column(db.Integer, db.ForeignKey('ecins.id', ondelete='CASCADE'), nullable=False)
-    bombeiro_substituto_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)   # ← corrigido
+    bombeiro_substituto_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     horas = db.Column(db.Numeric(5,2), nullable=False)
     valor_pago = db.Column(db.Numeric(10,2), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relações
-    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id])
+    # Relações – ambas com back_populates
+    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], back_populates='mobilidades')
     bombeiro_substituto = db.relationship('Bombeiro', foreign_keys=[bombeiro_substituto_id])
