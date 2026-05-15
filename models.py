@@ -193,25 +193,21 @@ class CreditoDispensa(db.Model):
     observacao = db.Column(db.String(50), default='Não Gozado')
     dispensa_id = db.Column(db.Integer, db.ForeignKey('dispensas.id'), nullable=True)
 
-    # Relações
     bombeiro = db.relationship('Bombeiro', back_populates='creditos')
     dispensa = db.relationship('Dispensa', back_populates='creditos')
 
 
 # ---------- Checklist ----------
-class CreditoDispensa(db.Model):
-    __tablename__ = 'creditos_dispensa'
+class Checklist(db.Model):
+    __tablename__ = 'checklists'
     id = db.Column(db.Integer, primary_key=True)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
-    data = db.Column(db.Date, nullable=False)
-    descricao = db.Column(db.String(200))
-    horas = db.Column(db.Integer, default=8)
-    observacao = db.Column(db.String(50), default='Não Gozado')
-    dispensa_id = db.Column(db.Integer, db.ForeignKey('dispensas.id'), nullable=True)
+    viatura_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=False)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+    itens_verificados = db.Column(db.Text)
+    observacoes = db.Column(db.Text)
 
-    bombeiro = db.relationship('Bombeiro', back_populates='creditos')
-    dispensa = db.relationship('Dispensa', back_populates='creditos')
-
+    bombeiro = db.relationship('Bombeiro', backref='checklists')
 
 
 
