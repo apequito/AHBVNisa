@@ -167,7 +167,7 @@ class TrocaServico(db.Model):
 
 
 # ---------- Dispensa de serviço ----------
-claclass Dispensa(db.Model):
+class Dispensa(db.Model):
     __tablename__ = 'dispensas'
     id = db.Column(db.Integer, primary_key=True)
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
