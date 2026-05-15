@@ -6994,7 +6994,7 @@ def criar_mobilidade():
         return jsonify({'erro': 'Este registo já possui uma mobilidade. Apague primeiro.'}), 400
 
     # Calcular valor a pagar ao substituto
-    valor_substituto = 3.75 * horas
+    valor_substituto = 3.50 * horas
     # Valor base do original (assumimos 42.0, mas usamos o valor actual se existir)
     valor_base = original.valor if original.valor is not None else 42.0
     novo_valor_original = max(0, valor_base - valor_substituto)   # não pode ser negativo
