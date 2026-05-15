@@ -2,7 +2,7 @@
 {% block content %}
 <h2>ECINS – Gestão de Escalamentos</h2>
 
-<!-- Seletores e Botões de Impressão (mantido) -->
+<!-- Seletores e Botões de Impressão -->
 <div class="mb-3">
     <form method="GET" action="{{ url_for('imprimir_ecins') }}" target="_blank" class="row g-2 align-items-end">
         <div class="col-auto">
@@ -29,12 +29,11 @@
     </form>
 </div>
 
-<!-- Filtros melhorados -->
+<!-- Filtros (mantidos) -->
 <div class="card mb-3">
     <div class="card-header bg-light">Filtros</div>
     <div class="card-body">
         <form method="GET" action="{{ url_for('listar_ecins') }}" class="row g-3 align-items-end">
-            <!-- Ordenar -->
             <div class="col-auto">
                 <label class="form-label">Ordenar por</label>
                 <select name="ordem" class="form-select form-select-sm">
@@ -42,12 +41,10 @@
                     <option value="nome" {% if ordem_atual == 'nome' %}selected{% endif %}>Nome</option>
                 </select>
             </div>
-            <!-- Mecanográfico -->
             <div class="col-auto">
                 <label class="form-label">Mecanográfico</label>
                 <input type="text" name="mec" class="form-control form-control-sm" value="{{ mec_pesquisa }}" placeholder="Pesquisar...">
             </div>
-            <!-- Nome (combobox) -->
             <div class="col-auto">
                 <label class="form-label">Bombeiro</label>
                 <select name="nome" class="form-select form-select-sm">
@@ -57,12 +54,10 @@
                     {% endfor %}
                 </select>
             </div>
-            <!-- Data específica -->
             <div class="col-auto">
                 <label class="form-label">Data</label>
                 <input type="date" name="data" class="form-control form-control-sm" value="{{ data_filtro }}">
             </div>
-            <!-- Turno -->
             <div class="col-auto">
                 <label class="form-label">Turno</label>
                 <select name="turno" class="form-select form-select-sm">
@@ -77,6 +72,7 @@
             </div>
             <div class="col-auto ms-auto">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoEcin">+ Novo Registo</button>
+                <!-- Botão "Atualizar Página" será inserido aqui dinamicamente via JS -->
             </div>
         </form>
     </div>
@@ -96,12 +92,12 @@
     </thead>
     <tbody>
         {% for r in registos %}
-        <tr>
+        <tr id="ecin-row-{{ r.id }}">
             <td>{{ r.id }}</td>
             <td>{{ r.bombeiro.mecanografico }} - {{ r.bombeiro.nome }}</td>
             <td>{{ r.data.strftime('%d/%m/%Y') }}</td>
             <td>{{ r.turno }}</td>
-            <td>
+            <td class="estado-cell">
                 {% if r.estado == 'Pendente' %}
                     <span class="badge bg-warning text-dark">Pendente</span>
                 {% elif r.estado == 'Não Escalado' %}
@@ -112,23 +108,20 @@
             </td>
             <td class="acoes-ecin">
                 {% if r.estado == 'Pendente' %}
-                    <div class="btn-group" role="group">
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='M') }}" class="btn btn-sm btn-outline-primary" title="Motorista ECIN">M</a>
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='C') }}" class="btn btn-sm btn-outline-primary" title="Chefe ECIN">C</a>
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='G') }}" class="btn btn-sm btn-outline-primary" title="Guarnição">G</a>
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='Me') }}" class="btn btn-sm btn-outline-warning" title="Motorista ELAC">Me</a>
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='Ce') }}" class="btn btn-sm btn-outline-warning" title="Chefe ELAC">Ce</a>
-                        <a href="{{ url_for('escalar_ecin', id=r.id, funcao='X') }}" class="btn btn-sm btn-outline-danger" title="Não Escalar">✕</a>
-                    </div>
+                <div class="btn-group action-buttons" role="group">
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="M" title="Motorista ECIN">M</button>
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="C" title="Chefe ECIN">C</button>
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnição">G</button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista ELAC">Me</button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe ELAC">Ce</button>
+                    <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
+                </div>
                 {% else %}
-                    <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">
-                        Modificar
-                    </a>
+                <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
                 {% endif %}
             </td>
         </tr>
-        {% else %}
-        <tr><td colspan="6" class="text-center text-muted">Nenhum registo encontrado.{% endfor %}
+        {% endfor %}
     </tbody>
 </table>
 
@@ -177,5 +170,85 @@ function imprimirEscalaELAC() {
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
 }
+
+// Contador de alterações realizadas (sem refresh)
+let alteracoesPendentes = 0;
+
+// Função que adiciona / remove o botão "Atualizar Página"
+function atualizarBotaoAtualizar() {
+    let btn = document.getElementById('btnAtualizarPagina');
+    const container = document.querySelector('.col-auto.ms-auto');
+    if (!container) return;
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btnAtualizarPagina';
+        btn.className = 'btn btn-sm btn-warning ms-2';
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Atualizar Página';
+        btn.onclick = function() { location.reload(); };
+        container.appendChild(btn);
+    }
+    if (alteracoesPendentes > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+// Submeter ação AJAX
+async function executarAcao(id, funcao, btnElement) {
+    const row = document.getElementById(`ecin-row-${id}`);
+    if (!row) return;
+    const acoesDiv = row.querySelector('.acoes-ecin');
+    const estadoSpan = row.querySelector('.estado-cell .badge');
+
+    // Desabilitar o botão temporariamente
+    btnElement.disabled = true;
+    const originalText = btnElement.innerHTML;
+    btnElement.innerHTML = '...';
+
+    try {
+        const response = await fetch(`/ecins/escalar_ajax/${id}?funcao=${funcao}`);
+        const data = await response.json();
+
+        if (data.success) {
+            // Atualizar o estado visual
+            estadoSpan.className = `badge ${data.estado_class}`;
+            estadoSpan.textContent = data.estado_texto;
+
+            // Substituir os botões de ação pelo botão "Modificar" se o estado já não for Pendente
+            if (!data.mostrar_botoes) {
+                acoesDiv.innerHTML = `<a href="{{ url_for('modificar_ecin', id=id) }}" class="btn btn-sm btn-secondary">Modificar</a>`;
+            } else {
+                // Se voltar a Pendente (improvável), recarregar a página para recuperar os botões
+                location.reload();
+            }
+            alteracoesPendentes++;
+            atualizarBotaoAtualizar();
+        } else {
+            alert('Erro: ' + (data.error || 'Falha na operação'));
+            // Reabilitar o botão e restaurar texto
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalText;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro de comunicação com o servidor.');
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalText;
+    }
+}
+
+// Adicionar event listeners aos botões de ação
+document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const id = this.getAttribute('data-id');
+        const funcao = this.getAttribute('data-funcao');
+        executarAcao(id, funcao, this);
+    });
+});
+
+// Inicializar estado do botão Atualizar (sem alterações)
+atualizarBotaoAtualizar();
 </script>
 {% endblock %}

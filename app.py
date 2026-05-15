@@ -3338,6 +3338,101 @@ def escalar_ecin(id):
     flash(f'{ecin.bombeiro.nome} escalado como {dados["estado"]}.', 'success')
     return redirect(url_for('listar_ecins'))
 
+@app.route('/ecins/escalar_ajax/<int:id>', methods=['GET'])
+@login_required
+def escalar_ecin_ajax(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
+        return jsonify({'error': 'Acesso restrito'}), 403
+
+    ecin = Ecin.query.get_or_404(id)
+    funcao_cod = request.args.get('funcao', 'X')
+
+    mapeamento = {
+        'M':  {'funcao': 'Motorista', 'categoria': 'ECIN', 'estado': 'Motorista ECIN'},
+        'C':  {'funcao': 'Chefe',     'categoria': 'ECIN', 'estado': 'Chefe ECIN'},
+        'G':  {'funcao': 'Guarnição', 'categoria': 'ECIN', 'estado': 'Guarnição ECIN'},
+        'Me': {'funcao': 'Motorista', 'categoria': 'ELAC', 'estado': 'Motorista ELAC'},
+        'Ce': {'funcao': 'Chefe',     'categoria': 'ELAC', 'estado': 'Chefe ELAC'},
+        'X':  {'estado': 'Não Escalado'}
+    }
+
+    if funcao_cod not in mapeamento:
+        return jsonify({'error': 'Opção inválida'}), 400
+
+    dados = mapeamento[funcao_cod]
+
+    # Remover escala antiga se existir
+    from sqlalchemy import func
+    if ecin.categoria and ecin.funcao:
+        escalas = Escala.query.filter(
+            Escala.bombeiro_id == ecin.bombeiro_id,
+            func.date(Escala.data_inicio) == ecin.data,
+            Escala.turno == ecin.turno,
+            Escala.categoria == ecin.categoria,
+            Escala.funcao == ecin.funcao
+        ).all()
+        for escala in escalas:
+            db.session.delete(escala)
+
+    if funcao_cod == 'X':
+        ecin.estado = dados['estado']
+        ecin.funcao = None
+        ecin.categoria = None
+    else:
+        # Criar nova escala
+        try:
+            partes = ecin.turno.split('-')[1].strip().split('/')
+            inicio_str = partes[0].replace('h', ':00')
+            fim_str = partes[1].replace('h', ':00')
+        except Exception:
+            inicio_str, fim_str = '08:00', '20:00'
+
+        data = ecin.data
+        inicio_time = datetime.strptime(inicio_str, '%H:%M').time()
+        fim_time = datetime.strptime(fim_str, '%H:%M').time()
+        data_inicio = datetime.combine(data, inicio_time)
+        data_fim = datetime.combine(data, fim_time)
+        if data_fim <= data_inicio:
+            data_fim += timedelta(days=1)
+
+        nova_escala = Escala(
+            bombeiro_id=ecin.bombeiro_id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            turno=ecin.turno,
+            categoria=dados['categoria'],
+            funcao=dados['funcao']
+        )
+        db.session.add(nova_escala)
+
+        ecin.funcao = dados['funcao']
+        ecin.categoria = dados['categoria']
+        ecin.estado = dados['estado']
+
+    db.session.commit()
+
+    # Preparar resposta com o novo estado
+    return jsonify({
+        'success': True,
+        'novo_estado': ecin.estado,
+        'estado_class': get_estado_class(ecin.estado),
+        'estado_texto': get_estado_texto(ecin.estado),
+        'mostrar_botoes': ecin.estado == 'Pendente'
+    })
+
+def get_estado_class(estado):
+    if estado == 'Pendente':
+        return 'bg-warning text-dark'
+    elif estado == 'Não Escalado':
+        return 'bg-danger'
+    else:
+        return 'bg-success'
+
+def get_estado_texto(estado):
+    return estado
+
+
+
 #----------Imprimir Disponibilidade ECINS----------------
 @app.route('/ecins/imprimir')
 @login_required
