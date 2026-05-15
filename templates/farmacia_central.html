@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Farmácia Central – Stock Intermédio</h2>
+
+<div class="mb-3">
+    <a href="{{ url_for('stock_farmacia') }}" class="btn btn-secondary">← Voltar ao Stock Farmácia</a>
+</div>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Código</th>
+            <th>Categoria</th>
+            <th>Nome</th>
+            <th>Tamanho</th>
+            <th>Stock Central</th>
+            <th>Stock Mínimo</th>
+            <th>Data Validade</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.codigo }}</td>
+            <td>{{ item.categoria }}</td>
+            <td>{{ item.nome }}</td>
+            <td>{{ item.tamanho or '-' }}</td>
+            <td>{{ item.stock }}</td>
+            <td>{{ item.stock_minimo }}</td>
+            <td>{{ item.data_validade.strftime('%d/%m/%Y') if item.data_validade else '-' }}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalTransferir"
+                        data-codigo="{{ item.codigo }}" data-nome="{{ item.nome }}">
+                    Transferir da Principal
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal Transferir -->
+<div class="modal fade" id="modalTransferir" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('transferir_para_central') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Transferir da Farmácia Principal</h5></div>
+                <div class="modal-body">
+                    <input type="hidden" name="codigo" id="codigo_produto">
+                    <p>Produto: <strong id="nome_produto"></strong></p>
+                    <label>Quantidade</label>
+                    <input type="number" name="quantidade" class="form-control" min="1" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success">Transferir</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('modalTransferir');
+    modal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const codigo = button.getAttribute('data-codigo');
+        const nome = button.getAttribute('data-nome');
+        document.getElementById('codigo_produto').value = codigo;
+        document.getElementById('nome_produto').textContent = nome;
+    });
+</script>
+{% endblock %}

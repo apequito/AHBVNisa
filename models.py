@@ -313,6 +313,18 @@ class Ecin(db.Model):
     bombeiro = db.relationship('Bombeiro', back_populates='ecins')
 
 
+class FarmaciaCentral(db.Model):
+    __tablename__ = 'farmacia_central'
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(20), unique=True, nullable=False)  # mesmo código do StockFarmacia
+    categoria = db.Column(db.String(100), nullable=False)
+    nome = db.Column(db.String(200), nullable=False)
+    tamanho = db.Column(db.String(50))
+    stock = db.Column(db.Integer, default=0)
+    stock_minimo = db.Column(db.Integer, default=5)
+    data_validade = db.Column(db.Date, nullable=True)
+    ultima_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # ---------- Stock Farmácia ----------
 class StockFarmacia(db.Model):
     __tablename__ = 'stock_farmacia'

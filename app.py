@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
 
-from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias
+from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias
 
 app = Flask(__name__)
 
@@ -4453,8 +4453,6 @@ def gerar_codigo_stock_farmacia():
     return f"SF{num:04d}"
 
 
-
-
 #----------- Stock Farmácia--------------
 @app.route('/stock-farmacia', methods=['GET', 'POST'])
 @login_required
@@ -4491,10 +4489,25 @@ def stock_farmacia():
             data_atualizacao=datetime.utcnow()
         )
         db.session.add(novo)
+        db.session.flush()   # para garantir que o ID é gerado (não é estritamente necessário)
+
+        # Criar registo correspondente na Farmácia Central
+        central = FarmaciaCentral(
+            codigo=codigo,
+            categoria=categoria,
+            nome=nome,
+            tamanho=tamanho if tamanho else None,
+            stock=0,                      # stock inicial na central é 0
+            stock_minimo=5,
+            data_validade=data_validade
+        )
+        db.session.add(central)
+
         db.session.commit()
-        flash(f'Produto {codigo} adicionado.', 'success')
+        flash(f'Produto {codigo} adicionado ao Stock Farmácia e à Farmácia Central.', 'success')
         return redirect(url_for('stock_farmacia'))
 
+    # GET (mantém igual)
     itens = StockFarmacia.query.order_by(StockFarmacia.categoria, StockFarmacia.nome).all()
     categorias = CategoriaFarmacia.query.order_by(CategoriaFarmacia.nome).all()
     return render_template('stock_farmacia.html', itens=itens, categorias=categorias)
@@ -4528,11 +4541,21 @@ def editar_stock_farmacia(id):
     item.stock = novo_stock
     item.infstock = novo_infstock
     db.session.commit()
+
+    # ----- Sincronizar com a Farmácia Central (mesmo código) -----
+    central = FarmaciaCentral.query.filter_by(codigo=item.codigo).first()
+    if central:
+        central.categoria = item.categoria
+        central.nome = item.nome
+        central.tamanho = item.tamanho
+        central.data_validade = item.data_validade
+        central.ultima_atualizacao = datetime.utcnow()
+        # NOTA: O stock da central NÃO é alterado aqui – apenas os dados descritivos
+        db.session.commit()
+    # ------------------------------------------------------------
+
     flash('Produto atualizado.', 'success')
     return redirect(url_for('stock_farmacia'))
-
-
-
 
 @app.route('/stock-farmacia/apagar/<int:id>')
 @login_required
@@ -4540,11 +4563,32 @@ def apagar_stock_farmacia(id):
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('stock_farmacia'))
+
     item = StockFarmacia.query.get_or_404(id)
+    codigo = item.codigo
+
+    # ----- Apagar também da Farmácia Central (se existir) -----
+    central = FarmaciaCentral.query.filter_by(codigo=codigo).first()
+    if central:
+        db.session.delete(central)
+    # ---------------------------------------------------------
+
     db.session.delete(item)
     db.session.commit()
     flash('Produto removido.', 'info')
     return redirect(url_for('stock_farmacia'))
+
+
+@app.route('/farmacia-central')
+@login_required
+def listar_farmacia_central():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    itens = FarmaciaCentral.query.order_by(FarmaciaCentral.nome).all()
+    return render_template('farmacia_central.html', itens=itens)
+
 
 
 
@@ -4925,20 +4969,66 @@ def confirmar_reposicao(id):
         flash('Reposição já confirmada.', 'warning')
         return redirect(url_for('stock_ambulancia'))
 
-    # CORREÇÃO: usar 'produto' em vez de 'produto_stock'
-    produto = reposicao.produto
-    if produto.stock < reposicao.quantidade:
-        flash(f'Stock insuficiente de "{produto.nome}" (disponível: {produto.stock}).', 'danger')
+    # Obter o produto principal (StockFarmacia) através da relação
+    produto_principal = reposicao.produto   # relação definida em StockAmbulancia.produto
+    if not produto_principal:
+        flash('Produto não encontrado.', 'danger')
         return redirect(url_for('stock_ambulancia'))
 
-    produto.stock -= reposicao.quantidade
-    produto.data_atualizacao = datetime.utcnow()
+    # Buscar o correspondente na Farmácia Central
+    central = FarmaciaCentral.query.filter_by(codigo=produto_principal.codigo).first()
+    if not central:
+        flash('Produto não encontrado na Farmácia Central.', 'danger')
+        return redirect(url_for('stock_ambulancia'))
+
+    if central.stock < reposicao.quantidade:
+        flash(f'Stock insuficiente na Farmácia Central para "{central.nome}". Disponível: {central.stock}.', 'danger')
+        return redirect(url_for('stock_ambulancia'))
+
+    # Abate da Farmácia Central
+    central.stock -= reposicao.quantidade
+    central.ultima_atualizacao = datetime.utcnow()
 
     reposicao.confirmado = True
     reposicao.responsavel_id = current_user.id
     db.session.commit()
-    flash('Reposição confirmada e stock atualizado.', 'success')
+
+    flash('Reposição confirmada e stock da Farmácia Central atualizado.', 'success')
     return redirect(url_for('stock_ambulancia'))
+
+
+@app.route('/farmacia-central/transferir', methods=['POST'])
+@login_required
+def transferir_para_central():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Farmacia']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    codigo = request.form.get('codigo')
+    quantidade = request.form.get('quantidade', type=int)
+
+    produto_principal = StockFarmacia.query.filter_by(codigo=codigo).first()
+    if not produto_principal or produto_principal.stock < quantidade:
+        flash('Stock insuficiente na Farmácia Principal.', 'danger')
+        return redirect(url_for('listar_farmacia_central'))
+
+    central = FarmaciaCentral.query.filter_by(codigo=codigo).first()
+    if not central:
+        flash('Produto não encontrado na Farmácia Central.', 'danger')
+        return redirect(url_for('listar_farmacia_central'))
+
+    # Abate do StockFarmacia
+    produto_principal.stock -= quantidade
+    produto_principal.data_atualizacao = datetime.utcnow()
+
+    # Adiciona à Farmácia Central
+    central.stock += quantidade
+    central.ultima_atualizacao = datetime.utcnow()
+
+    db.session.commit()
+    flash(f'Transferidos {quantidade} unidade(s) de {produto_principal.nome} para a Farmácia Central.', 'success')
+    return redirect(url_for('listar_farmacia_central'))
+
 
 
 #_____________________Central_____________
@@ -6602,6 +6692,8 @@ def apagar_tudo():
     flash('Todos os dados foram eliminados com sucesso!', 'success')
     return redirect(url_for('dashboard'))
 
+from datetime import date, timedelta
+
 @app.context_processor
 def inject_pendencias():
     pendencias = {}
@@ -6624,12 +6716,18 @@ def inject_pendencias():
                 StockFarmacia.stock <= StockFarmacia.infstock
             ).count()
 
+            # Stock Farmácia Central abaixo do mínimo (NOVO)
+            pendencias['central_stock_minimo'] = FarmaciaCentral.query.filter(
+                FarmaciaCentral.stock_minimo > 0,
+                FarmaciaCentral.stock <= FarmaciaCentral.stock_minimo
+            ).count()
+
             # Reposições de ambulância pendentes
             pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
 
             total = sum(pendencias.values())
 
-        # --- Departamentos específicos ---
+        # --- Departamentos específicos (para utilizadores que não são Admin nem Comando) ---
         else:
             if user.resp_departamento == 'Oficina':
                 pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
@@ -6642,12 +6740,18 @@ def inject_pendencias():
                     StockFarmacia.infstock > 0,
                     StockFarmacia.stock <= StockFarmacia.infstock
                 ).count()
+                # Para o departamento Farmácia, também mostramos os alertas da Central
+                pendencias['central_stock_minimo'] = FarmaciaCentral.query.filter(
+                    FarmaciaCentral.stock_minimo > 0,
+                    FarmaciaCentral.stock <= FarmaciaCentral.stock_minimo
+                ).count()
                 pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
             if user.resp_departamento == 'Socorrista':
                 pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+
             total = sum(pendencias.values())
 
-        # --- Inspeções periódicas próximas (apenas para Admin, Comando, Oficina) ---
+        # --- Inspecções periódicas próximas (apenas Admin, Comando, Oficina) ---
         pendencias['inspecoes_proximas'] = 0
         if user.tipo_user == 'Admin' or user.resp_departamento in ('Comando', 'Oficina'):
             hoje = date.today()
