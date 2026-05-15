@@ -3550,13 +3550,23 @@ def imprimir_escala_ecin():
     dias_ordenados = sorted(escala.keys(), key=lambda d: datetime.strptime(d, '%d/%m/%Y'))
     meses_nomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro',
                    'Novembro', 'Dezembro']
+    # Calcular dias de fim de semana no mês
+    import calendar
+    from datetime import date
+    weekend_days = []
+    for dia in range(1, ultimo_dia + 1):
+        data = date(ano, mes, dia)
+        if data.weekday() >= 5:  # 5=sábado, 6=domingo
+            weekend_days.append(dia)
+
 
     return render_template('imprimir_ecin_escala.html',
                            escala=escala,
                            dias=dias_ordenados,
                            mes=mes,
                            ano=ano,
-                           meses=meses_nomes)
+                           meses=meses_nomes,
+                           weekend_days=weekend_days)
 
 
 @app.route('/ecins/imprimir-escala-elac')

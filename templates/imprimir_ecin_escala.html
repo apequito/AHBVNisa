@@ -8,7 +8,6 @@
 @page {
     size: A3;
     margin: 12mm;
-    /* Remove cabeçalho/rodapé automático do navegador */
     @top-center { content: none; }
     @bottom-center { content: none; }
 }
@@ -25,11 +24,9 @@ body {
     .no-print {
         display: none;
     }
-    /* Remove qualquer conteúdo extra que o navegador possa adicionar */
     header, footer, .page-break, .page-number, .print-date, .print-url {
         display: none;
     }
-    /* Garante que o conteúdo impresso não tenha margens extras */
     body {
         margin: 0;
         padding: 0;
@@ -123,6 +120,11 @@ th {
     text-align: center;
 }
 
+/* Estilo para fins de semana */
+tr.weekend {
+    background-color: #f0f0f0 !important;
+}
+
 .bombeiro-linha {
     white-space: nowrap;
     overflow: hidden;
@@ -194,7 +196,6 @@ hr {
             ESCALA ECIN
         </div>
     </div>
-    <!-- Espaço vazio para equilibrar o flex (opcional) -->
     <div style="width: 95px;"></div>
 </div>
 
@@ -222,7 +223,7 @@ hr {
             'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp', 'Estagiário': 'Estg', 'Cadete': 'Cad'
         } %}
         {% for dia in dias %}
-        <tr>
+        <tr{% if dia in weekend_days %} class="weekend"{% endif %}>
             <td class="col-dia">{{ dia }}</td>
             {% for turno in ['07h/19h', '19h/07h'] %}
                 {% for funcao in ['Motorista', 'Chefe', 'Guarnição'] %}
@@ -240,7 +241,7 @@ hr {
                     {% else %}
                         -
                     {% endif %}
-                </td>
+                </table>
                 {% endfor %}
             {% endfor %}
         </tr>

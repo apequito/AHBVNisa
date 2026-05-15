@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Escala ELAC - {{ meses[mes-1] }} {{ ano }}</title>
 <style>
-/* Mesmo CSS de impressão do ECIN */
+/* Regras gerais (igual ao ECIN) */
 @page {
     size: A3;
     margin: 12mm;
@@ -24,7 +24,7 @@ body {
 }
 .no-print { margin: 15px; text-align: right; }
 
-/* Cabeçalho com imagem à esquerda */
+/* Cabeçalho com imagem à esquerda e texto centralizado */
 .header {
     display: flex;
     align-items: center;
@@ -61,6 +61,7 @@ body {
     font-weight: bold;
     margin-top: 3px;
 }
+
 /* Tabela */
 table {
     width: 100%;
@@ -90,6 +91,12 @@ th {
     width: 23.25%;
     text-align: center;
 }
+
+/* Estilo para fins de semana */
+tr.weekend {
+    background-color: #f0f0f0 !important;
+}
+
 .bombeiro-linha {
     white-space: nowrap;
     overflow: hidden;
@@ -100,6 +107,8 @@ th {
 .nome-bombeiro { font-weight: bold; margin: 0 2px; }
 .mecanografico { font-size: 9px; color: #333; }
 hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
+
+/* Rodapé */
 .footer {
     margin-top: 28px;
     font-size: 11px;
@@ -155,12 +164,14 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
         </tr>
     </thead>
     <tbody>
-        {% set abrev = { 'Comandante': 'Cmd', '2º Comandante': '2ºCmdt', 'Adjunto Comando': 'Adj Com',
-            'Of. Bomb. 1ª': 'Of1', 'Of. Bomb. 2ª': 'Of2', 'Chefe': 'Chf', 'Sub Chefe': 'SChf',
-            'Bomb. 1ª': '1ª', 'Bomb. 2ª': '2ª', 'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp',
-            'Estagiário': 'Estg', 'Cadete': 'Cad' } %}
+        {% set abrev = {
+            'Comandante': 'Cmd', '2º Comandante': '2ºCmdt', 'Adjunto Comando': 'Adj Com',
+            'Of. Bomb. 1ª': 'Of1', 'Of. Bomb. 2ª': 'Of2', 'Chefe': 'Chf',
+            'Sub Chefe': 'SChf', 'Bomb. 1ª': '1ª', 'Bomb. 2ª': '2ª',
+            'Bomb. 3ª': '3ª', 'Bombeiro Especialista': 'B.Esp', 'Estagiário': 'Estg', 'Cadete': 'Cad'
+        } %}
         {% for dia in dias %}
-        <tr>
+        <tr{% if dia in weekend_days %} class="weekend"{% endif %}>
             <td class="col-dia">{{ dia }}</td>
             {% for turno in ['07h/19h', '19h/07h'] %}
                 {% for funcao in ['Motorista', 'Chefe'] %}
@@ -175,7 +186,9 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
                         </div>
                         {% if not loop.last %}<hr>{% endif %}
                         {% endfor %}
-                    {% else %} - {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
                 </td>
                 {% endfor %}
             {% endfor %}
