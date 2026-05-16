@@ -6,15 +6,13 @@
     <style>
         @page {
             size: A4;
-            margin: auto;
-            width: 18cm;
+            margin: 1.5cm;
         }
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
             margin: 0;
             padding: 0;
-            width: 100%;
         }
         .no-print {
             text-align: right;
@@ -24,39 +22,39 @@
             .no-print { display: none; }
         }
 
-        /* Cabeçalho com imagem à esquerda, texto à direita e título centralizado */
+        /* Cabeçalho com imagem à esquerda e texto à direita */
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
         .logo-anepc {
             height: 70px;
             width: auto;
-        }
-        .header-titulo {
-            text-align: center;
-            flex: 1;
-        }
-        .header-titulo h2 {
-            margin: 0;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .header-titulo p {
-            margin: 5px 0 0;
-            font-size: 12px;
-            font-weight: bold;
         }
         .corpo-bombeiros {
             font-size: 14px;
             font-weight: bold;
             color: #b22222;
             text-align: right;
-            white-space: nowrap;
+        }
+
+        /* Título centralizado (movido para baixo) */
+        .titulo-central {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .titulo-central h2 {
+            margin: 0;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .titulo-central p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            font-weight: bold;
         }
 
         /* Informação do turno */
@@ -74,7 +72,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 30px;  /* aumentado espaço entre tabelas */
         }
         th, td {
             border: 1px solid #000;
@@ -87,11 +85,9 @@
             text-align: center;
             font-size: 11px;
         }
-        /* Altura uniforme reduzida */
         td {
-            height: 28px;
+            height: 28px;  /* altura das linhas mantida */
         }
-        /* Largura das colunas */
         .col-mec {
             width: auto;
             white-space: nowrap;
@@ -106,7 +102,7 @@
             width: 15%;
         }
 
-        /* Nome a negrito e ligeiramente maior */
+        /* Nome a negrito */
         .nome-bombeiro {
             font-weight: bold;
             font-size: 12px;
@@ -121,16 +117,20 @@
             text-transform: uppercase;
         }
 
-        /* Caixa de observações (apenas texto) */
+        /* Caixa de observações com altura aumentada */
         .obs-box {
             border: 1px solid #000;
-            padding: 8px 12px;
+            padding: 12px;
             margin-top: 15px;
             margin-bottom: 15px;
+            min-height: 80px;  /* aumenta espaço interno */
         }
         .obs-box p {
-            margin: 0;
+            margin: 0 0 10px 0;
             font-weight: bold;
+        }
+        .obs-linhas {
+            line-height: 1.8;
         }
 
         /* Assinatura centralizada */
@@ -161,14 +161,16 @@
     <button onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
-<!-- Cabeçalho: imagem esquerda, título central, texto direita -->
+<!-- Cabeçalho: imagem esquerda, texto direita -->
 <div class="header">
     <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC.jpg') }}" alt="ANEPC">
-    <div class="header-titulo">
-        <h2>REGISTO PRESENÇAS</h2>
-        <p>ECIN<br>Dispositivo Especial Combate Incêndios Rurais (DECIR 2026)</p>
-    </div>
     <div class="corpo-bombeiros">Corpo de Bombeiros de Nisa</div>
+</div>
+
+<!-- Título centralizado (movido para baixo) -->
+<div class="titulo-central">
+    <h2>REGISTO PRESENÇAS</h2>
+    <p>ECIN<br>Dispositivo Especial Combate Incêndios Rurais (DECIR 2026)</p>
 </div>
 
 <!-- Turno 07h/19h -->
@@ -195,9 +197,9 @@
             <td class="col-mec">{{ bombeiro.mecanografico or '' }}</td>
             <td class="col-funcao">
                 {% if bombeiro.funcao == 'CHEFE -' %}
-                    CHF. {{ bombeiro.posto or '' }}
+                    CHF./{{ bombeiro.posto or '' }}
                 {% elif bombeiro.funcao == 'MOT -' %}
-                    MOT. {{ bombeiro.posto or '' }}
+                    MOT./{{ bombeiro.posto or '' }}
                 {% else %}
                     {{ bombeiro.posto or '' }}
                 {% endif %}
@@ -234,9 +236,9 @@
             <td class="col-mec">{{ bombeiro.mecanografico or '' }}</td>
             <td class="col-funcao">
                 {% if bombeiro.funcao == 'CHEFE -' %}
-                    CHF. {{ bombeiro.posto or '' }}
+                    CHF./{{ bombeiro.posto or '' }}
                 {% elif bombeiro.funcao == 'MOT -' %}
-                    MOT. {{ bombeiro.posto or '' }}
+                    MOT./{{ bombeiro.posto or '' }}
                 {% else %}
                     {{ bombeiro.posto or '' }}
                 {% endif %}
@@ -249,9 +251,12 @@
     </tbody>
 </table>
 
-<!-- Caixa de observações sem linhas -->
+<!-- Caixa de observações com altura aumentada -->
 <div class="obs-box">
     <p>OBS.:</p>
+    <div class="obs-linhas">
+        <br><br>  <!-- dois parágrafos em branco para mais espaço -->
+    </div>
 </div>
 
 <!-- Assinatura do Comandante centralizada -->
