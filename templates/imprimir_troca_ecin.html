@@ -57,27 +57,31 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        /* Tabela principal */
-        .tabela-troca {
+        /* Tabela principal (corpo) - estilo do Word */
+        .tabela-corpo {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 12px;
+            border: 1px solid #000;
         }
-        .tabela-troca td {
-            padding: 4px 4px;
+        .tabela-corpo td, .tabela-corpo th {
+            border: 1px solid #000;
+            padding: 6px 8px;
             vertical-align: top;
         }
         .rotulo {
             font-weight: bold;
-            width: 140px;
-            white-space: nowrap;
+            width: 30%;
         }
         .conteudo {
-            border-bottom: 1px dotted #000;
+            width: 70%;
         }
-        /* Assinatura sem borda */
-        .assinatura-cell {
-            border-bottom: none;
+        .sem-borda {
+            border: none !important;
+        }
+        /* Linha para assinatura (sem borda inferior) */
+        .assinatura-linha {
+            border-bottom: none !important;
         }
         hr {
             margin: 10px 0;
@@ -92,9 +96,14 @@
             padding-top: 8px;
         }
         .comandante {
-            text-align: right;
+            text-align: center;
             margin-top: 15px;
             font-size: 9pt;
+        }
+        .linha-assinatura-comandante {
+            border-top: 1px solid #000;
+            width: 180px;
+            margin: 8px auto 0 auto;
         }
         .no-print {
             margin-top: 20px;
@@ -152,40 +161,76 @@
             {% endif %}
         {% endmacro %}
 
-        <!-- Requerente -->
-        <table class="tabela-troca">
-            <tr><td class="rotulo">DATA DA TROCA</td><td class="conteudo">{{ troca.data_pedido.strftime('%d / %m / %Y') if troca.data_pedido else '___ / ___ / _____' }}</td></tr>
-            <tr><td class="rotulo">Turno Serviço:</td><td class="conteudo">{% if troca.data_origem and troca.turno_origem %}{{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_origem) }}{% else %}________________________{% endif %}</td></tr>
-            <tr><td class="rotulo">Nome:</td><td class="conteudo">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '________________________' }}</td></tr>
-            <tr><td class="rotulo">Posto:</td><td class="conteudo">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '________________________' }}</td></tr>
-            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        <!-- Tabela do requerente -->
+        <table class="tabela-corpo">
+            <tr>
+                <td class="rotulo"><strong>DATA DA TROCA</strong></td>
+                <td class="conteudo">{{ troca.data_pedido.strftime('%d / %m / %Y') if troca.data_pedido else '___ / ___ / _____' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>TURNO SERVIÇO</strong></td>
+                <td class="conteudo">
+                    {% if troca.data_origem and troca.turno_origem %}
+                        {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_origem) }}
+                    {% else %}
+                        ________________________
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Nome:</strong></td>
+                <td class="conteudo">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Posto:</strong></td>
+                <td class="conteudo">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Assinatura:</strong></td>
+                <td class="conteudo assinatura-linha"> </td>  <!-- linha vazia sem borda -->
+            </tr>
         </table>
 
-        <hr>
-
-        <!-- Aceitante -->
-        <table class="tabela-troca">
-            <tr><td class="rotulo">Troca - Turno Serviço:</td><td class="conteudo">{% if troca.data_destino and troca.turno_destino %}Sim – {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_destino) }}{% else %}Não{% endif %}</td></tr>
-            <tr><td class="rotulo">Nome:</td><td class="conteudo">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '________________________' }}</td></tr>
-            <tr><td class="rotulo">Posto:</td><td class="conteudo">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '________________________' }}</td></tr>
-            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        <!-- Tabela do aceitante -->
+        <table class="tabela-corpo">
+            <tr>
+                <td class="rotulo"><strong>TROCA – TURNO SERVIÇO</strong></td>
+                <td class="conteudo">
+                    {% if troca.data_destino and troca.turno_destino %}
+                        Sim – {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_destino) }}
+                    {% else %}
+                        Não
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Nome:</strong></td>
+                <td class="conteudo">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Posto:</strong></td>
+                <td class="conteudo">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo"><strong>Assinatura:</strong></td>
+                <td class="conteudo assinatura-linha"> </td>
+            </tr>
         </table>
 
     {% else %}
         <!-- Versão em branco -->
-        <table class="tabela-troca">
-            <tr><td class="rotulo">DATA DA TROCA</td><td class="conteudo">___ / ___ / _____</td></tr>
-            <tr><td class="rotulo">Turno Serviço:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Nome:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Posto:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        <table class="tabela-corpo">
+            <tr><td class="rotulo"><strong>DATA DA TROCA</strong></td><td class="conteudo">___ / ___ / _____</td></tr>
+            <tr><td class="rotulo"><strong>TURNO SERVIÇO</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Nome:</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Posto:</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Assinatura:</strong></td><td class="conteudo assinatura-linha"> </td></tr>
         </table>
-        <hr>
-        <table class="tabela-troca">
-            <tr><td class="rotulo">Troca - Turno Serviço:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Nome:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Posto:</td><td class="conteudo">________________________</td></tr>
-            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        <table class="tabela-corpo">
+            <tr><td class="rotulo"><strong>TROCA – TURNO SERVIÇO</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Nome:</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Posto:</strong></td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo"><strong>Assinatura:</strong></td><td class="conteudo assinatura-linha"> </td></tr>
         </table>
     {% endif %}
 
@@ -194,7 +239,7 @@
     </div>
     <div class="comandante">
         O Comandante<br>
-        <div style="border-top: 1px solid #000; width: 160px; margin-top: 12px;"></div>
+        <div class="linha-assinatura-comandante"></div>
     </div>
 
     <div class="no-print">
