@@ -20,15 +20,23 @@
             width: 100%;
             margin: 0 auto;
         }
-        /* Cabeçalho com tabela de 3 colunas */
-        .cabecalho {
+        table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
-        .cabecalho td {
+        td, th {
+            border: 1px solid #000;
+            padding: 8px 6px;
             vertical-align: top;
-            padding: 5px;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .sem-borda {
+            border: none;
         }
         .logo-area {
             display: flex;
@@ -60,22 +68,6 @@
             font-weight: bold;
             font-size: 11pt;
         }
-        /* Tabela principal do formulário */
-        .form-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .form-table td, .form-table th {
-            border: 1px solid #000;
-            padding: 8px 6px;
-            vertical-align: top;
-        }
-        .form-table th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-            text-align: center;
-        }
         .campo-label {
             font-weight: bold;
             width: 30%;
@@ -83,20 +75,14 @@
         .campo-valor {
             width: 70%;
         }
+        .assinatura-td {
+            text-align: center;
+            vertical-align: bottom;
+        }
         .linha-assinatura {
             border-top: 1px solid #000;
             margin-top: 20px;
             padding-top: 5px;
-            text-align: center;
-        }
-        .assinaturas {
-            margin-top: 25px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .assinatura {
-            width: 45%;
-            text-align: center;
         }
         .no-print {
             margin-top: 25px;
@@ -112,8 +98,8 @@
 <body>
 <div class="container">
 
-    <!-- Cabeçalho com tabela de 3 colunas (imagem+texto | TROCAS DE SERVIÇO | VISTO) -->
-    <table class="cabecalho">
+    <!-- ========== TABELA DO CABEÇALHO (imagem + título + visto) ========== -->
+    <table>
         <tr>
             <td style="width: 33%;">
                 <div class="logo-area">
@@ -141,8 +127,8 @@
         </tr>
     </table>
 
-    <!-- Tabela principal com os campos (preenchidos ou vazios) -->
-    <table class="form-table">
+    <!-- ========== TABELA DO CORPO DO FORMULÁRIO ========== -->
+    <table>
         <!-- Linha: Nome do Requerente -->
         <tr>
             <td class="campo-label">Nome</td>
@@ -163,13 +149,13 @@
                 {% else %}
                     Dia ____/____/______  —  Turno: _________________
                 {% endif %}
-            </td>
+             </td>
         </tr>
-        <!-- Linha: Vem Requerer Troca de Serviço com (subtítulo) -->
+        <!-- Linha com subtítulo "Vem Requerer Troca de Serviço com :" -->
         <tr>
             <td colspan="2" style="text-align: center; background-color: #f9f9f9;">
                 <strong>Vem Requerer Troca de Serviço com :</strong>
-            </td>
+             </td>
         </tr>
         <!-- Linha: Nome do Colega -->
         <tr>
@@ -180,7 +166,7 @@
                 {% else %}
                     _________________________________________________
                 {% endif %}
-            </td>
+             </td>
         </tr>
         <!-- Linha: Serviço no Dia / Turno (Colega) -->
         <tr>
@@ -191,32 +177,35 @@
                 {% else %}
                     Dia ____/____/______  —  Turno: _________________
                 {% endif %}
-            </td>
+             </td>
         </tr>
     </table>
 
-    <!-- Assinaturas (Requerente e Aceitante) -->
-    <div class="assinaturas">
-        <div class="assinatura">
-            <div class="linha-assinatura">
-                _________________________________<br>
-                O Requerente
-            </div>
-        </div>
-        <div class="assinatura">
-            <div class="linha-assinatura">
-                _________________________________<br>
-                O Aceitante
-            </div>
-        </div>
-    </div>
+    <!-- ========== TABELA DAS ASSINATURAS ========== -->
+    <table>
+        <tr>
+            <td class="assinatura-td" style="width: 50%;">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Requerente
+                </div>
+             </td>
+            <td class="assinatura-td" style="width: 50%;">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Aceitante
+                </div>
+             </td>
+        </tr>
+    </table>
 
     <!-- Motivo (se existir) -->
     {% if troca and troca.motivo %}
-    <div style="margin-top: 25px; border-top: 1px dashed #aaa; padding-top: 10px;">
-        <strong>Motivo apresentado:</strong><br>
-        {{ troca.motivo }}
-    </div>
+    <table>
+        <tr>
+            <td><strong>Motivo apresentado:</strong><br>{{ troca.motivo }}</td>
+        </tr>
+    </table>
     {% endif %}
 
     <!-- Botões de impressão (não aparecem na impressão) -->
