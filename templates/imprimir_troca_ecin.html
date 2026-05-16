@@ -5,7 +5,7 @@
     <title>Registo de Troca de Serviço - ECIN</title>
     <style>
         @page { size: B5; margin: 1.5cm; }
-        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.3; margin: 0; padding: 0; background: white; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; margin: 0; padding: 0; }
         .container { max-width: 100%; margin: 0 auto; }
         .header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #aaa; padding-bottom: 10px; }
         .logo { height: 55px; width: auto; }
@@ -13,12 +13,12 @@
         .contactos { font-size: 8pt; color: #333; margin-top: 4px; }
         .titulo { text-align: center; font-size: 16pt; font-weight: bold; margin: 20px 0 10px; text-transform: uppercase; }
         .subtitulo { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; }
-        .campo-linha { display: flex; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; }
-        .label { font-weight: bold; min-width: 130px; }
-        .linha-preenchimento { border-bottom: 1px dotted #000; flex: 1; margin-left: 10px; min-width: 150px; }
-        .linha-cheia { border-bottom: 1px dotted #000; width: 100%; margin-top: 4px; }
-        .duas-colunas { display: flex; gap: 30px; margin-bottom: 16px; }
-        .coluna { flex: 1; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        td, th { border: 1px solid #000; padding: 8px 6px; vertical-align: top; }
+        th { background-color: #e0e0e0; text-align: center; font-weight: bold; }
+        .label-bold { font-weight: bold; }
+        .linha-preenchimento { border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; }
+        .assinatura-linha { border-top: 1px solid #000; margin-top: 20px; padding-top: 5px; text-align: center; }
         .nota { margin-top: 30px; font-size: 9pt; text-align: center; border-top: 1px solid #ccc; padding-top: 12px; }
         .comandante { text-align: right; margin-top: 20px; font-size: 10pt; }
         .no-print { margin-top: 30px; text-align: center; }
@@ -39,7 +39,7 @@
     <div class="subtitulo">ECIN</div>
 
     {% if troca %}
-        {# Macro para extrair horas de forma segura, suportando formatos "08h/20h" ou "1 - 08h/20h" #}
+        {# Macro para extrair horas de forma segura #}
         {% macro extrair_horas(turno) %}
             {% if turno %}
                 {% if '-' in turno %}
@@ -58,108 +58,67 @@
             {% endif %}
         {% endmacro %}
 
-        <div class="campo-linha">
-            <span class="label">DATA DA TROCA</span>
-            <span class="linha-preenchimento">{{ troca.data_origem.strftime('%d / %m / %Y') if troca.data_origem else '___ / ___ / _____' }}</span>
-        </div>
-        <div class="campo-linha">
-            <span class="label">TURNO SERVIÇO DAS</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">
-                {% set horas = extrair_horas(troca.turno_origem).split(':') %}
-                {{ horas[0] if horas|length > 0 else '_______' }} horas
-            </span>
-            <span class="label" style="margin-left: 15px;">às</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">
-                {{ horas[1] if horas|length > 1 else '_______' }} horas
-            </span>
-        </div>
-        <div class="duas-colunas">
-            <div class="coluna">
-                <span class="label">Nome:</span>
-                <div class="linha-cheia" style="margin-top: 6px;">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '' }}</div>
-            </div>
-            <div class="coluna">
-                <span class="label">Posto:</span>
-                <div class="linha-cheia" style="margin-top: 6px;">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '' }}</div>
-            </div>
-        </div>
-        <div class="campo-linha">
-            <span class="label">Assinatura:</span>
-            <div class="linha-cheia"></div>
-        </div>
+        {# Determinar se o aceitante tem dados para mostrar (data_destino e turno_destino não nulos) #}
+        {% set aceitante_tem_dados = troca.data_destino and troca.turno_destino %}
 
-        <div class="campo-linha" style="margin-top: 25px;">
-            <span class="label">TROCA – TURNO SERVIÇO DAS</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">
-                {% set horas2 = extrair_horas(troca.turno_destino).split(':') %}
-                {{ horas2[0] if horas2|length > 0 else '_______' }} horas
-            </span>
-            <span class="label" style="margin-left: 15px;">às</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">
-                {{ horas2[1] if horas2|length > 1 else '_______' }} horas
-            </span>
-        </div>
-        <div class="duas-colunas">
-            <div class="coluna">
-                <span class="label">Nome:</span>
-                <div class="linha-cheia" style="margin-top: 6px;">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '' }}</div>
-            </div>
-            <div class="coluna">
-                <span class="label">Posto:</span>
-                <div class="linha-cheia" style="margin-top: 6px;">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '' }}</div>
-            </div>
-        </div>
-        <div class="campo-linha">
-            <span class="label">Assinatura:</span>
-            <div class="linha-cheia"></div>
-        </div>
+        <table>
+            <!-- Linha DATA DA TROCA (data do requerente) -->
+            <tr>
+                <td style="width: 30%;"><strong>DATA DA TROCA</strong></td>
+                <td colspan="3">
+                    <span class="linha-preenchimento">{{ troca.data_origem.strftime('%d / %m / %Y') if troca.data_origem else '___ / ___ / _____' }}</span>
+                </td>
+            </tr>
+            <!-- TURNO SERVIÇO do requerente -->
+            <tr>
+                <td><strong>TURNO SERVIÇO DAS</strong></td>
+                <td colspan="3">
+                    {% set horas = extrair_horas(troca.turno_origem).split(':') %}
+                    <span class="linha-preenchimento" style="min-width: 80px;">{{ horas[0] if horas|length > 0 else '_______' }} horas</span>
+                    <span> às </span>
+                    <span class="linha-preenchimento" style="min-width: 80px;">{{ horas[1] if horas|length > 1 else '_______' }} horas</span>
+                 </td>
+            </tr>
+            <!-- Nome e Posto do requerente -->
+            <tr><td><strong>Nome:</strong></td><td colspan="3">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '' }}</td></tr>
+            <tr><td><strong>Posto:</strong></td><td colspan="3">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '' }}</td></tr>
+            <tr><td><strong>Assinatura:</strong></td><td colspan="3"><div class="assinatura-linha" style="margin-top: 10px;"></div></td></tr>
+
+            {% if aceitante_tem_dados %}
+                <!-- TROCA – TURNO SERVIÇO do aceitante -->
+                <tr><td colspan="4" style="background-color: #f0f0f0;"><strong>TROCA – TURNO SERVIÇO</strong></td></tr>
+                <tr><td><strong>TURNO SERVIÇO DAS</strong></td><td colspan="3">
+                    {% set horas2 = extrair_horas(troca.turno_destino).split(':') %}
+                    <span class="linha-preenchimento" style="min-width: 80px;">{{ horas2[0] if horas2|length > 0 else '_______' }} horas</span>
+                    <span> às </span>
+                    <span class="linha-preenchimento" style="min-width: 80px;">{{ horas2[1] if horas2|length > 1 else '_______' }} horas</span>
+                 </td></tr>
+                <tr><td><strong>Nome:</strong></td><td colspan="3">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '' }}</td></tr>
+                <tr><td><strong>Posto:</strong></td><td colspan="3">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '' }}</td></tr>
+                <tr><td><strong>Assinatura:</strong></td><td colspan="3"><div class="assinatura-linha" style="margin-top: 10px;"></div></td></tr>
+            {% else %}
+                <!-- Caso o aceitante não tenha turno para trocar (apenas folga) -->
+                <tr><td colspan="4" style="background-color: #f0f0f0;"><strong>TROCA – TURNO SERVIÇO (Folga / Sem turno específico)</strong></td></tr>
+                <tr><td><strong>Nome:</strong></td><td colspan="3">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '' }}</td></tr>
+                <tr><td><strong>Posto:</strong></td><td colspan="3">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '' }}</td></tr>
+                <tr><td><strong>Assinatura:</strong></td><td colspan="3"><div class="assinatura-linha" style="margin-top: 10px;"></div></td></tr>
+            {% endif %}
+        </table>
+
     {% else %}
-        <!-- Versão em branco para preenchimento manual -->
-        <div class="campo-linha">
-            <span class="label">DATA DA TROCA</span>
-            <span class="linha-preenchimento">_____ / _____ / ________</span>
-        </div>
-        <div class="campo-linha">
-            <span class="label">TURNO SERVIÇO DAS</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
-            <span class="label" style="margin-left: 15px;">às</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
-        </div>
-        <div class="duas-colunas">
-            <div class="coluna">
-                <span class="label">Nome:</span>
-                <div class="linha-cheia" style="margin-top: 6px;"></div>
-            </div>
-            <div class="coluna">
-                <span class="label">Posto:</span>
-                <div class="linha-cheia" style="margin-top: 6px;"></div>
-            </div>
-        </div>
-        <div class="campo-linha">
-            <span class="label">Assinatura:</span>
-            <div class="linha-cheia"></div>
-        </div>
-
-        <div class="campo-linha" style="margin-top: 25px;">
-            <span class="label">TROCA – TURNO SERVIÇO DAS</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
-            <span class="label" style="margin-left: 15px;">às</span>
-            <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
-        </div>
-        <div class="duas-colunas">
-            <div class="coluna">
-                <span class="label">Nome:</span>
-                <div class="linha-cheia" style="margin-top: 6px;"></div>
-            </div>
-            <div class="coluna">
-                <span class="label">Posto:</span>
-                <div class="linha-cheia" style="margin-top: 6px;"></div>
-            </div>
-        </div>
-        <div class="campo-linha">
-            <span class="label">Assinatura:</span>
-            <div class="linha-cheia"></div>
-        </div>
+        <!-- Versão em branco (manual) -->
+        <table>
+            <tr><td><strong>DATA DA TROCA</strong></td><td colspan="3"><span class="linha-preenchimento">_____ / _____ / ________</span></td></tr>
+            <tr><td><strong>TURNO SERVIÇO DAS</strong></td><td colspan="3"><span class="linha-preenchimento">_______ horas</span> às <span class="linha-preenchimento">_______ horas</span></td></tr>
+            <tr><td><strong>Nome:</strong></td><td colspan="3"><span class="linha-preenchimento" style="width: 100%;"></span></td></tr>
+            <tr><td><strong>Posto:</strong></td><td colspan="3"><span class="linha-preenchimento" style="width: 100%;"></span></td></tr>
+            <tr><td><strong>Assinatura:</strong></td><td colspan="3"><div class="assinatura-linha"></div></td></tr>
+            <tr><td colspan="4" style="background-color: #f0f0f0;"><strong>TROCA – TURNO SERVIÇO</strong></td></tr>
+            <tr><td><strong>TURNO SERVIÇO DAS</strong></td><td colspan="3"><span class="linha-preenchimento">_______ horas</span> às <span class="linha-preenchimento">_______ horas</span></td></tr>
+            <tr><td><strong>Nome:</strong></td><td colspan="3"><span class="linha-preenchimento"></span></td></tr>
+            <tr><td><strong>Posto:</strong></td><td colspan="3"><span class="linha-preenchimento"></span></td></tr>
+            <tr><td><strong>Assinatura:</strong></td><td colspan="3"><div class="assinatura-linha"></div></td></tr>
+        </table>
     {% endif %}
 
     <div class="nota">
