@@ -19,7 +19,6 @@
             width: 100%;
             margin: 0 auto;
         }
-        /* Cabeçalho */
         .cabecalho {
             display: flex;
             align-items: center;
@@ -49,63 +48,53 @@
             font-size: 14pt;
             text-transform: uppercase;
         }
-        /* Tabelas de campos */
-        .tabela-dados {
+        /* Tabela principal com bordas */
+        .tabela-principal {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            border: 1px solid #000;
+            margin-bottom: 20px;
         }
-        .tabela-dados td, .tabela-dados th {
-            border: none;
-            padding: 6px 4px;
+        .tabela-principal td, .tabela-principal th {
+            border: 1px solid #000;
+            padding: 8px 6px;
             vertical-align: top;
         }
         .rotulo {
             font-weight: bold;
-            width: 28%;
+            width: 30%;
+            background-color: #f9f9f9;
         }
         .campo {
-            border-bottom: 1px dotted #000;
-            padding-left: 6px;
-        }
-        .campo-sem-linha {
-            padding-left: 6px;
+            width: 70%;
         }
         .linha-datas {
-            display: inline-block;
-            min-width: 100px;
             border-bottom: 1px dotted #000;
-            margin: 0 8px;
+            display: inline-block;
+            min-width: 90px;
         }
-        .assinatura-area {
-            margin-top: 35px;
+        .assinatura-container {
             text-align: center;
+            margin-top: 35px;
         }
         .assinatura-linha {
             border-top: 1px solid #000;
             width: 250px;
             margin: 25px auto 0 auto;
         }
-        .parecer {
-            margin-top: 25px;
-            border-top: 1px solid #ccc;
-            padding-top: 15px;
-        }
         .no-print {
             margin-top: 25px;
             text-align: center;
         }
         @media print {
-            .no-print {
-                display: none;
-            }
+            .no-print { display: none; }
         }
     </style>
 </head>
 <body>
 <div class="container">
 
-    <!-- Cabeçalho -->
+    <!-- ========== CABEÇALHO ========== -->
     <div class="cabecalho">
         <div class="logo-area">
             <img class="logo" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="BVN">
@@ -116,57 +105,105 @@
             </div>
         </div>
         <div class="titulo">PEDIDO DE DISPENSA DE SERVIÇO<br>(Compensação de Tempo)</div>
-        <div style="width: 90px;"></div> <!-- espaço vazio para equilibrar -->
+        <div style="width: 90px;"></div>
     </div>
 
-    <!-- Dados do bombeiro -->
-    <table class="tabela-dados">
-        <tr><td class="rotulo">Nome:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.nome }}{% else %}_________________________________________________{% endif %}</td></tr>
-        <tr><td class="rotulo">Categoria:</td><td class="campo">{% if dispensa and dispensa.categoria %}{{ dispensa.categoria }}{% else %}________________________{% endif %}</td></tr>
-        <tr><td class="rotulo">Nº Mec.:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.mecanografico }}{% else %}_______________{% endif %}</td></tr>
-        <tr><td class="rotulo">Serviço:</td><td class="campo">{% if dispensa and dispensa.servico_tipo %}{{ dispensa.servico_tipo }}{% else %}_________________________________{% endif %}</td></tr>
-    </table>
-
-    <!-- Solicita dispensa nos dias -->
-    <table class="tabela-dados">
-        <tr><td class="rotulo">SOLICITA DISPENSA ao SERVIÇO nos DIAS:</td></td>
-            <td>
-                <div><span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span></div>
+    <!-- ========== CORPO EM TABELA ========== -->
+    <table class="tabela-principal">
+        <!-- Nº Mecanográfico -->
+        <tr>
+            <td class="rotulo">Nº Mecanográfico:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.bombeiro %}
+                    {{ dispensa.bombeiro.mecanografico }}
+                {% else %}
+                    _________________________
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Nome -->
+        <tr>
+            <td class="rotulo">Nome:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.bombeiro %}
+                    {{ dispensa.bombeiro.nome }}
+                {% else %}
+                    _________________________________________________
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Posto -->
+        <tr>
+            <td class="rotulo">Posto:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.bombeiro %}
+                    {{ dispensa.bombeiro.posto }}
+                {% else %}
+                    _________________________
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Categoria -->
+        <tr>
+            <td class="rotulo">Categoria:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.categoria %}
+                    {{ dispensa.categoria }}
+                {% else %}
+                    _________________________
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Solicito Dispensa no dia: (data e turno) -->
+        <tr>
+            <td class="rotulo">Solicito Dispensa no dia:</td>
+            <td class="campo">
+                {% if dispensa %}
+                    Data: <span class="linha-datas">{{ dispensa.data_inicio.strftime('%d/%m/%Y') if dispensa.data_inicio else '___/___/_____' }}</span>
+                    {% if dispensa.data_inicio != dispensa.data_fim %}
+                         até <span class="linha-datas">{{ dispensa.data_fim.strftime('%d/%m/%Y') if dispensa.data_fim else '___/___/_____' }}</span>
+                    {% endif %}
+                    <br>Turno: <span class="linha-datas">{{ dispensa.turno if dispensa.turno else '________' }}</span>
+                {% else %}
+                    Data: <span class="linha-datas">___/___/_____</span><br>Turno: <span class="linha-datas">________</span>
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Como compensação por ter trabalhado nos dias: (créditos) -->
+        <tr>
+            <td class="rotulo">Como compensação por ter trabalhado nos dias:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.creditos and dispensa.creditos|length > 0 %}
+                    {% for credito in dispensa.creditos %}
+                        <div>Dia: <span class="linha-datas">{{ credito.data.strftime('%d/%m/%Y') }}</span> — Horas: <span class="linha-datas">{{ credito.horas }}h</span></div>
+                    {% endfor %}
+                {% else %}
+                    <div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div>
+                    <div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div>
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Motivo -->
+        <tr>
+            <td class="rotulo">Motivo:</td>
+            <td class="campo">
+                {% if dispensa and dispensa.motivo %}
+                    {{ dispensa.motivo }}
+                {% else %}
+                    _________________________________________________________________
+                {% endif %}
             </td>
         </tr>
     </table>
 
-    <div style="margin-top: 5px;"><strong><u>Como Compensação por ter Trabalhado nos Dias:</u></strong></div>
-    <table class="tabela-dados">
-        <tr><td class="rotulo" style="width: 10%;"></td><td class="campo-sem-linha"><span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span></td></tr>
-    </table>
-
-    <!-- Data e assinatura do requerente -->
-    <div style="margin-top: 20px;">
-        Nisa, ______ de ____________________ de ______
-    </div>
-    <div class="assinatura-area">
+    <!-- ========== RODAPÉ (fora da tabela, centralizado) ========== -->
+    <div style="margin-top: 25px; text-align: center;">
+        Nisa, ______ de ____________________ de ______<br><br>
         Assinatura<br>
-        <div class="assinatura-linha"></div>
+        <div style="border-top: 1px solid #000; width: 250px; margin: 10px auto 0 auto;"></div>
     </div>
 
-    <!-- Parecer do responsável -->
-    <div class="parecer">
-        <strong><u>PARECER DO RESPONSÁVEL PELO SERVIÇO:</u></strong><br><br>
-        Vistos e Confirmados os motivos supra indicados,<br>
-        Considero ________________________ Concedida a Dispensa solicitada.<br><br>
-        Nisa, ____ / ____ / ________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Assinatura<br>
-        <div style="border-bottom: 1px dotted #000; width: 250px; margin-top: 10px;"></div>
-    </div>
-
-    <!-- Motivo (se existir) – opcional -->
-    {% if dispensa and dispensa.motivo %}
-    <div style="margin-top: 15px; font-size: 9pt;">
-        <strong>Motivo apresentado:</strong> {{ dispensa.motivo }}
-    </div>
-    {% endif %}
-
-    <!-- Botões de impressão -->
+    <!-- ========== BOTÕES DE IMPRESSÃO (não aparecem no papel) ========== -->
     <div class="no-print">
         <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
         <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
