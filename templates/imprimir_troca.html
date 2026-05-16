@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Pedido de Troca de Serviço</title>
     <style>
+        /* Página B5 (ISO) */
         @page {
             size: B5 landscape;
             margin: 1.2cm;
@@ -11,230 +12,208 @@
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 11pt;
-            line-height: 1.3;
+            background: white;
             margin: 0;
             padding: 0;
-            background: white;
         }
         .container {
-            max-width: 100%;
+            width: 100%;
             margin: 0 auto;
         }
-        /* Cabeçalho */
-        .header {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        td, th {
+            border: 1px solid #000;
+            padding: 8px 6px;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .sem-borda {
+            border: none;
+        }
+        .logo-area {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #aaa;
-            padding-bottom: 8px;
+            gap: 8px;
         }
         .logo {
-            height: 50px;
+            height: 45px;
             width: auto;
         }
         .associacao {
-            font-size: 11pt;
             font-weight: bold;
+            font-size: 9pt;
             line-height: 1.2;
-        }
-        .contactos {
-            font-size: 7.5pt;
-            color: #333;
-            margin-top: 3px;
-        }
-        .titulo {
-            text-align: center;
-            font-size: 16pt;
-            font-weight: bold;
-            margin: 12px 0 5px;
             text-transform: uppercase;
         }
-        /* Campos do formulário (layout flexível) */
-        .form-linha {
-            margin-bottom: 12px;
-            display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-        }
-        .label {
-            font-weight: bold;
-            width: 180px;
-        }
-        .campo {
-            flex: 1;
-            border-bottom: 1px dotted #000;
-            margin-left: 10px;
-            min-width: 200px;
-        }
-        .assinaturas {
-            margin-top: 35px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .assinatura {
-            width: 45%;
+        .titulo-central {
             text-align: center;
+            font-weight: bold;
+            font-size: 16pt;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+        .visto-area {
+            text-align: right;
+            font-size: 9pt;
+        }
+        .visto-area .visto-titulo {
+            font-weight: bold;
+            font-size: 11pt;
+        }
+        .campo-label {
+            font-weight: bold;
+            width: 30%;
+        }
+        .campo-valor {
+            width: 70%;
+        }
+        .assinatura-td {
+            text-align: center;
+            vertical-align: bottom;
         }
         .linha-assinatura {
             border-top: 1px solid #000;
-            margin-top: 25px;
+            margin-top: 20px;
             padding-top: 5px;
-            font-size: 9pt;
-        }
-        .info-extra {
-            margin-top: 20px;
-            font-size: 9pt;
-            text-align: center;
-        }
-        .motivo {
-            margin-top: 20px;
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
-            font-size: 9pt;
-        }
-        .nota {
-            margin-top: 20px;
-            font-size: 8.5pt;
-            text-align: center;
-            border-top: 1px solid #ccc;
-            padding-top: 8px;
-        }
-        .comandante {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 9pt;
-        }
-        .linha-comandante {
-            border-top: 1px solid #000;
-            width: 180px;
-            margin: 10px auto 0 auto;
         }
         .no-print {
-            margin-top: 20px;
+            margin-top: 25px;
             text-align: center;
         }
         @media print {
-            .no-print { display: none; }
+            .no-print {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="header">
-        <img class="logo" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="BVN">
-        <div class="associacao">
-            ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA<br>
-            <span class="contactos">Email: comandonisa@gmail.com | Rua Prof. Cruz Malpique S/N | 6050-341 Nisa | Tel 245412303</span>
-        </div>
-    </div>
 
-    <div class="titulo">PEDIDO DE TROCA DE SERVIÇO</div>
+    <!-- ========== TABELA DO CABEÇALHO (imagem + título + visto) ========== -->
+    <table>
+        <tr>
+            <td style="width: 33%;">
+                <div class="logo-area">
+                    <img class="logo" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="BVN">
+                    <div class="associacao">
+                        ASSOCIAÇÃO HUMANITÁRIA<br>
+                        DOS BOMBEIROS VOLUNTÁRIOS<br>
+                        DE NISA
+                    </div>
+                </div>
+            </td>
+            <td style="width: 34%; text-align: center;">
+                <div class="titulo-central">
+                    TROCAS<br>DE<br>SERVIÇO
+                </div>
+            </td>
+            <td style="width: 33%;">
+                <div class="visto-area">
+                    <div class="visto-titulo">VISTO</div>
+                    Data ___/___/_____<br><br>
+                    O Comandante<br>
+                    ___________________
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    <!-- Requerente -->
-    <div class="form-linha">
-        <div class="label">Nome do Requerente:</div>
-        <div class="campo">
-            {% if troca and troca.bombeiro_origem %}
-                {{ troca.bombeiro_origem.nome }} ({{ troca.bombeiro_origem.mecanografico }})
-            {% else %}
-                _______________________________
-            {% endif %}
-        </div>
-    </div>
+    <!-- ========== TABELA DO CORPO DO FORMULÁRIO ========== -->
+    <table>
+        <!-- Linha: Nome do Requerente -->
+        <tr>
+            <td class="campo-label">Nome</td>
+            <td class="campo-valor">
+                {% if troca and troca.bombeiro_origem %}
+                    {{ troca.bombeiro_origem.nome }} ({{ troca.bombeiro_origem.mecanografico }})
+                {% else %}
+                    _________________________________________________
+                {% endif %}
+            </td>
+        </tr>
+        <!-- Linha: Serviço no Dia / Turno (Requerente) -->
+        <tr>
+            <td class="campo-label">Serviço no Dia / Turno</td>
+            <td class="campo-valor">
+                {% if troca and troca.data_origem and troca.turno_origem %}
+                    Dia {{ troca.data_origem.strftime('%d/%m/%Y') }}  —  Turno: {{ troca.turno_origem }}
+                {% else %}
+                    Dia ____/____/______  —  Turno: _________________
+                {% endif %}
+             </td>
+        </tr>
+        <!-- Linha com subtítulo "Vem Requerer Troca de Serviço com :" -->
+        <tr>
+            <td colspan="2" style="text-align: center; background-color: #f9f9f9;">
+                <strong>Vem Requerer Troca de Serviço com :</strong>
+             </td>
+        </tr>
+        <!-- Linha: Nome do Colega -->
+        <tr>
+            <td class="campo-label">Nome</td>
+            <td class="campo-valor">
+                {% if troca and troca.bombeiro_destino %}
+                    {{ troca.bombeiro_destino.nome }} ({{ troca.bombeiro_destino.mecanografico }})
+                {% else %}
+                    _________________________________________________
+                {% endif %}
+             </td>
+        </tr>
+        <!-- Linha: Serviço no Dia / Turno (Colega) -->
+        <tr>
+            <td class="campo-label">Serviço no Dia / Turno</td>
+            <td class="campo-valor">
+                {% if troca and troca.data_destino and troca.turno_destino %}
+                    Dia {{ troca.data_destino.strftime('%d/%m/%Y') }}  —  Turno: {{ troca.turno_destino }}
+                {% else %}
+                    Dia ____/____/______  —  Turno: _________________
+                {% endif %}
+             </td>
+        </tr>
+    </table>
 
-    <div class="form-linha">
-        <div class="label">Serviço no dia / Turno:</div>
-        <div class="campo">
-            {% if troca and troca.data_origem and troca.turno_origem %}
-                {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ troca.turno_origem }}
-            {% else %}
-                ___/___/______  Turno: _______________
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="form-linha">
-        <div class="label">Vem requerer troca com:</div>
-        <div class="campo">
-            {% if troca and troca.bombeiro_destino %}
-                {{ troca.bombeiro_destino.nome }} ({{ troca.bombeiro_destino.mecanografico }})
-            {% else %}
-                _______________________________
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="form-linha">
-        <div class="label">Serviço no dia / Turno:</div>
-        <div class="campo">
-            {% if troca and troca.data_destino and troca.turno_destino %}
-                {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ troca.turno_destino }}
-            {% else %}
-                ___/___/______  Turno: _______________
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="form-linha">
-        <div class="label">Dia de folga / Período:</div>
-        <div class="campo">
-            {% if troca and troca.data_destino %}
-                {{ troca.data_destino.strftime('%d/%m/%Y') }}
-            {% else %}
-                ___/___/______
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Assinaturas -->
-    <div class="assinaturas">
-        <div class="assinatura">
-            <div class="linha-assinatura">
-                _________________________________<br>
-                O Requerente
-            </div>
-        </div>
-        <div class="assinatura">
-            <div class="linha-assinatura">
-                _________________________________<br>
-                O Aceitante
-            </div>
-        </div>
-    </div>
-
-    <!-- Data do pedido -->
-    <div class="info-extra">
-        <p>Data do pedido:
-            {% if troca and troca.data_pedido %}
-                {{ troca.data_pedido.strftime('%d/%m/%Y') }}
-            {% else %}
-                _________________________________
-            {% endif %}
-        </p>
-    </div>
+    <!-- ========== TABELA DAS ASSINATURAS ========== -->
+    <table>
+        <tr>
+            <td class="assinatura-td" style="width: 50%;">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Requerente
+                </div>
+             </td>
+            <td class="assinatura-td" style="width: 50%;">
+                <div class="linha-assinatura">
+                    _________________________________<br>
+                    O Aceitante
+                </div>
+             </td>
+        </tr>
+    </table>
 
     <!-- Motivo (se existir) -->
     {% if troca and troca.motivo %}
-    <div class="motivo">
-        <strong>Motivo apresentado:</strong><br>
-        {{ troca.motivo }}
-    </div>
+    <table>
+        <tr>
+            <td><strong>Motivo apresentado:</strong><br>{{ troca.motivo }}</td>
+        </tr>
+    </table>
     {% endif %}
 
-    <!-- Nota e Visto do Comando -->
-    <div class="nota">
-        <strong>Nota:</strong> As Trocas só são válidas após Autorização do Comando
-    </div>
-    <div class="comandante">
-        O Comandante<br>
-        <div class="linha-comandante"></div>
-    </div>
-
+    <!-- Botões de impressão (não aparecem na impressão) -->
     <div class="no-print">
         <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
         <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
     </div>
+
 </div>
 </body>
 </html>
