@@ -39,7 +39,25 @@
     <div class="subtitulo">ECIN</div>
 
     {% if troca %}
-        <!-- Serviço original com dados da troca -->
+        {# Macro para extrair horas de forma segura, suportando formatos "08h/20h" ou "1 - 08h/20h" #}
+        {% macro extrair_horas(turno) %}
+            {% if turno %}
+                {% if '-' in turno %}
+                    {% set parte = turno.split('-')[1].strip() %}
+                {% else %}
+                    {% set parte = turno %}
+                {% endif %}
+                {% if '/' in parte %}
+                    {% set horas = parte.split('/') %}
+                    {{ horas[0].replace('h', '').strip() }}:{{ horas[1].replace('h', '').strip() }}
+                {% else %}
+                    {{ parte.replace('h', '').strip() }}:00
+                {% endif %}
+            {% else %}
+                _______:______
+            {% endif %}
+        {% endmacro %}
+
         <div class="campo-linha">
             <span class="label">DATA DA TROCA</span>
             <span class="linha-preenchimento">{{ troca.data_origem.strftime('%d / %m / %Y') if troca.data_origem else '___ / ___ / _____' }}</span>
@@ -47,19 +65,12 @@
         <div class="campo-linha">
             <span class="label">TURNO SERVIÇO DAS</span>
             <span class="linha-preenchimento" style="min-width: 80px;">
-                {% if troca.turno_origem %}
-                    {{ troca.turno_origem.split('-')[1].split('/')[0]|trim }} horas
-                {% else %}
-                    _______ horas
-                {% endif %}
+                {% set horas = extrair_horas(troca.turno_origem).split(':') %}
+                {{ horas[0] if horas|length > 0 else '_______' }} horas
             </span>
             <span class="label" style="margin-left: 15px;">às</span>
             <span class="linha-preenchimento" style="min-width: 80px;">
-                {% if troca.turno_origem %}
-                    {{ troca.turno_origem.split('-')[1].split('/')[1]|trim }} horas
-                {% else %}
-                    _______ horas
-                {% endif %}
+                {{ horas[1] if horas|length > 1 else '_______' }} horas
             </span>
         </div>
         <div class="duas-colunas">
@@ -77,23 +88,15 @@
             <div class="linha-cheia"></div>
         </div>
 
-        <!-- Troca -->
         <div class="campo-linha" style="margin-top: 25px;">
             <span class="label">TROCA – TURNO SERVIÇO DAS</span>
             <span class="linha-preenchimento" style="min-width: 80px;">
-                {% if troca.turno_destino %}
-                    {{ troca.turno_destino.split('-')[1].split('/')[0]|trim }} horas
-                {% else %}
-                    _______ horas
-                {% endif %}
+                {% set horas2 = extrair_horas(troca.turno_destino).split(':') %}
+                {{ horas2[0] if horas2|length > 0 else '_______' }} horas
             </span>
             <span class="label" style="margin-left: 15px;">às</span>
             <span class="linha-preenchimento" style="min-width: 80px;">
-                {% if troca.turno_destino %}
-                    {{ troca.turno_destino.split('-')[1].split('/')[1]|trim }} horas
-                {% else %}
-                    _______ horas
-                {% endif %}
+                {{ horas2[1] if horas2|length > 1 else '_______' }} horas
             </span>
         </div>
         <div class="duas-colunas">
