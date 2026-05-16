@@ -12,7 +12,7 @@
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 11pt;
-            line-height: 1.3;
+            line-height: 1.4;
             margin: 0;
             padding: 0;
             background: white;
@@ -21,30 +21,82 @@
             max-width: 100%;
             margin: 0 auto;
         }
-        h1 {
-            text-align: center;
-            font-size: 16pt;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            font-weight: bold;
+
+        /* Cabeçalho com três áreas */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
-        .form-row {
-            margin-bottom: 18px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 6px;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            height: 50px;
+            width: auto;
+        }
+        .associacao-texto {
+            font-size: 12pt;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        .header-center {
+            text-align: center;
+            font-weight: bold;
+            font-size: 16pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .header-right {
+            text-align: right;
+            font-size: 10pt;
+        }
+        .visto-titulo {
+            font-weight: bold;
+            font-size: 12pt;
+        }
+
+        /* Título principal */
+        .titulo-principal {
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 20px 0 15px;
+            letter-spacing: 2px;
+        }
+
+        /* Campos do formulário */
+        .campo {
+            margin-bottom: 16px;
+            border-bottom: 1px dotted #000;
+            padding-bottom: 5px;
         }
         .label {
             font-weight: bold;
             display: inline-block;
-            width: 160px;
-            font-size: 11pt;
+            min-width: 160px;
         }
-        .data-field {
+        .linha-preenchimento {
             display: inline-block;
-            min-width: 200px;
+            min-width: 250px;
             border-bottom: 1px dotted #000;
-            padding-left: 8px;
+            margin-left: 10px;
         }
+        .linha-longa {
+            display: block;
+            border-bottom: 1px dotted #000;
+            margin-top: 5px;
+            width: 100%;
+        }
+        .campo-bloco {
+            margin-bottom: 20px;
+        }
+
+        /* Assinaturas */
         .assinaturas {
             margin-top: 40px;
             display: flex;
@@ -58,125 +110,113 @@
             border-top: 1px solid #000;
             margin-top: 25px;
             padding-top: 5px;
-            font-size: 9pt;
-        }
-        .info-extra {
-            margin-top: 20px;
-            font-size: 9pt;
-            text-align: center;
-        }
-        .motivo {
-            margin-top: 20px;
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
             font-size: 10pt;
         }
+
+        /* Rodapé / visto */
+        .visto-comando {
+            margin-top: 30px;
+            text-align: right;
+            font-size: 10pt;
+        }
+
+        /* Botões (não imprimem) */
+        .no-print {
+            margin-top: 30px;
+            text-align: center;
+        }
         @media print {
+            .no-print {
+                display: none;
+            }
             body {
                 margin: 0;
                 padding: 0;
-            }
-            .no-print {
-                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Pedido de Troca de Serviço</h1>
-
-        <!-- Requerente -->
-        <div class="form-row">
-            <span class="label">Nome do Requerente:</span>
-            <span class="data-field">
-                {% if troca and troca.bombeiro_origem %}
-                    {{ troca.bombeiro_origem.nome }} ({{ troca.bombeiro_origem.mecanografico }})
-                {% else %}
-                    _______________________________
-                {% endif %}
-            </span>
-        </div>
-
-        <div class="form-row">
-            <span class="label">Serviço no dia / Turno:</span>
-            <span class="data-field">
-                {% if troca and troca.data_origem and troca.turno_origem %}
-                    {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ troca.turno_origem }}
-                {% else %}
-                    ___/___/______  Turno: _______________
-                {% endif %}
-            </span>
-        </div>
-
-        <div class="form-row">
-            <span class="label">Vem requerer troca com:</span>
-            <span class="data-field">
-                {% if troca and troca.bombeiro_destino %}
-                    {{ troca.bombeiro_destino.nome }} ({{ troca.bombeiro_destino.mecanografico }})
-                {% else %}
-                    _______________________________
-                {% endif %}
-            </span>
-        </div>
-
-        <div class="form-row">
-            <span class="label">Serviço no dia / Turno:</span>
-            <span class="data-field">
-                {% if troca and troca.data_destino and troca.turno_destino %}
-                    {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ troca.turno_destino }}
-                {% else %}
-                    ___/___/______  Turno: _______________
-                {% endif %}
-            </span>
-        </div>
-
-        <div class="form-row">
-            <span class="label">Dia de folga / Período:</span>
-            <span class="data-field">
-                {% if troca and troca.data_destino %}
-                    {{ troca.data_destino.strftime('%d/%m/%Y') }}
-                {% else %}
-                    ___/___/______
-                {% endif %}
-            </span>
-        </div>
-
-        <!-- Assinaturas -->
-        <div class="assinaturas">
-            <div class="assinatura">
-                <div class="linha-assinatura">
-                    _________________________________<br>
-                    O Requerente
-                </div>
-            </div>
-            <div class="assinatura">
-                <div class="linha-assinatura">
-                    _________________________________<br>
-                    O Aceitante
-                </div>
+<div class="container">
+    <!-- Cabeçalho: imagem + associação à esquerda, título central, visto à direita -->
+    <div class="header">
+        <div class="header-left">
+            <img class="logo" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="BVN">
+            <div class="associacao-texto">
+                ASSOCIAÇÃO HUMANITÁRIA<br>
+                DOS BOMBEIROS VOLUNTÁRIOS<br>
+                DE NISA
             </div>
         </div>
-
-        <!-- Data e visto -->
-        <div class="info-extra">
-            <p>Data do pedido: _________________________________</p>
-            <p>Visto do Comando: _________________________________</p>
-            <p>(Autorização obrigatória para validação da troca)</p>
+        <div class="header-center">
+            TROCAS<br>DE<br>SERVIÇO
         </div>
-
-        {% if troca and troca.motivo %}
-        <div class="motivo">
-            <strong>Motivo apresentado:</strong><br>
-            {{ troca.motivo }}
-        </div>
-        {% endif %}
-
-        <!-- Botões de impressão (não aparecem na impressão) -->
-        <div class="no-print" style="margin-top: 30px; text-align: center;">
-            <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
-            <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+        <div class="header-right">
+            <div class="visto-titulo">VISTO</div>
+            Data ___/___/_____<br><br>
+            O Comandante<br>
+            ___________________
         </div>
     </div>
+
+    <!-- Corpo do formulário (campos para preenchimento manual) -->
+    <div class="campo-bloco">
+        <div class="campo">
+            <span class="label">Nome</span>
+            <span class="linha-preenchimento" style="min-width: 300px;">_________________________________________</span>
+        </div>
+        <div class="campo">
+            <span class="label">Serviço no Dia</span>
+            <span class="linha-preenchimento">____/_____/______</span>
+            <span class="label" style="margin-left: 20px;">Turno das</span>
+            <span class="linha-preenchimento">_____ Horas</span>
+            <span class="label">às</span>
+            <span class="linha-preenchimento">_____ Horas</span>
+        </div>
+        <div class="campo">
+            <span class="label">Vem Requerer Troca de Serviço com :</span>
+            <span class="linha-preenchimento" style="min-width: 250px;">_________________________________________</span>
+        </div>
+        <div class="campo">
+            <span class="label">de Serviço no Dia</span>
+            <span class="linha-preenchimento">____/____/_____</span>
+            <span class="label" style="margin-left: 20px;">no Turno das</span>
+            <span class="linha-preenchimento">_____ Horas</span>
+            <span class="label">às</span>
+            <span class="linha-preenchimento">_____ Horas</span>
+        </div>
+        <div class="campo">
+            <span class="label">de Folga Dia</span>
+            <span class="linha-preenchimento">____/_____/______</span>
+        </div>
+    </div>
+
+    <!-- Assinaturas -->
+    <div class="assinaturas">
+        <div class="assinatura">
+            <div class="linha-assinatura">
+                _________________________________<br>
+                O Requerente
+            </div>
+        </div>
+        <div class="assinatura">
+            <div class="linha-assinatura">
+                _________________________________<br>
+                O Aceitante
+            </div>
+        </div>
+    </div>
+
+    <!-- Visto do Comando (opcional, já está no cabeçalho, mas pode manter) -->
+    <div class="visto-comando">
+        &nbsp;
+    </div>
+
+    <!-- Botões de impressão (não aparecem na impressão) -->
+    <div class="no-print">
+        <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+    </div>
+</div>
 </body>
 </html>
