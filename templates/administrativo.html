@@ -19,7 +19,7 @@
 </ul>
 
 <div class="tab-content" id="adminTabContent">
-    <!-- Aba Deslocações -->
+    <!-- ==================== ABA DESLOCAÇÕES ==================== -->
     <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'deslocacoes' }}"
          id="deslocacoes" role="tabpanel">
         <!-- Cartões resumo -->
@@ -113,8 +113,7 @@
                             <td>{{ d.bombeiro.nome if d.bombeiro else '-' }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="9" class="text-center text-muted">Nenhuma deslocação encontrada.</td></tr>
-                        {% endfor %}
+                        <tr><td colspan="9" class="text-center text-muted">Nenhuma deslocação encontrada.{% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="fw-bold bg-light">
@@ -128,7 +127,7 @@
         </div>
     </div>
 
-    <!-- Aba ECINs / ELACs (com Mobilidade) -->
+    <!-- ==================== ABA ECINs / ELACs ==================== -->
     <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
          id="ecins" role="tabpanel">
         <!-- Cartões resumo -->
@@ -249,14 +248,13 @@
                                     </button>
                                 {% else %}
                                     <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="{{ ec.id }}">
-                                        <i class="bi bi-check-circle"></i> Visto
+                                        <i class="bi bi-check-circle"></i> Mobilidade
                                     </button>
                                 {% endif %}
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="8" class="text-center text-muted">Nenhum registo encontrado.</td></tr>
-                        {% endfor %}
+                        <td><td colspan="8" class="text-center text-muted">Nenhum registo encontrado.{% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="fw-bold bg-light">
@@ -305,7 +303,7 @@
 </div>
 
 <script>
-// Função para enviar contagem (existente)
+// Função para enviar contagem (mantida)
 function enviarContagem() {
     const form = document.createElement('form');
     form.method = 'POST';
@@ -320,12 +318,12 @@ function enviarContagem() {
 }
 
 // ------------- MOBILIDADE AJAX -------------
-// Actualizar linha original e adicionar linha do substituto
-function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome, novoRegisto) {
+// Atualizar linha original e adicionar nova linha do substituto
+function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome, originalNome, novoRegisto) {
     const linhaOriginal = document.querySelector(`tr.ecin-row[data-ecin-id="${ecinId}"]`);
     if (!linhaOriginal) return;
 
-    // Actualizar célula de mobilidade
+    // Atualizar célula de mobilidade do original (mostra substituto + botão apagar)
     const mobilidadeCell = linhaOriginal.querySelector('.mobilidade-cell');
     mobilidadeCell.innerHTML = `
         <span class="substituto-nome">${escapeHtml(substitutoNome)}</span>
@@ -334,13 +332,13 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
         </button>
     `;
 
-    // Actualizar valor do original
+    // Atualizar valor do original
     const valorCell = linhaOriginal.querySelector('.valor-cell');
     if (valorCell) {
         valorCell.innerHTML = novoValorOriginal.toFixed(2) + ' €';
     }
 
-    // Adicionar nova linha do substituto
+    // Adicionar nova linha do substituto (sem botão, apenas o nome do original)
     const tbody = document.getElementById('ecins-tbody');
     const novaLinha = document.createElement('tr');
     novaLinha.className = 'ecin-row';
@@ -353,18 +351,16 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
         <td>${novoRegisto.funcao}</td>
         <td>${novoRegisto.estado}</td>
         <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €</td>
-        <td class="mobilidade-cell" data-ecin-id="${novoRegisto.id}">
-            <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="${novoRegisto.id}">
-                <i class="bi bi-check-circle"></i> Visto
-            </button>
+        <td class="mobilidade-cell">
+            <span class="text-muted">${escapeHtml(originalNome)}</span>
         </td>
     `;
     tbody.appendChild(novaLinha);
 
-    // Reatribuir eventos aos novos botões
+    // Reatribuir eventos aos novos botões (apenas para os originais que ainda têm botão apagar)
     atribuirEventosMobilidade();
 
-    // Actualizar total
+    // Atualizar total
     let totalSpan = document.getElementById('total-valor-ecin');
     let totalAtual = parseFloat(totalSpan.innerText.replace('€', '').trim());
     let novoTotal = totalAtual + novoRegisto.valor;
@@ -417,7 +413,13 @@ document.getElementById('btnGravarMobilidade').addEventListener('click', functio
         .then(data => {
             if (data.sucesso) {
                 bootstrap.Modal.getInstance(document.getElementById('modalMobilidade')).hide();
-                atualizarLinhaAposMobilidade(ecinId, data.novo_valor_original, data.substituto_nome, data.novo_registo);
+                atualizarLinhaAposMobilidade(
+                    ecinId,
+                    data.novo_valor_original,
+                    data.substituto_nome,
+                    data.original_nome,
+                    data.novo_registo
+                );
             } else {
                 alert('Erro: ' + (data.erro || 'Falha ao criar mobilidade'));
             }
@@ -425,12 +427,12 @@ document.getElementById('btnGravarMobilidade').addEventListener('click', functio
         .catch(err => alert('Erro de comunicação'));
 });
 
-// Atribuir eventos aos botões (visto e apagar)
+// Atribuir eventos aos botões (mobilidade e apagar)
 function atribuirEventosMobilidade() {
-    // Botões "Visto"
+    // Botões "Mobilidade"
     document.querySelectorAll('.btn-mobilidade').forEach(btn => {
-        btn.removeEventListener('click', handlerVisto);
-        btn.addEventListener('click', handlerVisto);
+        btn.removeEventListener('click', handlerMobilidade);
+        btn.addEventListener('click', handlerMobilidade);
     });
     // Botões "Apagar"
     document.querySelectorAll('.btn-apagar-mobilidade').forEach(btn => {
@@ -439,7 +441,7 @@ function atribuirEventosMobilidade() {
     });
 }
 
-function handlerVisto(e) {
+function handlerMobilidade(e) {
     const ecinId = e.currentTarget.getAttribute('data-ecin-id');
     abrirModal(ecinId);
 }

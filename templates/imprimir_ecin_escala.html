@@ -20,6 +20,11 @@ body {
     .no-print { display: none; }
     header, footer, .page-break, .page-number, .print-date, .print-url { display: none; }
     body { margin: 0; padding: 0; }
+    /* Forçar impressão de cores de fundo */
+    tr.weekend, td, th {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }
 .no-print { margin: 15px; text-align: right; }
 .header {
@@ -83,7 +88,7 @@ th {
     font-weight: bold;
 }
 .col-motorista, .col-chefe, .col-guarnicao {
-    width: 15.5%;  /* ajuste para 3 colunas por turno */
+    width: 15.5%;
     text-align: center;
 }
 tr.weekend {
