@@ -72,7 +72,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;  /* aumentado espaço entre tabelas */
+            margin-bottom: 30px;
         }
         th, td {
             border: 1px solid #000;
@@ -86,8 +86,10 @@
             font-size: 11px;
         }
         td {
-            height: 28px;  /* altura das linhas mantida */
+            height: 28px;
         }
+
+        /* Colunas */
         .col-mec {
             width: auto;
             white-space: nowrap;
@@ -100,6 +102,12 @@
         }
         .col-entrada, .col-saida {
             width: 15%;
+        }
+
+        /* Centralizar e negrito nas células de Mec e Função */
+        td.col-mec, td.col-funcao {
+            text-align: center;
+            font-weight: bold;
         }
 
         /* Nome a negrito */
@@ -123,7 +131,7 @@
             padding: 12px;
             margin-top: 15px;
             margin-bottom: 15px;
-            min-height: 80px;  /* aumenta espaço interno */
+            min-height: 80px;
         }
         .obs-box p {
             margin: 0 0 10px 0;
@@ -167,7 +175,7 @@
     <div class="corpo-bombeiros">Corpo de Bombeiros de Nisa</div>
 </div>
 
-<!-- Título centralizado (movido para baixo) -->
+<!-- Título centralizado -->
 <div class="titulo-central">
     <h2>REGISTO PRESENÇAS</h2>
     <p>ECIN<br>Dispositivo Especial Combate Incêndios Rurais (DECIR 2026)</p>
@@ -249,17 +257,17 @@
         </tr>
         {% endfor %}
     </tbody>
-</table>
+</tr>
 
-<!-- Caixa de observações com altura aumentada -->
+<!-- Caixa de observações -->
 <div class="obs-box">
     <p>OBS.:</p>
     <div class="obs-linhas">
-        <br><br>  <!-- dois parágrafos em branco para mais espaço -->
+        <br><br>
     </div>
 </div>
 
-<!-- Assinatura do Comandante centralizada -->
+<!-- Assinatura do Comandante -->
 <div class="assinatura">
     O Comandante<br>
     <div class="linha"></div>
