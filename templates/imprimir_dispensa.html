@@ -6,11 +6,11 @@
     <style>
         @page {
             size: B5;
-            margin: 1.5cm;
+            margin: 0.5cm 1.2cm; /* top/bottom 0.5cm, left/right 1.2cm */
         }
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
+            font-size: 10pt; /* reduzido */
             background: white;
             margin: 0;
             padding: 0;
@@ -24,39 +24,39 @@
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #aaa;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
         }
         .logo-area {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
         }
         .logo {
-            height: 50px;
+            height: 35px; /* reduzido */
             width: auto;
         }
         .associacao {
             font-weight: bold;
-            font-size: 10pt;
-            line-height: 1.2;
+            font-size: 8pt; /* reduzido */
+            line-height: 1.1;
             text-transform: uppercase;
         }
         .titulo {
             text-align: center;
             font-weight: bold;
-            font-size: 14pt;
+            font-size: 11pt; /* reduzido */
             text-transform: uppercase;
         }
         .tabela-principal {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #000;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .tabela-principal td, .tabela-principal th {
             border: 1px solid #000;
-            padding: 8px 6px;
+            padding: 5px 4px; /* menos padding */
             vertical-align: top;
         }
         .rotulo {
@@ -70,21 +70,21 @@
         .linha-datas {
             border-bottom: 1px dotted #000;
             display: inline-block;
-            min-width: 90px;
+            min-width: 80px;
         }
         .parecer {
-            margin-top: 20px;
+            margin-top: 12px;
             border-top: 1px solid #ccc;
-            padding-top: 15px;
-            font-size: 10pt;
+            padding-top: 10px;
+            font-size: 9pt;
         }
         .assinatura-linha {
             border-top: 1px solid #000;
-            width: 250px;
-            margin: 20px auto 0 auto;
+            width: 220px;
+            margin: 15px auto 0 auto;
         }
         .no-print {
-            margin-top: 25px;
+            margin-top: 20px;
             text-align: center;
         }
         @media print {
@@ -106,92 +106,22 @@
             </div>
         </div>
         <div class="titulo">PEDIDO DE DISPENSA DE SERVIÇO<br>(Compensação de Tempo)</div>
-        <div style="width: 90px;"></div>
+        <div style="width: 70px;"></div>
     </div>
 
     <!-- Tabela principal -->
     <table class="tabela-principal">
-        <tr>
-            <td class="rotulo">Nº Mecanográfico:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.bombeiro %}
-                    {{ dispensa.bombeiro.mecanografico }}
-                {% else %}
-                    _________________________
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Nome:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.bombeiro %}
-                    {{ dispensa.bombeiro.nome }}
-                {% else %}
-                    _________________________________________________
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Posto:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.bombeiro %}
-                    {{ dispensa.bombeiro.posto }}
-                {% else %}
-                    _________________________
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Categoria:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.categoria %}
-                    {{ dispensa.categoria }}
-                {% else %}
-                    _________________________
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Solicito Dispensa no dia:</td>
-            <td class="campo">
-                {% if dispensa %}
-                    Data: <span class="linha-datas">{{ dispensa.data_inicio.strftime('%d/%m/%Y') if dispensa.data_inicio else '___/___/_____' }}</span>
-                    {% if dispensa.data_inicio != dispensa.data_fim %}
-                        até <span class="linha-datas">{{ dispensa.data_fim.strftime('%d/%m/%Y') if dispensa.data_fim else '___/___/_____' }}</span>
-                    {% endif %}
-                    <br>Turno: <span class="linha-datas">{{ dispensa.turno if dispensa.turno else '________' }}</span>
-                {% else %}
-                    Data: <span class="linha-datas">___/___/_____</span><br>Turno: <span class="linha-datas">________</span>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Como compensação por ter trabalhado nos dias:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.creditos and dispensa.creditos|length > 0 %}
-                    {% for credito in dispensa.creditos %}
-                        <div>Dia: <span class="linha-datas">{{ credito.data.strftime('%d/%m/%Y') }}</span> — Horas: <span class="linha-datas">{{ credito.horas }}h</span></div>
-                    {% endfor %}
-                {% else %}
-                    <div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div>
-                    <div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td class="rotulo">Motivo:</td>
-            <td class="campo">
-                {% if dispensa and dispensa.motivo %}
-                    {{ dispensa.motivo }}
-                {% else %}
-                    _________________________________________________________________
-                {% endif %}
-            </td>
-        </tr>
+        <tr><td class="rotulo">Nº Mecanográfico:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.mecanografico }}{% else %}_________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Nome:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.nome }}{% else %}_________________________________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Posto:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.posto }}{% else %}_________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Categoria:</td><td class="campo">{% if dispensa and dispensa.categoria %}{{ dispensa.categoria }}{% else %}_________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Solicito Dispensa no dia:</td><td class="campo">{% if dispensa %}Data: <span class="linha-datas">{{ dispensa.data_inicio.strftime('%d/%m/%Y') if dispensa.data_inicio else '___/___/_____' }}</span>{% if dispensa.data_inicio != dispensa.data_fim %} até <span class="linha-datas">{{ dispensa.data_fim.strftime('%d/%m/%Y') if dispensa.data_fim else '___/___/_____' }}</span>{% endif %}<br>Turno: <span class="linha-datas">{{ dispensa.turno if dispensa.turno else '________' }}</span>{% else %}Data: <span class="linha-datas">___/___/_____</span><br>Turno: <span class="linha-datas">________</span>{% endif %}</td></tr>
+        <tr><td class="rotulo">Como compensação por ter trabalhado nos dias:</td><td class="campo">{% if dispensa and dispensa.creditos and dispensa.creditos|length > 0 %}{% for credito in dispensa.creditos %}<div>Dia: <span class="linha-datas">{{ credito.data.strftime('%d/%m/%Y') }}</span> — Horas: <span class="linha-datas">{{ credito.horas }}h</span></div>{% endfor %}{% else %}<div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div><div>Dia: <span class="linha-datas">___/___/_____</span> — Horas: <span class="linha-datas">___h</span></div>{% endif %}</td></tr>
+        <tr><td class="rotulo">Motivo:</td><td class="campo">{% if dispensa and dispensa.motivo %}{{ dispensa.motivo }}{% else %}_________________________________________________________________{% endif %}</td></tr>
     </table>
 
-   <!-- Assinatura do requerente (centralizada) -->
-    <div style="margin-top: 20px; text-align: center;">
+    <!-- Assinatura do requerente -->
+    <div style="margin-top: 15px; text-align: center;">
         Nisa, ______ de ____________________ de ______<br><br>
         Assinatura<br>
         <div class="assinatura-linha"></div>
@@ -203,13 +133,13 @@
         Vistos e Confirmados os motivos supra indicados,<br>
         Considero ________________________ Concedida a Dispensa solicitada.<br><br>
         Nisa, ____ / ____ / ________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Assinatura<br>
-        <div style="border-bottom: 1px dotted #000; width: 250px; margin-top: 10px;"></div>
+        <div style="border-bottom: 1px dotted #000; width: 220px; margin-top: 8px;"></div>
     </div>
 
     <!-- Botões de impressão -->
     <div class="no-print">
-        <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
-        <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+        <button onclick="window.print();" style="padding: 6px 12px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close();" style="padding: 6px 12px;">❌ Fechar</button>
     </div>
 
 </div>
