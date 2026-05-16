@@ -7073,6 +7073,85 @@ def apagar_mobilidade(ecin_id):
     return jsonify({'sucesso': True, 'novo_valor_original': float(original.valor)})
 
 
+@app.route('/ecins/imprimir-turno-diario')
+@login_required
+def imprimir_turno_diario_ecin():
+    # Apenas perfis autorizados
+    if current_user.tipo_user not in ['Admin'] and current_user.resp_departamento not in ['Comando', 'ECIN', 'Central']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Data actual (ou pode receber por parâmetro)
+    data = request.args.get('data', type=str)
+    if data:
+        try:
+            data = datetime.strptime(data, '%Y-%m-%d').date()
+        except ValueError:
+            data = date.today()
+    else:
+        data = date.today()
+
+    # Buscar ECINs escalados para esta data (categoria ECIN e estado do tipo Motorista/Chefe/Guarnição)
+    ecins = Ecin.query.filter(
+        Ecin.data == data,
+        Ecin.categoria == 'ECIN',
+        Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
+    ).order_by(Ecin.turno, Ecin.funcao).all()
+
+    # Separar por turno e ordem: Chefe, Motorista, depois Guarnição (até 3)
+    turno_manha = []
+    turno_noite = []
+    for ec in ecins:
+        bombeiro = ec.bombeiro
+        info = {
+            'mecanografico': bombeiro.mecanografico,
+            'nome': bombeiro.nome,
+            'posto': bombeiro.posto,
+            'funcao': ec.funcao,   # 'Motorista', 'Chefe', 'Guarnição'
+            'turno': ec.turno
+        }
+        if ec.turno == '07h/19h':
+            turno_manha.append(info)
+        else:
+            turno_noite.append(info)
+
+    # Ordenar cada turno: Chefe, Motorista, Guarnição (por nome)
+    def ordenar_turno(lista):
+        ordem = {'Chefe': 0, 'Motorista': 1, 'Guarnição': 2}
+        return sorted(lista, key=lambda x: (ordem.get(x['funcao'], 3), x['nome']))
+
+    turno_manha = ordenar_turno(turno_manha)
+    turno_noite = ordenar_turno(turno_noite)
+
+    # Garantir 5 linhas por turno: 1 Chefe, 1 Motorista, 3 Guarnição
+    def preparar_linhas(turno):
+        linhas = []
+        # Chefe
+        chefe = next((b for b in turno if b['funcao'] == 'Chefe'), None)
+        linhas.append(chefe if chefe else {'mecanografico': '', 'nome': '', 'posto': '', 'funcao': 'CHEFE -'})
+        # Motorista
+        motorista = next((b for b in turno if b['funcao'] == 'Motorista'), None)
+        linhas.append(motorista if motorista else {'mecanografico': '', 'nome': '', 'posto': '', 'funcao': 'MOT -'})
+        # Guarnições (até 3)
+        guarnicoes = [b for b in turno if b['funcao'] == 'Guarnição']
+        for i in range(3):
+            if i < len(guarnicoes):
+                linhas.append(guarnicoes[i])
+            else:
+                linhas.append({'mecanografico': '', 'nome': '', 'posto': '', 'funcao': ''})
+        return linhas
+
+    linhas_manha = preparar_linhas(turno_manha)
+    linhas_noite = preparar_linhas(turno_noite)
+
+    meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+
+    return render_template('imprimir_turno_ecin_diario.html',
+                           data=data,
+                           linhas_manha=linhas_manha,
+                           linhas_noite=linhas_noite,
+                           meses=meses)
+
 
 @app.route('/administrativo/exportar-deslocacoes')
 @login_required

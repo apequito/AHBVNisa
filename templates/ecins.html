@@ -26,6 +26,14 @@
         <div class="col-auto">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaELAC()">🖨️ Imprimir Escala ELAC</button>
         </div>
+        <!-- Botão para impressão do turno diário ECIN -->
+        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN', 'Central'] %}
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="imprimirTurnoDiario()">
+                    <i class="bi bi-calendar-day me-1"></i> Turno ECIN
+                </button>
+            </div>
+        {% endif %}
     </form>
 </div>
 
@@ -193,6 +201,16 @@ function atualizarBotaoAtualizar() {
         btn.style.display = 'none';
     }
 }
+
+
+function imprimirTurnoDiario() {
+    // Opcional: pode permitir escolher a data, mas por defeito usa hoje
+    const data = new Date().toISOString().slice(0,10);
+    window.open('/ecins/imprimir-turno-diario?data=' + data, '_blank');
+}
+
+
+
 
 // Submeter ação AJAX
 async function executarAcao(id, funcao, btnElement) {

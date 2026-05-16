@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Turno ECIN - {{ data.strftime('%d/%m/%Y') }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .logo {
+            height: 60px;
+        }
+        .titulo {
+            text-align: center;
+            flex: 1;
+        }
+        .titulo h2 {
+            margin: 0;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+        .titulo p {
+            margin: 5px 0 0;
+            font-size: 12px;
+        }
+        .info-turno {
+            text-align: center;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 5px;
+            vertical-align: top;
+        }
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        td {
+            text-align: left;
+        }
+        .col-mec { width: 15%; }
+        .col-funcao { width: 15%; }
+        .col-nome { width: 30%; }
+        .col-entrada { width: 20%; }
+        .col-saida { width: 20%; }
+        .assinatura {
+            margin-top: 30px;
+            text-align: right;
+            font-size: 11px;
+        }
+        .obs {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+        .no-print {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="no-print">
+    <button onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="header">
+    <img class="logo" src="{{ url_for('static', filename='images/ANEPC-1.png') }}" alt="ANEPC">
+    <div class="titulo">
+        <h2>REGISTO PRESENÇAS – ECIN</h2>
+        <p>Dispositivo Especial Combate Incêndios Rurais (DECIR)</p>
+    </div>
+    <div style="width: 60px;"></div> <!-- espaço vazio para equilibrar -->
+</div>
+
+<div class="info-turno">
+    Período: {{ data.strftime('%d/%m/%Y') }} &nbsp;&nbsp;&nbsp; Turno: 07:00 às 19:00 horas
+</div>
+
+<table>
+    <thead>
+        <tr><th class="col-mec">Nº Mec</th><th class="col-funcao">Função/Categoria</th><th class="col-nome">Nome</th><th class="col-entrada">Entrada</th><th class="col-saida">Saída</th></tr>
+    </thead>
+    <tbody>
+        {% for bombeiro in linhas_manha %}
+        <tr>
+            <td>{{ bombeiro.mecanografico or '' }}</td>
+            <td>
+                {% if bombeiro.funcao == 'CHEFE -' %}CHEFE -{% elif bombeiro.funcao == 'MOT -' %}MOT -{% else %}{{ bombeiro.posto or '' }}{% endif %}
+            </td>
+            <td>{{ bombeiro.nome or '' }}</td>
+            <td></td>
+            <td></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="info-turno">
+    Período: {{ data.strftime('%d/%m/%Y') }} &nbsp;&nbsp;&nbsp; Turno: 19:00 às 07:00 horas
+</div>
+
+<table>
+    <thead>
+        <tr><th class="col-mec">Nº Mec</th><th class="col-funcao">Função/Categoria</th><th class="col-nome">Nome</th><th class="col-entrada">Entrada</th><th class="col-saida">Saída</th></tr>
+    </thead>
+    <tbody>
+        {% for bombeiro in linhas_noite %}
+        <tr>
+            <td>{{ bombeiro.mecanografico or '' }}</td>
+            <td>
+                {% if bombeiro.funcao == 'CHEFE -' %}CHEFE -{% elif bombeiro.funcao == 'MOT -' %}MOT -{% else %}{{ bombeiro.posto or '' }}{% endif %}
+            </td>
+            <td>{{ bombeiro.nome or '' }}</td>
+            <td></td>
+            <td></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="obs">
+    OBS. ____________________________________________________________________________<br><br>
+    _________________________________________________________________________________
+</div>
+
+<div class="assinatura">
+    O Comandante<br><br><br>
+    __________________________________
+</div>
+
+</body>
+</html>
