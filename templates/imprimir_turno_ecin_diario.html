@@ -14,74 +14,132 @@
             margin: 0;
             padding: 0;
         }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
-        .logo {
-            height: 60px;
-        }
-        .titulo {
-            text-align: center;
-            flex: 1;
-        }
-        .titulo h2 {
-            margin: 0;
-            font-size: 16px;
-            text-transform: uppercase;
-        }
-        .titulo p {
-            margin: 5px 0 0;
-            font-size: 12px;
-        }
-        .info-turno {
-            text-align: center;
-            margin: 15px 0;
-            font-weight: bold;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 6px 5px;
-            vertical-align: top;
-        }
-        th {
-            background-color: #e0e0e0;
-            font-weight: bold;
-            text-align: center;
-        }
-        td {
-            text-align: left;
-        }
-        .col-mec { width: 15%; }
-        .col-funcao { width: 15%; }
-        .col-nome { width: 30%; }
-        .col-entrada { width: 20%; }
-        .col-saida { width: 20%; }
-        .assinatura {
-            margin-top: 30px;
-            text-align: right;
-            font-size: 11px;
-        }
-        .obs {
-            margin-top: 20px;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-        }
         .no-print {
             text-align: right;
             margin-bottom: 15px;
         }
         @media print {
             .no-print { display: none; }
+        }
+
+        /* Cabeçalho */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .logo-anepc {
+            height: 80px;  /* maior */
+            width: auto;
+        }
+        .titulo-corpo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #b22222;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Informação do turno */
+        .info-turno {
+            text-align: center;
+            margin: 20px 0 12px;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1.6;
+        }
+        .info-turno span {
+            margin: 0 15px;
+        }
+
+        /* Tabelas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px 6px;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        /* Altura uniforme das linhas */
+        td {
+            height: 42px;
+        }
+        /* Largura das colunas */
+        .col-mec {
+            width: auto;
+            white-space: nowrap;
+        }
+        .col-funcao {
+            width: 18%;
+        }
+        .col-nome {
+            width: 32%;
+        }
+        .col-entrada, .col-saida {
+            width: 15%;
+        }
+
+        /* Nome a negrito e maior */
+        .nome-bombeiro {
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        /* Título das tabelas (ECIN) */
+        .titulo-tabela {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            margin: 5px 0 5px;
+            text-transform: uppercase;
+        }
+
+        /* Caixa de observações */
+        .obs-box {
+            border: 1px solid #000;
+            padding: 12px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .obs-box p {
+            margin: 0 0 8px 0;
+            font-weight: bold;
+        }
+        .linhas-obs {
+            min-height: 60px;
+        }
+
+        /* Assinatura centralizada */
+        .assinatura {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 11px;
+        }
+        .assinatura .linha {
+            margin-top: 35px;
+            border-top: 1px solid #000;
+            width: 250px;
+            display: inline-block;
+        }
+
+        /* Rodapé */
+        .footer {
+            margin-top: 35px;
+            font-size: 9px;
+            text-align: left;
+            border-top: 1px solid #aaa;
+            padding-top: 8px;
         }
     </style>
 </head>
@@ -90,69 +148,109 @@
     <button onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
+<!-- Cabeçalho com ANEPC maior + Corpo de Bombeiros -->
 <div class="header">
-    <img class="logo" src="{{ url_for('static', filename='images/ANEPC-1.png') }}" alt="ANEPC">
-    <div class="titulo">
-        <h2>REGISTO PRESENÇAS – ECIN</h2>
-        <p>Dispositivo Especial Combate Incêndios Rurais (DECIR)</p>
-    </div>
-    <div style="width: 60px;"></div> <!-- espaço vazio para equilibrar -->
+    <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC-1.png') }}" alt="ANEPC">
+    <div class="titulo-corpo">Corpo de Bombeiros de Nisa</div>
 </div>
 
+<!-- Turno 07h/19h -->
 <div class="info-turno">
-    Período: {{ data.strftime('%d/%m/%Y') }} &nbsp;&nbsp;&nbsp; Turno: 07:00 às 19:00 horas
+    Período: <strong>{{ data.strftime('%d/%m/%Y') }}</strong>
+    <span>|</span>
+    Turno: <strong>07:00 às 19:00 horas</strong>
 </div>
 
+<div class="titulo-tabela">ECIN</div>
 <table>
     <thead>
-        <tr><th class="col-mec">Nº Mec</th><th class="col-funcao">Função/Categoria</th><th class="col-nome">Nome</th><th class="col-entrada">Entrada</th><th class="col-saida">Saída</th></tr>
+        <tr>
+            <th class="col-mec">Nº Mec</th>
+            <th class="col-funcao">Função / Categoria</th>
+            <th class="col-nome">Nome</th>
+            <th class="col-entrada">Entrada</th>
+            <th class="col-saida">Saída</th>
+        </tr>
     </thead>
     <tbody>
         {% for bombeiro in linhas_manha %}
         <tr>
-            <td>{{ bombeiro.mecanografico or '' }}</td>
-            <td>
-                {% if bombeiro.funcao == 'CHEFE -' %}CHEFE -{% elif bombeiro.funcao == 'MOT -' %}MOT -{% else %}{{ bombeiro.posto or '' }}{% endif %}
+            <td class="col-mec">{{ bombeiro.mecanografico or '' }}</td>
+            <td class="col-funcao">
+                {% if bombeiro.funcao == 'CHEFE -' %}
+                    CHF. {{ bombeiro.posto or '' }}
+                {% elif bombeiro.funcao == 'MOT -' %}
+                    MOT. {{ bombeiro.posto or '' }}
+                {% else %}
+                    {{ bombeiro.posto or '' }}
+                {% endif %}
             </td>
-            <td>{{ bombeiro.nome or '' }}</td>
-            <td></td>
-            <td></td>
+            <td class="col-nome"><span class="nome-bombeiro">{{ bombeiro.nome or '' }}</span></td>
+            <td class="col-entrada"></td>
+            <td class="col-saida"></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
+<!-- Turno 19h/07h -->
 <div class="info-turno">
-    Período: {{ data.strftime('%d/%m/%Y') }} &nbsp;&nbsp;&nbsp; Turno: 19:00 às 07:00 horas
+    Período: <strong>{{ data.strftime('%d/%m/%Y') }}</strong>
+    <span>|</span>
+    Turno: <strong>19:00 às 07:00 horas</strong>
 </div>
 
+<div class="titulo-tabela">ECIN</div>
 <table>
     <thead>
-        <tr><th class="col-mec">Nº Mec</th><th class="col-funcao">Função/Categoria</th><th class="col-nome">Nome</th><th class="col-entrada">Entrada</th><th class="col-saida">Saída</th></tr>
+        <tr>
+            <th class="col-mec">Nº Mec</th>
+            <th class="col-funcao">Função / Categoria</th>
+            <th class="col-nome">Nome</th>
+            <th class="col-entrada">Entrada</th>
+            <th class="col-saida">Saída</th>
+        </tr>
     </thead>
     <tbody>
         {% for bombeiro in linhas_noite %}
         <tr>
-            <td>{{ bombeiro.mecanografico or '' }}</td>
-            <td>
-                {% if bombeiro.funcao == 'CHEFE -' %}CHEFE -{% elif bombeiro.funcao == 'MOT -' %}MOT -{% else %}{{ bombeiro.posto or '' }}{% endif %}
+            <td class="col-mec">{{ bombeiro.mecanografico or '' }}</td>
+            <td class="col-funcao">
+                {% if bombeiro.funcao == 'CHEFE -' %}
+                    CHF. {{ bombeiro.posto or '' }}
+                {% elif bombeiro.funcao == 'MOT -' %}
+                    MOT. {{ bombeiro.posto or '' }}
+                {% else %}
+                    {{ bombeiro.posto or '' }}
+                {% endif %}
             </td>
-            <td>{{ bombeiro.nome or '' }}</td>
-            <td></td>
-            <td></td>
+            <td class="col-nome"><span class="nome-bombeiro">{{ bombeiro.nome or '' }}</span></td>
+            <td class="col-entrada"></td>
+            <td class="col-saida"></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<div class="obs">
-    OBS. ____________________________________________________________________________<br><br>
-    _________________________________________________________________________________
+<!-- Caixa de Observações -->
+<div class="obs-box">
+    <p>OBS.</p>
+    <div class="linhas-obs">
+        ________________________________________________________________________<br>
+        ________________________________________________________________________<br>
+        ________________________________________________________________________
+    </div>
 </div>
 
+<!-- Assinatura do Comandante centralizada -->
 <div class="assinatura">
-    O Comandante<br><br><br>
-    __________________________________
+    O Comandante<br>
+    <div class="linha"></div>
+</div>
+
+<!-- Rodapé -->
+<div class="footer">
+    Anexo VI à NOP 2101/2025 – DECIR
 </div>
 
 </body>
