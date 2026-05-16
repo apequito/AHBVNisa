@@ -9,7 +9,6 @@ from werkzeug.utils import secure_filename
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
-from PIL import Image
 
 from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade
 
