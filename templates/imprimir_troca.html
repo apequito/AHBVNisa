@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Pedido de Troca de Serviço</title>
     <style>
-        /* Página B5 (ISO) - horizontal */
+        /* Página B5 (ISO) */
         @page {
             size: B5 landscape;
             margin: 1.2cm;
@@ -61,7 +61,7 @@
             line-height: 1.2;
         }
         .visto-area {
-            text-align: center;      /* ← Centralizado */
+            text-align: center;
             font-size: 9pt;
         }
         .visto-area .visto-titulo {
@@ -119,8 +119,9 @@
             <td style="width: 33%;">
                 <div class="visto-area">
                     <div class="visto-titulo">VISTO</div>
-                    Data ______/________/__________<br><br>   <!-- ← Mais underscores -->
+                    Data ______/_______/__________<br><br>
                     O Comandante<br>
+
                     ___________________
                 </div>
             </td>
@@ -128,7 +129,7 @@
     </table>
 
     <!-- ========== TABELA DO CORPO DO FORMULÁRIO ========== -->
-    </table>
+    <table>
         <!-- Linha: Nome do Requerente -->
         <tr>
             <td class="campo-label">Nome</td>
@@ -149,13 +150,13 @@
                 {% else %}
                     Dia ____/____/______  —  Turno: _________________
                 {% endif %}
-              </td>
+             </td>
         </tr>
         <!-- Linha com subtítulo "Vem Requerer Troca de Serviço com :" -->
         <tr>
             <td colspan="2" style="text-align: center; background-color: #f9f9f9;">
                 <strong>Vem Requerer Troca de Serviço com :</strong>
-              </td>
+             </td>
         </tr>
         <!-- Linha: Nome do Colega -->
         <tr>
@@ -166,7 +167,7 @@
                 {% else %}
                     _________________________________________________
                 {% endif %}
-              </td>
+             </td>
         </tr>
         <!-- Linha: Serviço no Dia / Turno (Colega) -->
         <tr>
@@ -177,7 +178,7 @@
                 {% else %}
                     Dia ____/____/______  —  Turno: _________________
                 {% endif %}
-              </td>
+             </td>
         </tr>
     </table>
 
@@ -189,13 +190,13 @@
                     _________________________________<br>
                     O Requerente
                 </div>
-              </td>
+             </td>
             <td class="assinatura-td" style="width: 50%;">
                 <div class="linha-assinatura">
                     _________________________________<br>
                     O Aceitante
                 </div>
-              </td>
+             </td>
         </tr>
     </table>
 
