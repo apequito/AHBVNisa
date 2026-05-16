@@ -6984,7 +6984,6 @@ def atualizar_valor_ecin():
 @app.route('/administrativo/mobilidade/criar', methods=['POST'])
 @login_required
 def criar_mobilidade():
-    """Cria uma mobilidade: substitui um bombeiro por outro num turno ECIN/ELAC."""
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
         return jsonify({'erro': 'Acesso restrito'}), 403
 
@@ -6995,36 +6994,29 @@ def criar_mobilidade():
     if not ecin_id or not bombeiro_substituto_id or not horas:
         return jsonify({'erro': 'Parâmetros inválidos'}), 400
 
-    # Buscar o ECIN original
     original = Ecin.query.get_or_404(ecin_id)
     if original.categoria not in ['ECIN', 'ELAC']:
         return jsonify({'erro': 'Registo não é ECIN/ELAC'}), 400
 
-    # Verificar se já existe mobilidade para este ECIN
-    mobilidade_existente = Mobilidade.query.filter_by(ecin_original_id=original.id).first()
-    if mobilidade_existente:
-        return jsonify({'erro': 'Este registo já possui uma mobilidade. Apague primeiro.'}), 400
+    if Mobilidade.query.filter_by(ecin_original_id=original.id).first():
+        return jsonify({'erro': 'Este registo já possui uma mobilidade.'}), 400
 
-    # Calcular valor a pagar ao substituto
     valor_substituto = 3.50 * horas
-    # Valor base do original (assumimos 42.0, mas usamos o valor actual se existir)
     valor_base = original.valor if original.valor is not None else 42.0
-    novo_valor_original = max(0, valor_base - valor_substituto)   # não pode ser negativo
+    novo_valor_original = max(0, valor_base - valor_substituto)
 
-    # Criar o novo registo ECIN para o substituto
     novo_ecin = Ecin(
         bombeiro_id=bombeiro_substituto_id,
         data=original.data,
         turno=original.turno,
-        categoria=original.categoria,   # ECIN ou ELAC
-        funcao=original.funcao,         # mantém a mesma função (Motorista, Chefe, etc.)
+        categoria=original.categoria,
+        funcao=original.funcao,
         estado='Mobilizado',
         valor=valor_substituto
     )
     db.session.add(novo_ecin)
-    db.session.flush()   # para obter o id
+    db.session.flush()
 
-    # Criar o registo de mobilidade
     mobilidade = Mobilidade(
         ecin_original_id=original.id,
         bombeiro_substituto_id=bombeiro_substituto_id,
@@ -7032,28 +7024,24 @@ def criar_mobilidade():
         valor_pago=valor_substituto
     )
     db.session.add(mobilidade)
-
-    # Actualizar o valor do ECIN original
     original.valor = novo_valor_original
-
     db.session.commit()
 
-    # Retornar dados para actualizar a tabela via AJAX
+    substituto = Bombeiro.query.get(bombeiro_substituto_id)
     return jsonify({
         'sucesso': True,
-        'substituto_nome': original.bombeiro.nome,  # nome do substituto? Não, é o nome do bombeiro escolhido
-        # Vamos buscar o nome do substituto
-        'substituto_nome': Bombeiro.query.get(bombeiro_substituto_id).nome,
-        'novo_valor_original': float(novo_valor_original),
+        'substituto_nome': substituto.nome,
+        'original_nome': original.bombeiro.nome,
+        'novo_valor_original': novo_valor_original,
         'novo_registo': {
             'id': novo_ecin.id,
             'data': novo_ecin.data.strftime('%d/%m/%Y'),
             'turno': novo_ecin.turno,
             'categoria': novo_ecin.categoria,
-            'bombeiro': novo_ecin.bombeiro.nome,
+            'bombeiro': substituto.nome,
             'funcao': novo_ecin.funcao or '-',
             'estado': novo_ecin.estado,
-            'valor': float(novo_ecin.valor) if novo_ecin.valor else 0.0
+            'valor': novo_ecin.valor
         }
     })
 
@@ -7061,7 +7049,6 @@ def criar_mobilidade():
 @app.route('/administrativo/mobilidade/apagar/<int:ecin_id>', methods=['POST'])
 @login_required
 def apagar_mobilidade(ecin_id):
-    """Remove a mobilidade associada a um ECIN, apaga o registo do substituto e restaura o valor original."""
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
         return jsonify({'erro': 'Acesso restrito'}), 403
 
@@ -7070,7 +7057,6 @@ def apagar_mobilidade(ecin_id):
     if not mobilidade:
         return jsonify({'erro': 'Mobilidade não encontrada'}), 404
 
-    # Localizar o ECIN do substituto (que tem data, turno, categoria iguais e bombeiro = substituto)
     substituto_ecin = Ecin.query.filter_by(
         bombeiro_id=mobilidade.bombeiro_substituto_id,
         data=original.data,
@@ -7080,16 +7066,11 @@ def apagar_mobilidade(ecin_id):
     if substituto_ecin:
         db.session.delete(substituto_ecin)
 
-    # Restaurar o valor original (somar o valor pago de volta)
-    valor_pago = mobilidade.valor_pago
-    original.valor = (original.valor or 0) + float(valor_pago)
-
-    # Eliminar a mobilidade
+    original.valor = (original.valor or 0) + float(mobilidade.valor_pago)
     db.session.delete(mobilidade)
     db.session.commit()
 
     return jsonify({'sucesso': True, 'novo_valor_original': float(original.valor)})
-
 
 
 
