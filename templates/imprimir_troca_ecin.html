@@ -5,7 +5,7 @@
     <title>Registo de Troca de Serviço - ECIN</title>
     <style>
         @page {
-            size: B5;
+            size: B5 landscape;
             margin: 1.5cm;
         }
         body {
@@ -20,6 +20,7 @@
             max-width: 100%;
             margin: 0 auto;
         }
+        /* Cabeçalho */
         .header {
             display: flex;
             align-items: center;
@@ -57,28 +58,32 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-        /* Tabela simples para alinhar */
-        .info-linha {
-            display: flex;
-            margin-bottom: 12px;
-            align-items: baseline;
-            flex-wrap: wrap;
-        }
-        .info-label {
-            font-weight: bold;
-            width: 140px;
-        }
-        .info-conteudo {
-            flex: 1;
-            border-bottom: 1px dotted #000;
-            padding-left: 8px;
-        }
-        .linha-assinatura {
-            border-top: 1px solid #000;
-            margin-top: 25px;
-            padding-top: 5px;
-            text-align: center;
+        /* Tabela principal */
+        .tabela-troca {
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .tabela-troca td {
+            padding: 8px 5px;
+            vertical-align: top;
+        }
+        .rotulo {
+            font-weight: bold;
+            width: 160px;
+            white-space: nowrap;
+        }
+        .conteudo {
+            border-bottom: 1px dotted #000;
+        }
+        /* Linha de assinatura (sem borda) */
+        .assinatura-cell {
+            border-bottom: none;
+        }
+        hr {
+            margin: 15px 0;
+            border: 0;
+            border-top: 1px dashed #ccc;
         }
         .nota {
             margin-top: 30px;
@@ -99,11 +104,6 @@
         @media print {
             .no-print { display: none; }
         }
-        hr {
-            margin: 15px 0;
-            border: 0;
-            border-top: 1px dashed #ccc;
-        }
     </style>
 </head>
 <body>
@@ -120,7 +120,7 @@
     <div class="subtitulo">ECIN</div>
 
     {% if troca %}
-        {# Macro para extrair horas de forma segura (suporta "08h/20h" ou "1 - 08h/20h") #}
+        {# Macros auxiliares para horas #}
         {% macro extrair_horas(turno) %}
             {% if turno %}
                 {% if '-' in turno %}
@@ -153,104 +153,82 @@
             {% endif %}
         {% endmacro %}
 
-        <!-- Data da Troca (data do pedido) -->
-        <div class="info-linha">
-            <div class="info-label">DATA DA TROCA</div>
-            <div class="info-conteudo">
-                {{ troca.data_pedido.strftime('%d / %m / %Y') if troca.data_pedido else '___ / ___ / _____' }}
-            </div>
-        </div>
-
-        <!-- Requerente: Turno Serviço (data e turno que pretende) -->
-        <div class="info-linha">
-            <div class="info-label">Turno Serviço:</div>
-            <div class="info-conteudo">
-                {% if troca.data_origem and troca.turno_origem %}
-                    {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_origem) }}
-                {% else %}
-                    ________________________
-                {% endif %}
-            </div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Nome:</div>
-            <div class="info-conteudo">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '________________________' }}</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Posto:</div>
-            <div class="info-conteudo">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '________________________' }}</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Assinatura:</div>
-            <div class="info-conteudo"></div>
-        </div>
+        <!-- Tabela do requerente -->
+        <table class="tabela-troca">
+            <tr>
+                <td class="rotulo">DATA DA TROCA</td>
+                <td class="conteudo">
+                    {{ troca.data_pedido.strftime('%d / %m / %Y') if troca.data_pedido else '___ / ___ / _____' }}
+                </td>
+            </tr>
+            <tr>
+                <td class="rotulo">Turno Serviço:</td>
+                <td class="conteudo">
+                    {% if troca.data_origem and troca.turno_origem %}
+                        {{ troca.data_origem.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_origem) }}
+                    {% else %}
+                        ________________________
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="rotulo">Nome:</td>
+                <td class="conteudo">{{ troca.bombeiro_origem.nome if troca.bombeiro_origem else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Posto:</td>
+                <td class="conteudo">{{ troca.bombeiro_origem.posto if troca.bombeiro_origem else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Assinatura:</td>
+                <td class="assinatura-cell"> </td>  <!-- sem borda -->
+            </tr>
+        </table>
 
         <hr>
 
-        <!-- Aceitante: Troca - Turno Serviço (Sim/Não + dados se sim) -->
-        <div class="info-linha">
-            <div class="info-label">Troca - Turno Serviço:</div>
-            <div class="info-conteudo">
-                {% if troca.data_destino and troca.turno_destino %}
-                    Sim –
-                    {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_destino) }}
-                {% else %}
-                    Não
-                {% endif %}
-            </div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Nome:</div>
-            <div class="info-conteudo">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '________________________' }}</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Posto:</div>
-            <div class="info-conteudo">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '________________________' }}</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Assinatura:</div>
-            <div class="info-conteudo"></div>
-        </div>
+        <!-- Tabela do aceitante -->
+        <table class="tabela-troca">
+            <tr>
+                <td class="rotulo">Troca - Turno Serviço:</td>
+                <td class="conteudo">
+                    {% if troca.data_destino and troca.turno_destino %}
+                        Sim – {{ troca.data_destino.strftime('%d/%m/%Y') }} - {{ formatar_horas_intervalo(troca.turno_destino) }}
+                    {% else %}
+                        Não
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="rotulo">Nome:</td>
+                <td class="conteudo">{{ troca.bombeiro_destino.nome if troca.bombeiro_destino else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Posto:</td>
+                <td class="conteudo">{{ troca.bombeiro_destino.posto if troca.bombeiro_destino else '________________________' }}</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Assinatura:</td>
+                <td class="assinatura-cell"> </td>
+            </tr>
+        </table>
 
     {% else %}
         <!-- Versão em branco (sem dados) -->
-        <div class="info-linha">
-            <div class="info-label">DATA DA TROCA</div>
-            <div class="info-conteudo">___ / ___ / _____</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Turno Serviço:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Nome:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Posto:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Assinatura:</div>
-            <div class="info-conteudo"></div>
-        </div>
+        <table class="tabela-troca">
+            <tr><td class="rotulo">DATA DA TROCA</td><td class="conteudo">___ / ___ / _____</td></tr>
+            <tr><td class="rotulo">Turno Serviço:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Nome:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Posto:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        </table>
         <hr>
-        <div class="info-linha">
-            <div class="info-label">Troca - Turno Serviço:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Nome:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Posto:</div>
-            <div class="info-conteudo">________________________</div>
-        </div>
-        <div class="info-linha">
-            <div class="info-label">Assinatura:</div>
-            <div class="info-conteudo"></div>
-        </div>
+        <table class="tabela-troca">
+            <tr><td class="rotulo">Troca - Turno Serviço:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Nome:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Posto:</td><td class="conteudo">________________________</td></tr>
+            <tr><td class="rotulo">Assinatura:</td><td class="assinatura-cell"> </td></tr>
+        </table>
     {% endif %}
 
     <div class="nota">
