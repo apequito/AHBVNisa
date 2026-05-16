@@ -2627,6 +2627,17 @@ def api_creditos_nao_gozados(user_id):
     return resultado
 
 
+@app.route('/dispensas/imprimir/<int:id>')
+@login_required
+def imprimir_dispensa(id):
+    dispensa = Dispensa.query.get_or_404(id)
+    # Apenas o próprio, Admin ou Comando podem imprimir
+    if current_user.id != dispensa.bombeiro_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('dispensas'))
+    return render_template('imprimir_dispensa.html', dispensa=dispensa)
+
+
 @app.route('/dispensas/aprovar/<int:id>')
 @login_required
 def aprovar_dispensa(id):

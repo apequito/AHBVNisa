@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido de Dispensa de Serviço</title>
+    <style>
+        @page {
+            size: B5 landscape;
+            margin: 1.2cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            background: white;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+        }
+        /* Cabeçalho */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #aaa;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo {
+            height: 50px;
+            width: auto;
+        }
+        .associacao {
+            font-weight: bold;
+            font-size: 10pt;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+        .titulo {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14pt;
+            text-transform: uppercase;
+        }
+        /* Tabelas de campos */
+        .tabela-dados {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .tabela-dados td, .tabela-dados th {
+            border: none;
+            padding: 6px 4px;
+            vertical-align: top;
+        }
+        .rotulo {
+            font-weight: bold;
+            width: 28%;
+        }
+        .campo {
+            border-bottom: 1px dotted #000;
+            padding-left: 6px;
+        }
+        .campo-sem-linha {
+            padding-left: 6px;
+        }
+        .linha-datas {
+            display: inline-block;
+            min-width: 100px;
+            border-bottom: 1px dotted #000;
+            margin: 0 8px;
+        }
+        .assinatura-area {
+            margin-top: 35px;
+            text-align: center;
+        }
+        .assinatura-linha {
+            border-top: 1px solid #000;
+            width: 250px;
+            margin: 25px auto 0 auto;
+        }
+        .parecer {
+            margin-top: 25px;
+            border-top: 1px solid #ccc;
+            padding-top: 15px;
+        }
+        .no-print {
+            margin-top: 25px;
+            text-align: center;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Cabeçalho -->
+    <div class="cabecalho">
+        <div class="logo-area">
+            <img class="logo" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="BVN">
+            <div class="associacao">
+                ASSOCIAÇÃO HUMANITÁRIA<br>
+                DOS BOMBEIROS VOLUNTÁRIOS<br>
+                DE NISA
+            </div>
+        </div>
+        <div class="titulo">PEDIDO DE DISPENSA DE SERVIÇO<br>(Compensação de Tempo)</div>
+        <div style="width: 90px;"></div> <!-- espaço vazio para equilibrar -->
+    </div>
+
+    <!-- Dados do bombeiro -->
+    <table class="tabela-dados">
+        <tr><td class="rotulo">Nome:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.nome }}{% else %}_________________________________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Categoria:</td><td class="campo">{% if dispensa and dispensa.categoria %}{{ dispensa.categoria }}{% else %}________________________{% endif %}</td></tr>
+        <tr><td class="rotulo">Nº Mec.:</td><td class="campo">{% if dispensa and dispensa.bombeiro %}{{ dispensa.bombeiro.mecanografico }}{% else %}_______________{% endif %}</td></tr>
+        <tr><td class="rotulo">Serviço:</td><td class="campo">{% if dispensa and dispensa.servico_tipo %}{{ dispensa.servico_tipo }}{% else %}_________________________________{% endif %}</td></tr>
+    </table>
+
+    <!-- Solicita dispensa nos dias -->
+    <table class="tabela-dados">
+        <tr><td class="rotulo">SOLICITA DISPENSA ao SERVIÇO nos DIAS:</td></td>
+            <td>
+                <div><span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span></div>
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin-top: 5px;"><strong><u>Como Compensação por ter Trabalhado nos Dias:</u></strong></div>
+    <table class="tabela-dados">
+        <tr><td class="rotulo" style="width: 10%;"></td><td class="campo-sem-linha"><span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span> ; <span class="linha-datas">___/___/_____</span></td></tr>
+    </table>
+
+    <!-- Data e assinatura do requerente -->
+    <div style="margin-top: 20px;">
+        Nisa, ______ de ____________________ de ______
+    </div>
+    <div class="assinatura-area">
+        Assinatura<br>
+        <div class="assinatura-linha"></div>
+    </div>
+
+    <!-- Parecer do responsável -->
+    <div class="parecer">
+        <strong><u>PARECER DO RESPONSÁVEL PELO SERVIÇO:</u></strong><br><br>
+        Vistos e Confirmados os motivos supra indicados,<br>
+        Considero ________________________ Concedida a Dispensa solicitada.<br><br>
+        Nisa, ____ / ____ / ________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Assinatura<br>
+        <div style="border-bottom: 1px dotted #000; width: 250px; margin-top: 10px;"></div>
+    </div>
+
+    <!-- Motivo (se existir) – opcional -->
+    {% if dispensa and dispensa.motivo %}
+    <div style="margin-top: 15px; font-size: 9pt;">
+        <strong>Motivo apresentado:</strong> {{ dispensa.motivo }}
+    </div>
+    {% endif %}
+
+    <!-- Botões de impressão -->
+    <div class="no-print">
+        <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+    </div>
+
+</div>
+</body>
+</html>

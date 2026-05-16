@@ -25,6 +25,9 @@
             </td>
             <td>
                 <button class="btn btn-sm btn-info" onclick="verDetalhes({{ d.id }})">🔍 Ver</button>
+                <a href="{{ url_for('imprimir_dispensa', id=d.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
+        <i class="bi bi-printer"></i> Imprimir
+    </a>
             </td>
         </tr>
         {% endfor %}
