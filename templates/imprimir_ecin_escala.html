@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Escala ECIN - {{ meses[mes-1] }} {{ ano }}</title>
 <style>
-/* Mesmo CSS do ELAC, apenas ajustando larguras das colunas para 3 por turno */
 @page {
     size: A3;
     margin: 12mm;
@@ -83,9 +82,8 @@ th {
     text-align: center;
     font-weight: bold;
 }
-/* Para 3 colunas por turno, distribuir o restante (100% - 7% = 93%) / 6 = 15.5% cada */
 .col-motorista, .col-chefe, .col-guarnicao {
-    width: 15.5%;
+    width: 15.5%;  /* ajuste para 3 colunas por turno */
     text-align: center;
 }
 tr.weekend {
