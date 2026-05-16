@@ -6,13 +6,15 @@
     <style>
         @page {
             size: A4;
-            margin: 15mm;
+            margin: auto;
+            width: 18cm;
         }
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
             margin: 0;
             padding: 0;
+            width: 100%;
         }
         .no-print {
             text-align: right;
@@ -22,34 +24,47 @@
             .no-print { display: none; }
         }
 
-        /* Cabeçalho */
+        /* Cabeçalho com imagem à esquerda, texto à direita e título centralizado */
         .header {
             display: flex;
             align-items: center;
-            gap: 20px;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
         .logo-anepc {
-            height: 80px;  /* maior */
+            height: 70px;
             width: auto;
         }
-        .titulo-corpo {
-            font-size: 20px;
-            font-weight: bold;
-            color: #b22222;
+        .header-titulo {
+            text-align: center;
+            flex: 1;
+        }
+        .header-titulo h2 {
+            margin: 0;
+            font-size: 16px;
             text-transform: uppercase;
             letter-spacing: 1px;
+        }
+        .header-titulo p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .corpo-bombeiros {
+            font-size: 14px;
+            font-weight: bold;
+            color: #b22222;
+            text-align: right;
+            white-space: nowrap;
         }
 
         /* Informação do turno */
         .info-turno {
             text-align: center;
-            margin: 20px 0 12px;
-            font-size: 14px;
+            margin: 15px 0 10px;
+            font-size: 13px;
             font-weight: bold;
-            line-height: 1.6;
         }
         .info-turno span {
             margin: 0 15px;
@@ -59,21 +74,22 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         th, td {
             border: 1px solid #000;
-            padding: 8px 6px;
+            padding: 4px 5px;
             vertical-align: middle;
         }
         th {
             background-color: #e0e0e0;
             font-weight: bold;
             text-align: center;
+            font-size: 11px;
         }
-        /* Altura uniforme das linhas */
+        /* Altura uniforme reduzida */
         td {
-            height: 42px;
+            height: 28px;
         }
         /* Largura das colunas */
         .col-mec {
@@ -90,56 +106,53 @@
             width: 15%;
         }
 
-        /* Nome a negrito e maior */
+        /* Nome a negrito e ligeiramente maior */
         .nome-bombeiro {
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         /* Título das tabelas (ECIN) */
         .titulo-tabela {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             text-align: center;
-            margin: 5px 0 5px;
+            margin: 5px 0 3px;
             text-transform: uppercase;
         }
 
-        /* Caixa de observações */
+        /* Caixa de observações (apenas texto) */
         .obs-box {
             border: 1px solid #000;
-            padding: 12px;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            padding: 8px 12px;
+            margin-top: 15px;
+            margin-bottom: 15px;
         }
         .obs-box p {
-            margin: 0 0 8px 0;
+            margin: 0;
             font-weight: bold;
-        }
-        .linhas-obs {
-            min-height: 60px;
         }
 
         /* Assinatura centralizada */
         .assinatura {
             text-align: center;
-            margin-top: 25px;
+            margin-top: 20px;
             font-size: 11px;
         }
         .assinatura .linha {
-            margin-top: 35px;
+            margin-top: 30px;
             border-top: 1px solid #000;
-            width: 250px;
+            width: 220px;
             display: inline-block;
         }
 
         /* Rodapé */
         .footer {
-            margin-top: 35px;
+            margin-top: 25px;
             font-size: 9px;
             text-align: left;
             border-top: 1px solid #aaa;
-            padding-top: 8px;
+            padding-top: 6px;
         }
     </style>
 </head>
@@ -148,10 +161,14 @@
     <button onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
-<!-- Cabeçalho com ANEPC maior + Corpo de Bombeiros -->
+<!-- Cabeçalho: imagem esquerda, título central, texto direita -->
 <div class="header">
-    <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC-1.png') }}" alt="ANEPC">
-    <div class="titulo-corpo">Corpo de Bombeiros de Nisa</div>
+    <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC.jpg') }}" alt="ANEPC">
+    <div class="header-titulo">
+        <h2>REGISTO PRESENÇAS</h2>
+        <p>ECIN<br>Dispositivo Especial Combate Incêndios Rurais (DECIR 2026)</p>
+    </div>
+    <div class="corpo-bombeiros">Corpo de Bombeiros de Nisa</div>
 </div>
 
 <!-- Turno 07h/19h -->
@@ -232,14 +249,9 @@
     </tbody>
 </table>
 
-<!-- Caixa de Observações -->
+<!-- Caixa de observações sem linhas -->
 <div class="obs-box">
-    <p>OBS.</p>
-    <div class="linhas-obs">
-        ________________________________________________________________________<br>
-        ________________________________________________________________________<br>
-        ________________________________________________________________________
-    </div>
+    <p>OBS.:</p>
 </div>
 
 <!-- Assinatura do Comandante centralizada -->
