@@ -2301,12 +2301,31 @@ def trocas():
                            separador_atual=separador)
 
 
+@app.route('/trocas/imprimir-ecin')
+@login_required
+def imprimir_troca_ecin():
+    # Se quiser passar dados de uma troca específica, pode usar parâmetros
+    return render_template('imprimir_troca_ecin.html')
+
+@app.route('/trocas/imprimir-elac')
+@login_required
+def imprimir_troca_elac():
+    # Se quiser passar dados de uma troca específica, pode usar parâmetros
+    return render_template('imprimir_troca_elac.html')
+
 
 @app.route('/trocas/imprimir/<int:id>')
 @login_required
 def imprimir_troca(id):
     troca = TrocaServico.query.get_or_404(id)
-    return render_template('imprimir_troca.html', troca=troca)
+    tipo = determinar_tipo_troca(troca)
+    if tipo == 'ecin':
+        return render_template('imprimir_troca_ecin.html', troca=troca)
+    elif tipo == 'elac':
+        return render_template('imprimir_troca_elac.html', troca=troca)
+    else:
+        return render_template('imprimir_troca.html', troca=troca)
+
 
 
 @app.route('/api/escala_usuario/<int:user_id>')
@@ -2393,20 +2412,29 @@ def imprimir_escala():
 
 # ---------- Aceitar/Recusar pelo colega (destino) ----------
 def determinar_tipo_troca(troca):
-    """Retorna 'assalariado' ou 'ecin' conforme a origem da troca."""
-    # Verifica se o bombeiro de origem é profissional e tem escalas nas categorias de assalariado
+    """Retorna 'assalariado', 'ecin' ou 'elac' conforme a origem da troca."""
     bombeiro = Bombeiro.query.get(troca.bombeiro_origem_id)
     if bombeiro and bombeiro.tipo_bombeiro == 'Profissional':
-        tem_escala = Escala.query.filter(
+        # Verifica se tem escala nas categorias de assalariado nesse dia
+        escala = Escala.query.filter(
             Escala.bombeiro_id == troca.bombeiro_origem_id,
             func.date(Escala.data_inicio) == troca.data_origem,
             Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
         ).first()
-        if tem_escala:
+        if escala:
             return 'assalariado'
-
-    # Caso contrário, assume ECIN
-    return 'ecin'
+    # Se não for assalariado, verifica se é ECIN ou ELAC
+    ecin = Ecin.query.filter(
+        Ecin.bombeiro_id == troca.bombeiro_origem_id,
+        Ecin.data == troca.data_origem,
+        Ecin.turno == troca.turno_origem
+    ).first()
+    if ecin:
+        if ecin.categoria == 'ECIN':
+            return 'ecin'
+        elif ecin.categoria == 'ELAC':
+            return 'elac'
+    return 'assalariado'  # fallback
 
 
 @app.route('/trocas/aceitar/<int:id>')

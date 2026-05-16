@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Registo de Troca de Serviço - ECIN</title>
+    <style>
+        @page {
+            size: B5;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        /* Cabeçalho */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #aaa;
+            padding-bottom: 10px;
+        }
+        .logo {
+            height: 55px;
+            width: auto;
+        }
+        .associacao {
+            font-size: 12pt;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        .contactos {
+            font-size: 8pt;
+            color: #333;
+            margin-top: 4px;
+        }
+        /* Título */
+        .titulo {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0 10px;
+            text-transform: uppercase;
+        }
+        .subtitulo {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        /* Tabela / campos */
+        .campo-linha {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .label {
+            font-weight: bold;
+            min-width: 130px;
+        }
+        .linha-preenchimento {
+            border-bottom: 1px dotted #000;
+            flex: 1;
+            margin-left: 10px;
+            min-width: 150px;
+        }
+        .linha-cheia {
+            border-bottom: 1px dotted #000;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .duas-colunas {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 16px;
+        }
+        .coluna {
+            flex: 1;
+        }
+        .assinatura-linha {
+            border-top: 1px solid #000;
+            margin-top: 25px;
+            padding-top: 5px;
+            font-size: 9pt;
+            text-align: center;
+        }
+        .nota {
+            margin-top: 30px;
+            font-size: 9pt;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 12px;
+        }
+        .comandante {
+            text-align: right;
+            margin-top: 20px;
+            font-size: 10pt;
+        }
+        .no-print {
+            margin-top: 30px;
+            text-align: center;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <img class="logo" src="{{ url_for('static', filename='images/ANEPC.jpg') }}" alt="ANEPC">
+        <div class="associacao">
+            ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA<br>
+            <span class="contactos">Email: comandonisa@gmail.com | Rua Prof. Cruz Malpique S/N | 6050-341 Nisa | Tel 245412303</span>
+        </div>
+    </div>
+
+    <div class="titulo">REGISTO DE TROCAS DE SERVIÇO</div>
+    <div class="subtitulo">ECIN</div>
+
+    <!-- Serviço original -->
+    <div class="campo-linha">
+        <span class="label">DATA DA TROCA</span>
+        <span class="linha-preenchimento">_____ / _____ / ________</span>
+    </div>
+    <div class="campo-linha">
+        <span class="label">TURNO SERVIÇO DAS</span>
+        <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
+        <span class="label" style="margin-left: 15px;">às</span>
+        <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
+    </div>
+    <div class="duas-colunas">
+        <div class="coluna">
+            <span class="label">Nome:</span>
+            <div class="linha-cheia" style="margin-top: 6px;"></div>
+        </div>
+        <div class="coluna">
+            <span class="label">Posto:</span>
+            <div class="linha-cheia" style="margin-top: 6px;"></div>
+        </div>
+    </div>
+    <div class="campo-linha">
+        <span class="label">Assinatura:</span>
+        <div class="linha-cheia"></div>
+    </div>
+
+    <!-- Troca -->
+    <div class="campo-linha" style="margin-top: 25px;">
+        <span class="label">TROCA – TURNO SERVIÇO DAS</span>
+        <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
+        <span class="label" style="margin-left: 15px;">às</span>
+        <span class="linha-preenchimento" style="min-width: 80px;">_______ horas</span>
+    </div>
+    <div class="duas-colunas">
+        <div class="coluna">
+            <span class="label">Nome:</span>
+            <div class="linha-cheia" style="margin-top: 6px;"></div>
+        </div>
+        <div class="coluna">
+            <span class="label">Posto:</span>
+            <div class="linha-cheia" style="margin-top: 6px;"></div>
+        </div>
+    </div>
+    <div class="campo-linha">
+        <span class="label">Assinatura:</span>
+        <div class="linha-cheia"></div>
+    </div>
+
+    <div class="nota">
+        <strong>Nota:</strong> As Trocas só são válidas após Autorização do Comando
+    </div>
+    <div class="comandante">
+        O Comandante<br>
+        <div style="border-top: 1px solid #000; width: 180px; margin-top: 20px;"></div>
+    </div>
+
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close()">❌ Fechar</button>
+    </div>
+</div>
+</body>
+</html>
