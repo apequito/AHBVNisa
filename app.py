@@ -6886,6 +6886,8 @@ def inject_pendencias():
 
 
 #---------------------------Deslocações----------------
+from datetime import date
+
 @app.route('/deslocacoes', methods=['GET', 'POST'])
 @login_required
 def deslocacoes():
@@ -6905,7 +6907,6 @@ def deslocacoes():
             flash('Data inválida.', 'danger')
             return redirect(url_for('deslocacoes'))
 
-        # Valor só pode ser guardado por admin/comando/secretaria
         valor = None
         if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria']:
             if valor_str:
@@ -6930,13 +6931,19 @@ def deslocacoes():
         flash('Deslocação registada.', 'success')
         return redirect(url_for('deslocacoes'))
 
+    # GET – listagem
     query = Deslocacao.query.order_by(Deslocacao.data.desc())
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
         query = query.filter_by(bombeiro_id=current_user.id)
 
     deslocacoes_lista = query.all()
     viaturas = Viatura.query.order_by(Viatura.matricula).all()
-    return render_template('deslocacoes.html', deslocacoes=deslocacoes_lista, viaturas=viaturas)
+
+    return render_template('deslocacoes.html',
+                           deslocacoes=deslocacoes_lista,
+                           viaturas=viaturas,
+                           now=date.today())   # ← variável now adicionada
+
 
 @app.route('/administrativo')
 @login_required
