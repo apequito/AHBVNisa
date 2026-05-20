@@ -2,36 +2,180 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Disponibilidades</title>
+    <title>Disponibilidades - {{ bombeiro.nome }} - {{ meses[mes-1] }}/{{ ano }}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 30px; }
-        h2 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        @media print { body { margin: 15px; } }
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            background: white;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+        }
+        /* Cabeçalho */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #aaa;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .logo {
+            height: 55px;
+            width: auto;
+        }
+        .info-associacao {
+            font-size: 10pt;
+            line-height: 1.2;
+        }
+        .associacao {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .contactos {
+            font-size: 8pt;
+            color: #333;
+        }
+        .titulo {
+            text-align: center;
+            font-weight: bold;
+            font-size: 16pt;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        /* Campos de identificação */
+        .campos {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border: 1px solid #000;
+            padding: 8px 12px;
+            background-color: #f9f9f9;
+        }
+        .campo {
+            font-weight: bold;
+        }
+        .campo span {
+            font-weight: normal;
+            border-bottom: 1px dotted #000;
+            display: inline-block;
+            min-width: 200px;
+        }
+        /* Tabela */
+        .tabela-disp {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .tabela-disp th, .tabela-disp td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+        .tabela-disp th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .col-dia {
+            width: 15%;
+            text-align: center;
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        .col-turno {
+            width: 42.5%;
+            text-align: center;
+        }
+        .piquete {
+            background-color: #f9f9f9;
+            font-weight: bold;
+        }
+        .no-print {
+            margin-top: 20px;
+            text-align: center;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
     </style>
 </head>
 <body>
-    <h2>Disponibilidades</h2>
-    <table>
+<div class="container">
+
+    <!-- Cabeçalho -->
+    <div class="cabecalho">
+        <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
+        <div class="info-associacao">
+            <div class="associacao">ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA</div>
+            <div class="contactos">Email: comandonisa@gmail.com | Rua Prof. Cruz Malpique S/N | 6050-341 Nisa | Tel 245412303</div>
+        </div>
+    </div>
+
+    <!-- Título -->
+    <div class="titulo">DISPONIBILIDADE</div>
+
+    <!-- Nome e Mês -->
+    <div class="campos">
+        <div class="campo">Nome: <span>{{ bombeiro.nome }}</span></div>
+        <div class="campo">Mês: <span>{{ meses[mes-1] }} / {{ ano }}</span></div>
+    </div>
+
+    <!-- Tabela de disponibilidades -->
+    <table class="tabela-disp">
         <thead>
             <tr>
-                <th>Bombeiro</th><th>Data</th><th>Categoria</th><th>Turno Extra</th><th>Confirmada</th>
+                <th class="col-dia">Dia</th>
+                <th class="col-turno">07 / 19 Horas</th>
+                <th class="col-turno">19 / 07 Horas</th>
             </tr>
         </thead>
         <tbody>
-            {% for d in disponibilidades %}
+            {% for dia in dias %}
+            {% set data = date(ano, mes, dia) %}
+            {% set disp = disp_dict.get(data, {}) %}
             <tr>
-                <td>{{ d.bombeiro.nome }}</td>
-                <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
-                <td>{{ d.categoria or '-' }}</td>
-                <td>{{ d.turno_extra or '-' }}</td>
-                <td>{{ 'Sim' if d.confirmada else 'Não' }}</td>
+                <td class="col-dia">{{ dia }}</td>
+                <td class="col-turno">
+                    {% if disp and disp.turno == '07h/19h' %}
+                        ✓ {{ disp.categoria if disp.categoria else 'Disponível' }}
+                    {% else %}
+                        &nbsp;
+                    {% endif %}
+                </td>
+                <td class="col-turno">
+                    {% if disp and disp.turno == '19h/07h' %}
+                        ✓ {{ disp.categoria if disp.categoria else 'Disponível' }}
+                    {% else %}
+                        &nbsp;
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
+
+            <!-- Linha extra para Piquete de Saúde (não é um dia, mas um campo especial) -->
+            <tr class="piquete">
+                <td class="col-dia"><strong>Piquete de Saúde</strong></td>
+                <td class="col-turno"><strong>08/16 H</strong></td>
+                <td class="col-turno"><strong>16/24h</strong></td>
+            </tr>
         </tbody>
     </table>
-    <script>window.print();</script>
+
+    <!-- Botões de impressão (não aparecem no papel) -->
+    <div class="no-print">
+        <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+    </div>
+
+</div>
 </body>
 </html>
