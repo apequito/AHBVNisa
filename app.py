@@ -3138,28 +3138,45 @@ def aprovar_disponibilidades():
 @app.route('/disponibilidades/imprimir')
 @login_required
 def imprimir_disponibilidades():
-    # Parâmetros opcionais (apenas relevantes para Admin/Comando/ECIN)
     bombeiro_id = request.args.get('bombeiro_id', type=int)
-    mes = request.args.get('mes', type=int)
-    ano = request.args.get('ano', type=int)
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
 
-    # Determinar qual o ID do bombeiro cujas disponibilidades vão ser impressas
-    if (current_user.tipo_user == 'Admin' or current_user.resp_departamento in ('Comando', 'ECIN')) and bombeiro_id:
-        # Utilizador com privilégios e forneceu um bombeiro específico
-        user_id = bombeiro_id
+    # Se for admin ou comando pode ver de outro bombeiro, senão vê só as suas
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN']:
+        if bombeiro_id:
+            bombeiro = Bombeiro.query.get_or_404(bombeiro_id)
+        else:
+            bombeiro = current_user
     else:
-        # Utilizador normal ou privilégio sem bombeiro específico → vê as suas próprias
-        user_id = current_user.id
+        bombeiro = current_user
 
-    # Construir a query
-    query = Disponibilidade.query.filter_by(bombeiro_id=user_id)
-    if mes:
-        query = query.filter(db.extract('month', Disponibilidade.data) == mes)
-    if ano:
-        query = query.filter(db.extract('year', Disponibilidade.data) == ano)
+    # Buscar disponibilidades do bombeiro no mês/ano
+    disponibilidades = Disponibilidade.query.filter(
+        Disponibilidade.bombeiro_id == bombeiro.id,
+        db.extract('year', Disponibilidade.data) == ano,
+        db.extract('month', Disponibilidade.data) == mes
+    ).all()
 
-    lista = query.order_by(Disponibilidade.data.asc()).all()
-    return render_template('imprimir_disponibilidades.html', disponibilidades=lista)
+    # Criar um dicionário para fácil consulta: data -> (turno, categoria, confirmada)
+    disp_dict = {}
+    for d in disponibilidades:
+        disp_dict[d.data] = {'turno': d.turno_extra, 'categoria': d.categoria, 'confirmada': d.confirmada}
+
+    # Lista de dias do mês
+    import calendar
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    dias = list(range(1, ultimo_dia + 1))
+
+    meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+
+    return render_template('imprimir_disponibilidades.html',
+                           bombeiro=bombeiro,
+                           dias=dias,
+                           mes=mes,
+                           ano=ano,
+                           meses=meses,
+                           disp_dict=disp_dict)
 
 
 

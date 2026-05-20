@@ -9,9 +9,9 @@
         <a href="{{ url_for('exportar_disponibilidades') }}" class="btn btn-outline-success btn-sm ms-2">📥 Exportar</a>
         <button class="btn btn-outline-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalImprimir">🖨️ Imprimir Disponibilidade</button>
     {% else %}
-        <a href="{{ url_for('imprimir_disponibilidades') }}" target="_blank" class="btn btn-outline-secondary btn-sm ms-2">
-            🖨️ Imprimir as Minhas Disponibilidades
-        </a>
+        <a href="{{ url_for('imprimir_disponibilidades', bombeiro_id=bombeiro_id, mes=mes, ano=ano) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-printer"></i> Imprimir
+</a>
     {% endif %}
 </div>
 
