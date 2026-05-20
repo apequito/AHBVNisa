@@ -2121,53 +2121,70 @@ def importar_escala():
     linhas_importadas = 0
     erros = []
 
-    # Assumimos: Mecanográfico | Início | Fim | Turno | Categoria | Função (opcional)
+    # Função auxiliar para converter data/hora
+    def parse_datetime(valor):
+        if not valor:
+            return None
+        # Se já for datetime (caso do openpyxl)
+        if isinstance(valor, datetime):
+            return valor
+        # Se for date, converte para datetime (início do dia)
+        if isinstance(valor, date):
+            return datetime.combine(valor, datetime.min.time())
+        # Caso contrário, tenta converter strings
+        s = str(valor).strip()
+        formatos = [
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d',
+            '%d/%m/%Y %H:%M:%S',
+            '%d/%m/%Y %H:%M',
+            '%d/%m/%Y'
+        ]
+        for fmt in formatos:
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        return None
+
+    # Cabeçalhos esperados:
+    # Col0: Mecanográfico, Col1: Nome (opcional), Col2: Início, Col3: Fim, Col4: Turno, Col5: Categoria, Col6: Função (opcional)
     for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if not row or all(cell is None for cell in row):
             continue
 
         try:
             mecanografico = str(row[0]).strip() if row[0] else None
-            inicio_str = str(row[1]).strip() if row[1] else None
-            fim_str = str(row[2]).strip() if row[2] else None
-            turno = str(row[3]).strip() if len(row) > 3 and row[3] else None
-            categoria = str(row[4]).strip() if len(row) > 4 and row[4] else 'Bombeiro'
-            funcao = str(row[5]).strip() if len(row) > 5 and row[5] else None
+            # A coluna Nome (índice 1) é ignorada na validação, mas pode existir
+            inicio_val = row[2] if len(row) > 2 else None
+            fim_val = row[3] if len(row) > 3 else None
+            turno = str(row[4]).strip() if len(row) > 4 and row[4] else None
+            categoria = str(row[5]).strip() if len(row) > 5 and row[5] else 'Bombeiro'
+            funcao = str(row[6]).strip() if len(row) > 6 and row[6] else None
         except IndexError:
             erros.append(f'Linha {row_num}: número insuficiente de colunas.')
             continue
 
-        if not mecanografico or not inicio_str or not fim_str or not turno or not categoria:
-            erros.append(f'Linha {row_num}: campos obrigatórios em falta (mecanográfico, início, fim, turno, categoria).')
+        if not mecanografico or not inicio_val or not fim_val or not turno:
+            erros.append(f'Linha {row_num}: campos obrigatórios em falta (mecanográfico, início, fim, turno).')
             continue
 
-        # Validar mecanográfico
+        # Validar bombeiro
         bombeiro = Bombeiro.query.filter_by(mecanografico=mecanografico).first()
         if not bombeiro:
             erros.append(f'Linha {row_num}: mecanográfico "{mecanografico}" não encontrado.')
             continue
 
-        # Validar datas
-        data_inicio = None
-        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
-            try:
-                data_inicio = datetime.strptime(inicio_str, fmt).date()
-                break
-            except ValueError:
-                pass
-        if not data_inicio:
-            erros.append(f'Linha {row_num}: data de início inválida "{inicio_str}".')
-            continue
+        # Converter datas (agora suporta datetime nativo)
+        data_inicio = parse_datetime(inicio_val)
+        data_fim = parse_datetime(fim_val)
 
-        data_fim = None
-        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
-            try:
-                data_fim = datetime.strptime(fim_str, fmt).date()
-                break
-            except ValueError:
-                pass
+        if not data_inicio:
+            erros.append(f'Linha {row_num}: data de início inválida "{inicio_val}".')
+            continue
         if not data_fim:
-            erros.append(f'Linha {row_num}: data de fim inválida "{fim_str}".')
+            erros.append(f'Linha {row_num}: data de fim inválida "{fim_val}".')
             continue
 
         # Validar turno
@@ -2185,7 +2202,7 @@ def importar_escala():
             erros.append(f'Linha {row_num}: categoria "{categoria}" inválida.')
             continue
 
-        # Criar a escala (sem tipo_bombeiro)
+        # Criar a escala
         nova = Escala(
             bombeiro_id=bombeiro.id,
             data_inicio=data_inicio,
@@ -2200,7 +2217,11 @@ def importar_escala():
     db.session.commit()
 
     if erros:
-        flash(f'{linhas_importadas} escala(s) importada(s) com sucesso. {len(erros)} erro(s): ' + '; '.join(erros), 'warning')
+        # Limita a 5 erros para não sobrecarregar a mensagem
+        msg_erro = '; '.join(erros[:5])
+        if len(erros) > 5:
+            msg_erro += f' e mais {len(erros)-5} erro(s).'
+        flash(f'{linhas_importadas} escala(s) importada(s) com sucesso. {len(erros)} erro(s): {msg_erro}', 'warning')
     else:
         flash(f'{linhas_importadas} escala(s) importada(s) com sucesso!', 'success')
 
@@ -5688,25 +5709,65 @@ def _importar_linha_disponibilidades(row, row_num):
 
 
 def _importar_linha_escalas(row, row_num):
-    mec = str(row[0]).strip() if row[0] else None
-    inicio_str = str(row[1]).strip() if len(row) > 1 else None
-    fim_str = str(row[2]).strip() if len(row) > 2 else None
-    turno = str(row[3]).strip() if len(row) > 3 else ''
-    categoria = str(row[4]).strip() if len(row) > 4 else 'Bombeiro'
-    funcao = str(row[5]).strip() if len(row) > 5 else None
-    inicio = _parse_datetime(inicio_str)
-    fim = _parse_datetime(fim_str)
-    if not mec or not inicio or not fim:
-        return "Dados de escala incompletos"
-    bombeiro = Bombeiro.query.filter_by(mecanografico=mec).first()
-    if not bombeiro:
-        return f"Bombeiro {mec} não encontrado"
-    e = Escala(bombeiro_id=bombeiro.id, data_inicio=inicio, data_fim=fim,
-               turno=turno, categoria=categoria,
-               funcao=funcao if funcao and funcao != '' else None)
-    db.session.add(e)
-    db.session.flush()
-    return None
+    """Importa uma linha do Excel para a tabela Escala.
+       Espera colunas: Mecanográfico | Nome | Início | Fim | Turno | Categoria | Função (opcional)
+    """
+    try:
+        mecanografico = str(row[0]).strip() if row[0] else None
+        # O nome não é usado directamente (é apenas para conferência)
+        inicio_str = str(row[2]).strip() if len(row) > 2 and row[2] else None
+        fim_str = str(row[3]).strip() if len(row) > 3 and row[3] else None
+        turno = str(row[4]).strip() if len(row) > 4 and row[4] else ''
+        categoria = str(row[5]).strip() if len(row) > 5 and row[5] else 'Bombeiro'
+        funcao = str(row[6]).strip() if len(row) > 6 and row[6] else None
+
+        if not mecanografico or not inicio_str or not turno:
+            return f"Linha {row_num}: Mecanográfico, data início ou turno em falta."
+
+        bombeiro = Bombeiro.query.filter_by(mecanografico=mecanografico).first()
+        if not bombeiro:
+            return f"Linha {row_num}: Bombeiro com mecanográfico {mecanografico} não encontrado."
+
+        # Converter a data/hora início
+        try:
+            # Tentar remover o ' 00:00:00' se existir, mas manter como datetime
+            if ' ' in inicio_str:
+                data_inicio = datetime.strptime(inicio_str, '%Y-%m-%d %H:%M:%S')
+            else:
+                data_inicio = datetime.strptime(inicio_str, '%Y-%m-%d')
+        except ValueError:
+            try:
+                data_inicio = datetime.strptime(inicio_str, '%d/%m/%Y')
+            except ValueError:
+                return f"Linha {row_num}: Data início inválida '{inicio_str}'."
+
+        # Determinar a hora de fim com base no turno (se a data fim não for fornecida ou for igual)
+        # Usar a função turno_para_horas (já existente)
+        inicio_str_hora, fim_str_hora = turno_para_horas(turno)
+        # Converter as strings de hora em objetos time
+        hora_inicio = datetime.strptime(inicio_str_hora, '%H:%M').time()
+        hora_fim = datetime.strptime(fim_str_hora, '%H:%M').time()
+        # Construir data_hora_inicio e data_hora_fim
+        data_inicio = datetime.combine(data_inicio.date(), hora_inicio)
+        data_fim = datetime.combine(data_inicio.date(), hora_fim)
+        # Se a hora fim for menor ou igual à início, adiciona um dia
+        if data_fim <= data_inicio:
+            data_fim += timedelta(days=1)
+
+        # Criar escala
+        e = Escala(
+            bombeiro_id=bombeiro.id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            turno=turno,
+            categoria=categoria,
+            funcao=funcao if funcao and funcao != '' else None
+        )
+        db.session.add(e)
+        return None  # sem erro
+
+    except Exception as e:
+        return f"Linha {row_num}: erro inesperado - {str(e)}"
 
 
 def _importar_linha_avarias(row, row_num):
