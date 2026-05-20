@@ -460,6 +460,8 @@ class Deslocacao(db.Model):
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
     hora_inicio = db.Column(db.String(10), nullable=False)
+    data_fim = db.Column(db.Date, nullable=True)          # NOVO
+    hora_fim = db.Column(db.String(10), nullable=True)    # NOVO
     servico = db.Column(db.String(50), nullable=False)
     local_origem = db.Column(db.String(200))
     local_destino = db.Column(db.String(200))
@@ -469,6 +471,7 @@ class Deslocacao(db.Model):
 
     bombeiro = db.relationship('Bombeiro', back_populates='deslocacoes')
     viatura = db.relationship('Viatura', back_populates='deslocacoes')
+
 
 class Mobilidade(db.Model):
     __tablename__ = 'mobilidades'

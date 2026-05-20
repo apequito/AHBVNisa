@@ -19,11 +19,26 @@
             width: 100%;
             margin: 0 auto;
         }
-        h1 {
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .logo {
+            height: 60px;
+            width: auto;
+        }
+        .titulo {
             text-align: center;
+            flex: 1;
+        }
+        .titulo h1 {
             font-size: 18pt;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin: 0;
         }
         .info-linha {
             display: flex;
@@ -74,7 +89,13 @@
 <body>
 <div class="container">
 
-    <h1>DESLOCAÇÕES</h1>
+    <div class="cabecalho">
+        <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
+        <div class="titulo">
+            <h1>DESLOCAÇÕES</h1>
+        </div>
+        <div style="width: 60px;"></div> <!-- espaço vazio para equilibrar -->
+    </div>
 
     <div class="info-linha">
         <div class="info-campo">NOME: {{ nome_bombeiro }}</div>
@@ -135,7 +156,7 @@
 
     <div class="assinatura">
         _________________________________<br>
-        Assinatura do Responsável
+        Assinatura do Bombeiro
         <div class="linha-assinatura"></div>
     </div>
 

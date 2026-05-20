@@ -2640,18 +2640,15 @@ def imprimir_minhas_deslocacoes():
         extract('year', Deslocacao.data) == ano
     ).order_by(Deslocacao.data, Deslocacao.hora_inicio).all()
 
-    # Preparar linhas (compatível com o template)
     linhas = []
     for d in deslocacoes:
-        # Se o modelo não tiver hora_fim, usa vazio
-        hora_fim = getattr(d, 'hora_fim', '')
         linha = {
             'dia': d.data.day,
             'localidade': f"{d.local_origem or ''} → {d.local_destino or ''}",
             'inicio_dia': d.data.day,
             'inicio_hora': d.hora_inicio,
-            'fim_dia': d.data.day,   # assumindo mesmo dia
-            'fim_hora': hora_fim,
+            'fim_dia': d.data_fim.day if d.data_fim else '',
+            'fim_hora': d.hora_fim or '',
             'viatura': d.viatura.matricula if d.viatura else '',
             'n_servico': d.n_servico or ''
         }
@@ -6888,10 +6885,13 @@ def inject_pendencias():
 #---------------------------Deslocações----------------
 from datetime import date
 
+from datetime import date, datetime
+
 @app.route('/deslocacoes', methods=['GET', 'POST'])
 @login_required
 def deslocacoes():
     if request.method == 'POST':
+        # Dados principais
         data_str = request.form['data']
         hora_inicio = request.form['hora_inicio']
         servico = request.form['servico']
@@ -6901,12 +6901,48 @@ def deslocacoes():
         viatura_id = request.form.get('viatura_id', type=int)
         n_servico = request.form.get('n_servico', '')
 
+        # Novos campos
+        data_fim_str = request.form.get('data_fim', '')
+        hora_fim = request.form.get('hora_fim', '')
+
+        # Validar data início
         try:
             data = datetime.strptime(data_str, '%Y-%m-%d').date()
         except ValueError:
             flash('Data inválida.', 'danger')
             return redirect(url_for('deslocacoes'))
 
+        # Validar hora início
+        if len(hora_inicio) > 10:
+            try:
+                dt = datetime.strptime(hora_inicio, '%d/%m/%Y %H:%M')
+                hora_inicio = dt.strftime('%H:%M')
+            except ValueError:
+                try:
+                    dt = datetime.strptime(hora_inicio, '%Y-%m-%d %H:%M')
+                    hora_inicio = dt.strftime('%H:%M')
+                except ValueError:
+                    flash('Formato de hora início inválido. Use HH:MM.', 'danger')
+                    return redirect(url_for('deslocacoes'))
+        elif len(hora_inicio) != 5 or hora_inicio[2] != ':':
+            flash('Hora início deve estar no formato HH:MM.', 'danger')
+            return redirect(url_for('deslocacoes'))
+
+        # Validar data fim (opcional)
+        data_fim = None
+        if data_fim_str:
+            try:
+                data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Data fim inválida.', 'danger')
+                return redirect(url_for('deslocacoes'))
+
+        # Validar hora fim (opcional)
+        if hora_fim and (len(hora_fim) != 5 or hora_fim[2] != ':'):
+            flash('Hora fim deve estar no formato HH:MM.', 'danger')
+            return redirect(url_for('deslocacoes'))
+
+        # Valor (apenas para perfis autorizados)
         valor = None
         if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria']:
             if valor_str:
@@ -6919,6 +6955,8 @@ def deslocacoes():
             bombeiro_id=current_user.id,
             data=data,
             hora_inicio=hora_inicio,
+            data_fim=data_fim,
+            hora_fim=hora_fim if hora_fim else None,
             servico=servico,
             local_origem=local_origem,
             local_destino=local_destino,
@@ -6942,8 +6980,7 @@ def deslocacoes():
     return render_template('deslocacoes.html',
                            deslocacoes=deslocacoes_lista,
                            viaturas=viaturas,
-                           now=date.today())   # ← variável now adicionada
-
+                           now=date.today())
 
 @app.route('/administrativo')
 @login_required

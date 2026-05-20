@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between mb-3">
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaDeslocacao">+ Nova Deslocação</button>
 
-    <!-- Botão para imprimir as deslocações do mês -->
+    <!-- Formulário de impressão -->
     <form method="GET" action="{{ url_for('imprimir_minhas_deslocacoes') }}" target="_blank" class="d-flex gap-2">
         <select name="mes" class="form-select form-select-sm" style="width: auto;">
             {% for i in range(1,13) %}
@@ -22,11 +22,18 @@
 <table class="table table-sm table-striped align-middle">
     <thead>
         <tr>
-            <th>Data</th><th>Hora</th><th>Serviço</th><th>Origem</th><th>Destino</th>
+            <th>Data</th>
+            <th>Hora Início</th>
+            <th>Data Fim</th>
+            <th>Hora Fim</th>
+            <th>Serviço</th>
+            <th>Origem</th>
+            <th>Destino</th>
             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
             <th>Valor</th>
             {% endif %}
-            <th>Viatura</th><th>Nº Serviço</th>
+            <th>Viatura</th>
+            <th>Nº Serviço</th>
         </tr>
     </thead>
     <tbody>
@@ -34,6 +41,8 @@
         <tr>
             <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
             <td>{{ d.hora_inicio }}</td>
+            <td>{{ d.data_fim.strftime('%d/%m/%Y') if d.data_fim else '-' }}</td>
+            <td>{{ d.hora_fim if d.hora_fim else '-' }}</td>
             <td>{{ d.servico }}</td>
             <td>{{ d.local_origem or '-' }}</td>
             <td>{{ d.local_destino or '-' }}</td>
@@ -44,20 +53,30 @@
             <td>{{ d.n_servico or '-' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="{{ 8 if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] else 7 }}" class="text-center text-muted">Nenhuma deslocação registada.</td></tr>
-        {% endfor %}
+        <tr><td colspan="{{ 11 if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] else 10 }}" class="text-center text-muted">Nenhuma deslocação registada.{% endfor %}
     </tbody>
 </table>
 
-<!-- Modal Nova Deslocação (mantido igual) -->
+<!-- Modal Nova Deslocação -->
 <div class="modal fade" id="modalNovaDeslocacao" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST">
             <div class="modal-content">
                 <div class="modal-header"><h5>Nova Deslocação</h5></div>
                 <div class="modal-body">
+                    <label class="form-label">Data Início</label>
                     <input type="date" name="data" class="form-control mb-2" required>
-                    <input type="text" name="hora_inicio" class="form-control mb-2" placeholder="Hora início (HH:MM)" required>
+                    <label class="form-label">Hora Início</label>
+                    <input type="time" name="hora_inicio" class="form-control mb-2" required>
+
+                    <hr>
+                    <label class="form-label">Data Fim (opcional)</label>
+                    <input type="date" name="data_fim" class="form-control mb-2">
+                    <label class="form-label">Hora Fim (opcional)</label>
+                    <input type="time" name="hora_fim" class="form-control mb-2">
+                    <hr>
+
+                    <label class="form-label">Serviço</label>
                     <select name="servico" id="servicoSelect" class="form-select mb-2" required>
                         <option value="">-- Serviço --</option>
                         <option>C. Doentes</option>
@@ -65,20 +84,29 @@
                         <option>Retorno</option>
                         <option>Urgência</option>
                     </select>
+
+                    <label class="form-label">Local Origem</label>
                     <input type="text" name="local_origem" class="form-control mb-2" placeholder="Local Origem">
+
+                    <label class="form-label">Local Destino</label>
                     <input type="text" name="local_destino" id="localDestino" class="form-control mb-2" placeholder="Local Destino">
+
                     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
                     <label class="form-label">Valor (€)</label>
                     <input type="number" step="0.01" name="valor" id="valorDeslocacao" class="form-control mb-2" value="0.00">
                     {% else %}
                     <input type="hidden" name="valor" id="valorDeslocacao" value="0.00">
                     {% endif %}
+
+                    <label class="form-label">Viatura</label>
                     <select name="viatura_id" class="form-select mb-2">
                         <option value="">-- Viatura --</option>
                         {% for v in viaturas %}
                         <option value="{{ v.id }}">{{ v.matricula }} ({{ v.tipo }})</option>
                         {% endfor %}
                     </select>
+
+                    <label class="form-label">Nº Serviço</label>
                     <input type="text" name="n_servico" class="form-control mb-2" placeholder="Nº Serviço">
                 </div>
                 <div class="modal-footer"><button type="submit" class="btn btn-success">Registar</button></div>
