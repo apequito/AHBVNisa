@@ -105,7 +105,6 @@
 <body>
 <div class="container">
 
-    <!-- Cabeçalho -->
     <div class="cabecalho">
         <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
         <div class="info-associacao">
@@ -114,16 +113,13 @@
         </div>
     </div>
 
-    <!-- Título -->
     <div class="titulo">DISPONIBILIDADE</div>
 
-    <!-- Nome e Mês -->
     <div class="campos">
         <div class="campo">Nome: <span>{{ bombeiro.nome }}</span></div>
         <div class="campo">Mês: <span>{{ meses[mes-1] }} / {{ ano }}</span></div>
     </div>
 
-    <!-- Tabela de disponibilidades -->
     <table class="tabela-disp">
         <thead>
             <tr>
@@ -134,21 +130,20 @@
         </thead>
         <tbody>
             {% for dia in dias %}
-            {# Constrói a chave YYYY-MM-DD #}
             {% set key = "%04d-%02d-%02d" % (ano, mes, dia) %}
-            {% set disp = disp_dict.get(key, {}) %}
+            {% set disp = disp_dict.get(key, {'07h/19h': None, '19h/07h': None}) %}
             <tr>
                 <td class="col-dia">{{ dia }}</td>
                 <td class="col-turno">
-                    {% if disp and disp.turno == '07h/19h' %}
-                        ✓ {{ disp.categoria if disp.categoria else 'Disponível' }}
+                    {% if disp['07h/19h'] %}
+                        ✓ {{ disp['07h/19h'] }}
                     {% else %}
                         &nbsp;
                     {% endif %}
                 </td>
                 <td class="col-turno">
-                    {% if disp and disp.turno == '19h/07h' %}
-                        ✓ {{ disp.categoria if disp.categoria else 'Disponível' }}
+                    {% if disp['19h/07h'] %}
+                        ✓ {{ disp['19h/07h'] }}
                     {% else %}
                         &nbsp;
                     {% endif %}
@@ -158,7 +153,6 @@
         </tbody>
     </table>
 
-    <!-- Botões de impressão -->
     <div class="no-print">
         <button onclick="window.print();" style="padding: 6px 12px;">🖨️ Imprimir / Guardar PDF</button>
         <button onclick="window.close();" style="padding: 6px 12px;">❌ Fechar</button>

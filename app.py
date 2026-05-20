@@ -3159,10 +3159,16 @@ def imprimir_disponibilidades():
     ).all()
 
     # Dicionário com chave 'YYYY-MM-DD' para fácil acesso
+    # Dicionário para guardar os dois turnos por dia
     disp_dict = {}
     for d in disponibilidades:
-        key = d.data.isoformat()
-        disp_dict[key] = {'turno': d.turno_extra, 'categoria': d.categoria, 'confirmada': d.confirmada}
+        key = d.data.isoformat()  # "YYYY-MM-DD"
+        if key not in disp_dict:
+            disp_dict[key] = {'07h/19h': None, '19h/07h': None}
+        if d.turno_extra == '07h/19h':
+            disp_dict[key]['07h/19h'] = d.categoria
+        elif d.turno_extra == '19h/07h':
+            disp_dict[key]['19h/07h'] = d.categoria
 
     import calendar
     ultimo_dia = calendar.monthrange(ano, mes)[1]
