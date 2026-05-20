@@ -19,7 +19,6 @@
             width: 100%;
             margin: 0 auto;
         }
-        /* Cabeçalho */
         .cabecalho {
             display: flex;
             align-items: center;
@@ -51,7 +50,6 @@
             margin: 20px 0 25px;
             text-transform: uppercase;
         }
-        /* Tabela de campos */
         .tabela-avaria {
             width: 100%;
             border-collapse: collapse;
@@ -74,13 +72,6 @@
             background-color: #e0e0e0;
             font-weight: bold;
             text-align: center;
-        }
-        .assinatura {
-            border-top: 1px solid #000;
-            margin-top: 30px;
-            padding-top: 8px;
-            text-align: center;
-            width: 250px;
         }
         .no-print {
             margin-top: 30px;
@@ -117,7 +108,7 @@
         </tr>
         <tr>
             <td class="rotulo">Km</td>
-            <td class="conteudo">{{ avaria.kms or '_________________' }}</td>
+            <td class="conteudo">{{ avaria.kms if avaria.kms else '_________________' }}</td>
         </tr>
         <tr>
             <td class="rotulo">Descrição da Avaria</td>
@@ -136,26 +127,56 @@
     <!-- Secção 2: Conhecimento da Avaria - Responsável Mecânica -->
     <table class="tabela-avaria">
         <tr><td colspan="2" class="sec-titulo">Conhecimento da Avaria - Responsável Mecânica</td></tr>
-        <tr><td class="rotulo">Parecer</td><td class="conteudo">_________________________________</td></tr>
-        <tr><td class="rotulo">Condições Circulação</td><td class="conteudo">_________________________________</td></tr>
-        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
-        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+        <tr>
+            <td class="rotulo">Parecer / Motivo</td>
+            <td class="conteudo">{{ avaria.parecer_resp if avaria.parecer_resp else '_________________________________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Classificação</td>
+            <td class="conteudo">{{ avaria.urg_despacho if avaria.urg_despacho else '_________________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Data</td>
+            <td class="conteudo">{{ avaria.data_resp.strftime('%d / %m / %Y') if avaria.data_resp else '____ / ____ / ________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Assinatura</td>
+            <td class="conteudo">_________________________________</td>
+        </tr>
     </table>
 
     <!-- Secção 3: Despacho Comandante -->
     <table class="tabela-avaria">
         <tr><td colspan="2" class="sec-titulo">Despacho Comandante</td></tr>
-        <tr><td class="rotulo">Decisão</td><td class="conteudo">_________________________________</td></tr>
-        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
-        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+        <tr>
+            <td class="rotulo">Decisão / Despacho</td>
+            <td class="conteudo">{{ avaria.decisao_cmd if avaria.decisao_cmd else '_________________________________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Data</td>
+            <td class="conteudo">{{ avaria.data_cmd.strftime('%d / %m / %Y') if avaria.data_cmd else '____ / ____ / ________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Assinatura</td>
+            <td class="conteudo">_________________________________</td>
+        </tr>
     </table>
 
     <!-- Secção 4: Decisão da Direção -->
     <table class="tabela-avaria">
         <tr><td colspan="2" class="sec-titulo">Decisão da Direção</td></tr>
-        <tr><td class="rotulo">Presidente</td><td class="conteudo">_________________________________</td></tr>
-        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
-        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+        <tr>
+            <td class="rotulo">Presidente</td>
+            <td class="conteudo">_________________________________</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Data</td>
+            <td class="conteudo">____ / ____ / ________</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Assinatura</td>
+            <td class="conteudo">_________________________________</td>
+        </tr>
     </table>
 
     <!-- Botões de impressão -->
