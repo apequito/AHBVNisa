@@ -2627,6 +2627,44 @@ def api_creditos_nao_gozados(user_id):
     return resultado
 
 
+@app.route('/deslocacoes/imprimir-minhas')
+@login_required
+def imprimir_minhas_deslocacoes():
+    mes = request.args.get('mes', type=int, default=date.today().month)
+    ano = request.args.get('ano', type=int, default=date.today().year)
+
+    from sqlalchemy import extract
+    deslocacoes = Deslocacao.query.filter(
+        Deslocacao.bombeiro_id == current_user.id,
+        extract('month', Deslocacao.data) == mes,
+        extract('year', Deslocacao.data) == ano
+    ).order_by(Deslocacao.data, Deslocacao.hora_inicio).all()
+
+    # Preparar linhas (compatível com o template)
+    linhas = []
+    for d in deslocacoes:
+        # Se o modelo não tiver hora_fim, usa vazio
+        hora_fim = getattr(d, 'hora_fim', '')
+        linha = {
+            'dia': d.data.day,
+            'localidade': f"{d.local_origem or ''} → {d.local_destino or ''}",
+            'inicio_dia': d.data.day,
+            'inicio_hora': d.hora_inicio,
+            'fim_dia': d.data.day,   # assumindo mesmo dia
+            'fim_hora': hora_fim,
+            'viatura': d.viatura.matricula if d.viatura else '',
+            'n_servico': d.n_servico or ''
+        }
+        linhas.append(linha)
+
+    return render_template('imprimir_deslocacoes_bombeiro.html',
+                           mes=mes, ano=ano,
+                           nome_bombeiro=current_user.nome,
+                           linhas=linhas)
+
+
+
+
 @app.route('/dispensas/imprimir/<int:id>')
 @login_required
 def imprimir_dispensa(id):

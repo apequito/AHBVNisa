@@ -2,7 +2,22 @@
 {% block content %}
 <h2><i class="bi bi-car-front me-2"></i>Deslocações</h2>
 
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovaDeslocacao">+ Nova Deslocação</button>
+<div class="d-flex justify-content-between mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaDeslocacao">+ Nova Deslocação</button>
+
+    <!-- Botão para imprimir as deslocações do mês -->
+    <form method="GET" action="{{ url_for('imprimir_minhas_deslocacoes') }}" target="_blank" class="d-flex gap-2">
+        <select name="mes" class="form-select form-select-sm" style="width: auto;">
+            {% for i in range(1,13) %}
+            <option value="{{ i }}" {% if i == now.month %}selected{% endif %}>{{ i }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="ano" class="form-control form-control-sm" value="{{ now.year }}" style="width: 80px;">
+        <button type="submit" class="btn btn-sm btn-secondary">
+            <i class="bi bi-printer"></i> Imprimir Registo
+        </button>
+    </form>
+</div>
 
 <table class="table table-sm table-striped align-middle">
     <thead>
@@ -34,7 +49,7 @@
     </tbody>
 </table>
 
-<!-- Modal Nova Deslocação -->
+<!-- Modal Nova Deslocação (mantido igual) -->
 <div class="modal fade" id="modalNovaDeslocacao" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST">
@@ -73,32 +88,10 @@
 </div>
 
 <script>
-// Tabela de preços: serviço -> destino -> valor
 const precos = {
-    'C. Doentes': {
-        'Portalegre': 10.00,
-        'Évora': 35.00,
-        'Lisboa': 35.00,
-        'Coimbra': 35.00,
-        'Elvas': 20.00
-    },
-    'Evacuação': {
-        'Portalegre': 10.00,
-        'Évora': 35.00,
-        'Lisboa': 35.00,
-        'Coimbra': 35.00,
-        'Elvas': 20.00
-    },
-    'Retorno': {
-        'Nisa': 10.00,
-        'Alpalhão': 10.00,
-        'Tolosa': 10.00,
-        'Arez': 10.00,
-        'Santana': 10.00,
-        'Pé da Serra': 10.00,
-        'São Matias': 10.00,
-        'Amieira Tejo': 10.00
-    }
+    'C. Doentes': {'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Coimbra': 35.00, 'Elvas': 20.00},
+    'Evacuação': {'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Coimbra': 35.00, 'Elvas': 20.00},
+    'Retorno': {'Nisa': 10.00, 'Alpalhão': 10.00, 'Tolosa': 10.00, 'Arez': 10.00, 'Santana': 10.00, 'Pé da Serra': 10.00, 'São Matias': 10.00, 'Amieira Tejo': 10.00}
 };
 
 function atualizarValor() {
@@ -106,7 +99,6 @@ function atualizarValor() {
     const destino = document.getElementById('localDestino').value.trim();
     const campoValor = document.getElementById('valorDeslocacao');
     let novoValor = 0.00;
-
     if (servico && destino && precos[servico] && precos[servico][destino] !== undefined) {
         novoValor = precos[servico][destino];
     }
