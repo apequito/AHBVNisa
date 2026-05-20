@@ -19,7 +19,6 @@
             width: 100%;
             margin: 0 auto;
         }
-        /* Cabeçalho */
         .cabecalho {
             display: flex;
             align-items: center;
@@ -51,7 +50,6 @@
             margin-bottom: 20px;
             text-transform: uppercase;
         }
-        /* Campos de identificação */
         .campos {
             display: flex;
             justify-content: space-between;
@@ -69,7 +67,6 @@
             display: inline-block;
             min-width: 200px;
         }
-        /* Tabela */
         .tabela-disp {
             width: 100%;
             border-collapse: collapse;
@@ -111,7 +108,6 @@
 <body>
 <div class="container">
 
-    <!-- Cabeçalho -->
     <div class="cabecalho">
         <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
         <div class="info-associacao">
@@ -120,16 +116,13 @@
         </div>
     </div>
 
-    <!-- Título -->
     <div class="titulo">DISPONIBILIDADE</div>
 
-    <!-- Nome e Mês -->
     <div class="campos">
         <div class="campo">Nome: <span>{{ bombeiro.nome }}</span></div>
         <div class="campo">Mês: <span>{{ meses[mes-1] }} / {{ ano }}</span></div>
     </div>
 
-    <!-- Tabela de disponibilidades -->
     <table class="tabela-disp">
         <thead>
             <tr>
@@ -140,8 +133,8 @@
         </thead>
         <tbody>
             {% for dia in dias %}
-            {% set data = date(ano, mes, dia) %}
-            {% set disp = disp_dict.get(data, {}) %}
+            {% set key = "%04d-%02d-%02d" % (ano, mes, dia) %}
+            {% set disp = disp_dict.get(key, {}) %}
             <tr>
                 <td class="col-dia">{{ dia }}</td>
                 <td class="col-turno">
@@ -161,7 +154,6 @@
             </tr>
             {% endfor %}
 
-            <!-- Linha extra para Piquete de Saúde (não é um dia, mas um campo especial) -->
             <tr class="piquete">
                 <td class="col-dia"><strong>Piquete de Saúde</strong></td>
                 <td class="col-turno"><strong>08/16 H</strong></td>
@@ -170,7 +162,6 @@
         </tbody>
     </table>
 
-    <!-- Botões de impressão (não aparecem no papel) -->
     <div class="no-print">
         <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
         <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>

@@ -3138,11 +3138,11 @@ def aprovar_disponibilidades():
 @app.route('/disponibilidades/imprimir')
 @login_required
 def imprimir_disponibilidades():
+    from datetime import date
     bombeiro_id = request.args.get('bombeiro_id', type=int)
     mes = request.args.get('mes', type=int, default=date.today().month)
     ano = request.args.get('ano', type=int, default=date.today().year)
 
-    # Se for admin ou comando pode ver de outro bombeiro, senão vê só as suas
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN']:
         if bombeiro_id:
             bombeiro = Bombeiro.query.get_or_404(bombeiro_id)
@@ -3151,19 +3151,19 @@ def imprimir_disponibilidades():
     else:
         bombeiro = current_user
 
-    # Buscar disponibilidades do bombeiro no mês/ano
+    # Buscar disponibilidades
     disponibilidades = Disponibilidade.query.filter(
         Disponibilidade.bombeiro_id == bombeiro.id,
         db.extract('year', Disponibilidade.data) == ano,
         db.extract('month', Disponibilidade.data) == mes
     ).all()
 
-    # Criar um dicionário para fácil consulta: data -> (turno, categoria, confirmada)
+    # Dicionário com chave 'YYYY-MM-DD' para fácil acesso
     disp_dict = {}
     for d in disponibilidades:
-        disp_dict[d.data] = {'turno': d.turno_extra, 'categoria': d.categoria, 'confirmada': d.confirmada}
+        key = d.data.isoformat()
+        disp_dict[key] = {'turno': d.turno_extra, 'categoria': d.categoria, 'confirmada': d.confirmada}
 
-    # Lista de dias do mês
     import calendar
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     dias = list(range(1, ultimo_dia + 1))
@@ -3176,7 +3176,8 @@ def imprimir_disponibilidades():
                            mes=mes,
                            ano=ano,
                            meses=meses,
-                           disp_dict=disp_dict)
+                           disp_dict=disp_dict,
+                           date=date)  # ← passa a função date para o template
 
 
 
