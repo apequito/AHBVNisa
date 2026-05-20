@@ -918,6 +918,8 @@ def imprimir_gestao_frota(viatura_id):
 
 
 # ---------- Avarias ----------
+from datetime import date
+
 @app.route('/avarias', methods=['GET', 'POST'])
 @login_required
 def avarias():
@@ -966,7 +968,7 @@ def avarias():
         query_registo = query_registo.filter(Avaria.reportado_por == current_user.id)
     avarias_lista = query_registo.order_by(Avaria.data_reporte.desc()).limit(100).all()
 
-    viaturas = Viatura.query.all()   # para o modal de criação (disponível para todos)
+    viaturas = Viatura.query.all()   # para o modal de criação
 
     # --- Aba Histórico ---
     historico_avarias = []
@@ -993,7 +995,8 @@ def avarias():
                            filtro_mes=filtro_mes,
                            filtro_ano=filtro_ano,
                            filtro_estado=filtro_estado,
-                           tab=tab)
+                           tab=tab,
+                           hoje=date.today())   # ← variável hoje adicionada
 
 @app.route('/avarias/parecer_resp/<int:id>', methods=['POST'])
 @login_required

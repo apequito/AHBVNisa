@@ -46,8 +46,7 @@
                 {% for a in avarias %}
                 <tr>
                     <td><strong>{{ a.codigo }}</strong></td>
-                    <td>{{ a.viatura.matricula }} ({{
-                        a.viatura.estado|capitalize }})</td>
+                    <td>{{ a.viatura.matricula }} ({{ a.viatura.estado|capitalize }})</td>
                     <td>{{ a.descricao }}</td>
                     <td>{{ a.reportador.nome }}</td>
                     <td>{{ a.kms or '-' }}</td>
@@ -90,7 +89,7 @@
         </table>
     </div>
 
-    <!-- Aba Histórico (mantida) -->
+    <!-- Aba Histórico -->
     <div class="tab-pane fade" id="historico" role="tabpanel">
         <form method="GET" action="{{ url_for('avarias') }}" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="historico">
@@ -133,9 +132,7 @@
 
         <table class="table table-striped table-sm align-middle">
             <thead>
-                <tr>
-                    <th>Código</th><th>Viatura</th><th>Descrição</th><th>Kms</th><th>Estado</th><th>Data</th>
-                </tr>
+                <tr><th>Código</th><th>Viatura</th><th>Descrição</th><th>Kms</th><th>Estado</th><th>Data</th></tr>
             </thead>
             <tbody>
                 {% for a in historico_avarias %}
@@ -181,7 +178,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Data (automática)</label>
-                    <input type="text" id="data_resp" class="form-control" readonly value="{{ date.today().strftime('%d/%m/%Y') }}">
+                    <input type="text" id="data_resp" class="form-control" readonly value="{{ hoje.strftime('%d/%m/%Y') }}">
                 </div>
             </div>
             <div class="modal-footer">
@@ -212,7 +209,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Data (automática)</label>
-                    <input type="text" id="data_cmd" class="form-control" readonly value="{{ date.today().strftime('%d/%m/%Y') }}">
+                    <input type="text" id="data_cmd" class="form-control" readonly value="{{ hoje.strftime('%d/%m/%Y') }}">
                 </div>
             </div>
             <div class="modal-footer">
