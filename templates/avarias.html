@@ -39,9 +39,7 @@
                     <th>Comando</th>
                     <th>Estado</th>
                     <th>Data</th>
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
-                    <th>Ação</th>
-                    {% endif %}
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,44 +54,49 @@
                     <td class="text-center">{{ '✔️' if a.comando_verificado else '❌' }}</td>
                     <td><span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">{{ a.estado }}</span></td>
                     <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
                     <td>
-                        <form method="POST" action="{{ url_for('atualizar_avaria', id=a.id) }}" class="row g-1 align-items-center">
-                            <div class="col-auto">
-                                <select name="estado" class="form-select form-select-sm">
-                                    <option value="Pendente" {{ 'selected' if a.estado=='Pendente' }}>Pendente</option>
-                                    <option value="Analisar" {{ 'selected' if a.estado=='Analisar' }}>Analisar</option>
-                                    <option value="Resolvido" {{ 'selected' if a.estado=='Resolvido' }}>Resolvido</option>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <input type="number" name="kms" class="form-control form-control-sm" value="{{ a.kms or '' }}" placeholder="Kms" style="width:70px">
-                            </div>
-                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Oficina' %}
-                            <div class="col-auto form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="resp_oficina" id="resp_oficina_{{ a.id }}" {{ 'checked' if a.responsavel_oficina }}>
-                                <label class="form-check-label small" for="resp_oficina_{{ a.id }}">Oficina</label>
-                            </div>
-                            {% endif %}
-                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                            <div class="col-auto form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="comando_verificado" id="comando_{{ a.id }}" {{ 'checked' if a.comando_verificado }}>
-                                <label class="form-check-label small" for="comando_{{ a.id }}">Comando</label>
-                            </div>
-                            {% endif %}
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
-                            </div>
-                        </form>
+                        <div class="d-flex flex-column gap-1">
+                            <!-- Formulário de atualização -->
+                            <form method="POST" action="{{ url_for('atualizar_avaria', id=a.id) }}" class="row g-1 align-items-center">
+                                <div class="col-auto">
+                                    <select name="estado" class="form-select form-select-sm">
+                                        <option value="Pendente" {{ 'selected' if a.estado=='Pendente' }}>Pendente</option>
+                                        <option value="Analisar" {{ 'selected' if a.estado=='Analisar' }}>Analisar</option>
+                                        <option value="Resolvido" {{ 'selected' if a.estado=='Resolvido' }}>Resolvido</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <input type="number" name="kms" class="form-control form-control-sm" value="{{ a.kms or '' }}" placeholder="Kms" style="width:70px">
+                                </div>
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Oficina' %}
+                                <div class="col-auto form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="resp_oficina" id="resp_oficina_{{ a.id }}" {{ 'checked' if a.responsavel_oficina }}>
+                                    <label class="form-check-label small" for="resp_oficina_{{ a.id }}">Oficina</label>
+                                </div>
+                                {% endif %}
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                <div class="col-auto form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="comando_verificado" id="comando_{{ a.id }}" {{ 'checked' if a.comando_verificado }}>
+                                    <label class="form-check-label small" for="comando_{{ a.id }}">Comando</label>
+                                </div>
+                                {% endif %}
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                                </div>
+                            </form>
+                            <!-- Botão de impressão -->
+                            <a href="{{ url_for('imprimir_avaria', id=a.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-printer"></i> Imprimir
+                            </a>
+                        </div>
                     </td>
-                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-    <!-- Aba Histórico -->
+    <!-- Aba Histórico (mantida) -->
     <div class="tab-pane fade" id="historico" role="tabpanel">
         <form method="GET" action="{{ url_for('avarias') }}" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="historico">
@@ -156,7 +159,7 @@
     </div>
 </div>
 
-<!-- Modal Nova Avaria (CORRIGIDO) -->
+<!-- Modal Nova Avaria -->
 <div class="modal fade" id="modalNovaAvaria" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('avarias') }}">
@@ -177,4 +180,23 @@
         </form>
     </div>
 </div>
+
+<!-- Modal para Importar Avarias (se existir) -->
+{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
+<div class="modal fade" id="modalImportarAvarias" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('importar_avarias') }}" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Importar Avarias</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx, .xlsm" required>
+                    <small class="text-muted">Formato Excel (.xlsx) com colunas: Código, Matrícula, Descrição, Reportado(mec), Kms, Resp.Oficina, Comando, Estado, Data</small>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Importar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

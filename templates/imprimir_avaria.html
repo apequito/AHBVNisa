@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Registo de Avaria - {{ avaria.codigo }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            background: white;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+        }
+        /* Cabeçalho */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #aaa;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        .logo {
+            height: 60px;
+            width: auto;
+        }
+        .info-associacao {
+            font-size: 10pt;
+            line-height: 1.2;
+        }
+        .associacao {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .contactos {
+            font-size: 8pt;
+            color: #333;
+        }
+        .titulo {
+            text-align: center;
+            font-weight: bold;
+            font-size: 16pt;
+            margin: 20px 0 25px;
+            text-transform: uppercase;
+        }
+        /* Tabela de campos */
+        .tabela-avaria {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .tabela-avaria td, .tabela-avaria th {
+            border: 1px solid #000;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+        .rotulo {
+            font-weight: bold;
+            width: 30%;
+            background-color: #f9f9f9;
+        }
+        .conteudo {
+            width: 70%;
+        }
+        .sec-titulo {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .assinatura {
+            border-top: 1px solid #000;
+            margin-top: 30px;
+            padding-top: 8px;
+            text-align: center;
+            width: 250px;
+        }
+        .no-print {
+            margin-top: 30px;
+            text-align: center;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Cabeçalho -->
+    <div class="cabecalho">
+        <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
+        <div class="info-associacao">
+            <div class="associacao">ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA</div>
+            <div class="contactos">Email: comandonisa@gmail.com | Rua Prof. Cruz Malpique S/N | 6050-341 Nisa | Tel 245412303</div>
+        </div>
+    </div>
+
+    <div class="titulo">AVARIAS EM VEÍCULOS / EQUIPAMENTOS</div>
+
+    <!-- Secção 1: Dados da avaria -->
+    <table class="tabela-avaria">
+        <tr>
+            <td class="rotulo">Veículo / Equipamento</td>
+            <td class="conteudo">{{ avaria.viatura.matricula }} - {{ avaria.viatura.nomenclatura }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">N.º Motorista</td>
+            <td class="conteudo">{{ avaria.reportador.nome }} ({{ avaria.reportador.mecanografico }})</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Km</td>
+            <td class="conteudo">{{ avaria.kms or '_________________' }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Descrição da Avaria</td>
+            <td class="conteudo">{{ avaria.descricao }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Data</td>
+            <td class="conteudo">{{ avaria.data_reporte.strftime('%d / %m / %Y') }}</td>
+        </tr>
+        <tr>
+            <td class="rotulo">Assinatura</td>
+            <td class="conteudo">_________________________________</td>
+        </tr>
+    </table>
+
+    <!-- Secção 2: Conhecimento da Avaria - Responsável Mecânica -->
+    <table class="tabela-avaria">
+        <tr><td colspan="2" class="sec-titulo">Conhecimento da Avaria - Responsável Mecânica</td></tr>
+        <tr><td class="rotulo">Parecer</td><td class="conteudo">_________________________________</td></tr>
+        <tr><td class="rotulo">Condições Circulação</td><td class="conteudo">_________________________________</td></tr>
+        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
+        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+    </table>
+
+    <!-- Secção 3: Despacho Comandante -->
+    <table class="tabela-avaria">
+        <tr><td colspan="2" class="sec-titulo">Despacho Comandante</td></tr>
+        <tr><td class="rotulo">Decisão</td><td class="conteudo">_________________________________</td></tr>
+        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
+        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+    </table>
+
+    <!-- Secção 4: Decisão da Direção -->
+    <table class="tabela-avaria">
+        <tr><td colspan="2" class="sec-titulo">Decisão da Direção</td></tr>
+        <tr><td class="rotulo">Presidente</td><td class="conteudo">_________________________________</td></tr>
+        <tr><td class="rotulo">Data</td><td class="conteudo">____ / ____ / ________</td></tr>
+        <tr><td class="rotulo">Assinatura</td><td class="conteudo">_________________________________</td></tr>
+    </table>
+
+    <!-- Botões de impressão -->
+    <div class="no-print">
+        <button onclick="window.print();" style="padding: 8px 16px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close();" style="padding: 8px 16px;">❌ Fechar</button>
+    </div>
+
+</div>
+</body>
+</html>

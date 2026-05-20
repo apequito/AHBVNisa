@@ -3134,6 +3134,11 @@ def aprovar_disponibilidades():
     flash(f'{len(ids)} disponibilidade(s) aprovada(s) e registada(s) em ECINS.', 'success')
     return redirect(url_for('disponibilidades'))
 
+@app.route('/avarias/imprimir/<int:id>')
+@login_required
+def imprimir_avaria(id):
+    avaria = Avaria.query.get_or_404(id)
+    return render_template('imprimir_avaria.html', avaria=avaria)
 
 @app.route('/disponibilidades/imprimir')
 @login_required
