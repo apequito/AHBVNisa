@@ -55,11 +55,11 @@
                             <span class="badge bg-success" data-bs-toggle="tooltip" title="{{ a.parecer_resp }}">Visto</span>
                         {% else %}
                             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Oficina' %}
-                            <button class="btn btn-sm btn-outline-danger btn-parecer" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalParecerResp">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
+                                <button class="btn btn-sm btn-outline-danger btn-parecer" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalParecerResp">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
                             {% else %}
-                            <span class="text-muted">Aguardar</span>
+                                <span class="text-muted">Aguardar</span>
                             {% endif %}
                         {% endif %}
                     </td>
@@ -81,7 +81,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">
+                        <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else ('info' if a.estado=='Oficina' else 'success')) }}">
                             {{ a.estado }}
                         </span>
                     </td>
@@ -97,7 +97,7 @@
         </table>
     </div>
 
-    <!-- Aba Histórico (mantida) -->
+    <!-- Aba Histórico -->
     <div class="tab-pane fade" id="historico" role="tabpanel">
         <form method="GET" action="{{ url_for('avarias') }}" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="historico">
@@ -130,6 +130,7 @@
                     <option value="Pendente" {% if filtro_estado == 'Pendente' %}selected{% endif %}>Pendente</option>
                     <option value="Analisar" {% if filtro_estado == 'Analisar' %}selected{% endif %}>Analisar</option>
                     <option value="Resolvido" {% if filtro_estado == 'Resolvido' %}selected{% endif %}>Resolvido</option>
+                    <option value="Oficina" {% if filtro_estado == 'Oficina' %}selected{% endif %}>Oficina</option>
                 </select>
             </div>
             <div class="col-auto">
@@ -149,7 +150,7 @@
                     <td>{{ a.viatura.matricula }}</td>
                     <td>{{ a.descricao }}</td>
                     <td>{{ a.kms or '-' }}</td>
-                    <td><span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">{{ a.estado }}</span></td>
+                    <td><span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else ('info' if a.estado=='Oficina' else 'success')) }}">{{ a.estado }}</span></td>
                     <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
                 </tr>
                 {% endfor %}
@@ -213,6 +214,7 @@
                     <select id="estado_viatura_cmd" class="form-select">
                         <option value="operacional">Operacional</option>
                         <option value="inoperacional">Inoperacional</option>
+                        <option value="oficina">Enviar para Oficina</option>
                     </select>
                 </div>
                 <div class="mb-3">

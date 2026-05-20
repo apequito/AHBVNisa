@@ -1019,6 +1019,7 @@ def avaria_parecer_resp(id):
     db.session.commit()
     return jsonify({'sucesso': True, 'data_resp': avaria.data_resp.strftime('%d/%m/%Y')})
 
+
 @app.route('/avarias/decisao_cmd/<int:id>', methods=['POST'])
 @login_required
 def avaria_decisao_cmd(id):
@@ -1028,14 +1029,19 @@ def avaria_decisao_cmd(id):
     data = request.get_json()
     avaria.decisao_cmd = data.get('decisao')
     avaria.data_cmd = date.today()
-    # Atualizar estado da viatura conforme decisão do comando
+    estado_viatura = data.get('estado_viatura')  # 'operacional', 'inoperacional' ou 'oficina'
+
     if avaria.viatura:
-        if data.get('estado_viatura') == 'inoperacional':
+        if estado_viatura == 'oficina':
+            avaria.viatura.estado = 'inoperacional'  # ou mantém, mas indicação de oficina
+            avaria.estado = 'Oficina'  # novo estado da avaria
+        elif estado_viatura == 'inoperacional':
             avaria.viatura.estado = 'inoperacional'
-            avaria.estado = 'Analisar'   # mantém em análise
-        else:
+            avaria.estado = 'Analisar'  # mantém em análise
+        else:  # operacional
             avaria.viatura.estado = 'operacional'
-            avaria.estado = 'Resolvido'  # conclui a avaria
+            avaria.estado = 'Resolvido'
+
     db.session.commit()
     return jsonify({'sucesso': True, 'data_cmd': avaria.data_cmd.strftime('%d/%m/%Y')})
 
