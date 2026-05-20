@@ -67,16 +67,24 @@
                         {% if a.decisao_cmd %}
                             <span class="badge bg-success" data-bs-toggle="tooltip" title="{{ a.decisao_cmd }}">Decidido</span>
                         {% else %}
-                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                            <button class="btn btn-sm btn-outline-danger btn-decisao" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalDecisaoCmd">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
+                            {% if a.parecer_resp %}
+                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                    <button class="btn btn-sm btn-outline-danger btn-decisao" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalDecisaoCmd">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">Aguardar Comando</span>
+                                {% endif %}
                             {% else %}
-                            <span class="text-muted">Aguardar</span>
+                                <span class="text-muted">Aguardar Oficina</span>
                             {% endif %}
                         {% endif %}
                     </td>
-                    <td><span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">{{ a.estado }}</span></td>
+                    <td>
+                        <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">
+                            {{ a.estado }}
+                        </span>
+                    </td>
                     <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>
                         <a href="{{ url_for('imprimir_avaria', id=a.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
@@ -89,7 +97,7 @@
         </table>
     </div>
 
-    <!-- Aba Histórico -->
+    <!-- Aba Histórico (mantida) -->
     <div class="tab-pane fade" id="historico" role="tabpanel">
         <form method="GET" action="{{ url_for('avarias') }}" class="row g-2 align-items-end mb-3">
             <input type="hidden" name="tab" value="historico">
@@ -261,14 +269,13 @@
 {% endif %}
 
 <script>
-// Abrir modal de parecer e guardar ID
+// Parecer do Responsável
 document.querySelectorAll('.btn-parecer').forEach(btn => {
     btn.addEventListener('click', function() {
         document.getElementById('avaria_id_parecer').value = this.getAttribute('data-id');
     });
 });
 
-// Submeter parecer via AJAX
 document.getElementById('btnGuardarParecer').addEventListener('click', function() {
     const id = document.getElementById('avaria_id_parecer').value;
     const parecer = document.getElementById('parecer_texto').value;
@@ -296,14 +303,13 @@ document.getElementById('btnGuardarParecer').addEventListener('click', function(
     .catch(err => alert('Erro de comunicação'));
 });
 
-// Abrir modal de decisão
+// Decisão do Comando
 document.querySelectorAll('.btn-decisao').forEach(btn => {
     btn.addEventListener('click', function() {
         document.getElementById('avaria_id_decisao').value = this.getAttribute('data-id');
     });
 });
 
-// Submeter decisão via AJAX
 document.getElementById('btnGuardarDecisao').addEventListener('click', function() {
     const id = document.getElementById('avaria_id_decisao').value;
     const decisao = document.getElementById('decisao_texto').value;
