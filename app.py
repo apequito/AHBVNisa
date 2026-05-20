@@ -1032,30 +1032,10 @@ def avaria_decisao_cmd(id):
     if avaria.viatura:
         if data.get('estado_viatura') == 'inoperacional':
             avaria.viatura.estado = 'inoperacional'
-            # Avaria mantém-se "Analisar" (não concluída)
-            avaria.estado = 'Analisar'
+            avaria.estado = 'Analisar'   # mantém em análise
         else:
             avaria.viatura.estado = 'operacional'
-            # Avaria concluída
-            avaria.estado = 'Resolvido'
-    db.session.commit()
-    return jsonify({'sucesso': True, 'data_cmd': avaria.data_cmd.strftime('%d/%m/%Y')})
-
-@app.route('/avarias/decisao_cmd/<int:id>', methods=['POST'])
-@login_required
-def avaria_decisao_cmd(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        return jsonify({'erro': 'Acesso restrito'}), 403
-    avaria = Avaria.query.get_or_404(id)
-    data = request.get_json()
-    avaria.decisao_cmd = data.get('decisao')
-    avaria.data_cmd = date.today()
-    # Atualizar estado da viatura conforme decisão do comando
-    if avaria.viatura:
-        if data.get('estado_viatura') == 'inoperacional':
-            avaria.viatura.estado = 'inoperacional'
-        else:
-            avaria.viatura.estado = 'operacional'
+            avaria.estado = 'Resolvido'  # conclui a avaria
     db.session.commit()
     return jsonify({'sucesso': True, 'data_cmd': avaria.data_cmd.strftime('%d/%m/%Y')})
 
