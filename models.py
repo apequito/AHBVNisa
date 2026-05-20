@@ -83,6 +83,11 @@ class Avaria(db.Model):
     kms = db.Column(db.Integer, nullable=True)
     responsavel_oficina = db.Column(db.Boolean, default=False)
     comando_verificado = db.Column(db.Boolean, default=False)
+    parecer_resp = db.Column(db.Text, nullable=True)  # parecer do responsável da oficina
+    urg_despacho = db.Column(db.String(30), nullable=True)  # Manutenção/Urgente/Não Urgente
+    data_resp = db.Column(db.Date, nullable=True)  # data do parecer
+    decisao_cmd = db.Column(db.Text, nullable=True)  # decisão do comando
+    data_cmd = db.Column(db.Date, nullable=True)  # data da decisão
 
     viatura = db.relationship('Viatura', back_populates='avarias')
     reportador = db.relationship('Bombeiro', back_populates='avarias_reportadas')
@@ -112,6 +117,9 @@ class Oficina(db.Model):
 
     avaria = db.relationship('Avaria', back_populates='oficina_registos')
     viatura = db.relationship('Viatura', back_populates='oficina_registos')
+
+
+
 
 
 # ---------- Gestão Frota ----------

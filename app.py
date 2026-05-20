@@ -995,6 +995,44 @@ def avarias():
                            filtro_estado=filtro_estado,
                            tab=tab)
 
+@app.route('/avarias/parecer_resp/<int:id>', methods=['POST'])
+@login_required
+def avaria_parecer_resp(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Oficina':
+        return jsonify({'erro': 'Acesso restrito'}), 403
+    avaria = Avaria.query.get_or_404(id)
+    data = request.get_json()
+    avaria.parecer_resp = data.get('parecer')
+    avaria.urg_despacho = data.get('urg_despacho')
+    avaria.data_resp = date.today()
+    # Atualizar estado da viatura conforme escolha do responsável
+    if avaria.viatura:
+        if data.get('estado_viatura') == 'inoperacional':
+            avaria.viatura.estado = 'inoperacional'
+        else:
+            avaria.viatura.estado = 'operacional'
+    db.session.commit()
+    return jsonify({'sucesso': True, 'data_resp': avaria.data_resp.strftime('%d/%m/%Y')})
+
+@app.route('/avarias/decisao_cmd/<int:id>', methods=['POST'])
+@login_required
+def avaria_decisao_cmd(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'erro': 'Acesso restrito'}), 403
+    avaria = Avaria.query.get_or_404(id)
+    data = request.get_json()
+    avaria.decisao_cmd = data.get('decisao')
+    avaria.data_cmd = date.today()
+    # Atualizar estado da viatura conforme decisão do comando
+    if avaria.viatura:
+        if data.get('estado_viatura') == 'inoperacional':
+            avaria.viatura.estado = 'inoperacional'
+        else:
+            avaria.viatura.estado = 'operacional'
+    db.session.commit()
+    return jsonify({'sucesso': True, 'data_cmd': avaria.data_cmd.strftime('%d/%m/%Y')})
+
+
 @app.route('/avarias/atualizar/<int:id>', methods=['POST'])
 @login_required
 def atualizar_avaria(id):

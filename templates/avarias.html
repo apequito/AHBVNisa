@@ -35,8 +35,8 @@
                     <th>Descrição</th>
                     <th>Reportado por</th>
                     <th>Kms</th>
-                    <th>Resp. Oficina</th>
-                    <th>Comando</th>
+                    <th>Parecer Resp.</th>
+                    <th>Decisão Comando</th>
                     <th>Estado</th>
                     <th>Data</th>
                     <th>Ações</th>
@@ -46,49 +46,43 @@
                 {% for a in avarias %}
                 <tr>
                     <td><strong>{{ a.codigo }}</strong></td>
-                    <td>{{ a.viatura.matricula }}</td>
+                    <td>{{ a.viatura.matricula }} ({{
+                        a.viatura.estado|capitalize }})</td>
                     <td>{{ a.descricao }}</td>
                     <td>{{ a.reportador.nome }}</td>
                     <td>{{ a.kms or '-' }}</td>
-                    <td class="text-center">{{ '✔️' if a.responsavel_oficina else '❌' }}</td>
-                    <td class="text-center">{{ '✔️' if a.comando_verificado else '❌' }}</td>
+                    <td>
+                        {% if a.parecer_resp %}
+                            <span class="badge bg-success" data-bs-toggle="tooltip" title="{{ a.parecer_resp }}">Visto</span>
+                        {% else %}
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Oficina' %}
+                            <button class="btn btn-sm btn-outline-danger btn-parecer" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalParecerResp">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">Aguardar</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if a.decisao_cmd %}
+                            <span class="badge bg-success" data-bs-toggle="tooltip" title="{{ a.decisao_cmd }}">Decidido</span>
+                        {% else %}
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                            <button class="btn btn-sm btn-outline-danger btn-decisao" data-id="{{ a.id }}" data-bs-toggle="modal" data-bs-target="#modalDecisaoCmd">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">Aguardar</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
                     <td><span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">{{ a.estado }}</span></td>
                     <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>
-                        <div class="d-flex flex-column gap-1">
-                            <!-- Formulário de atualização -->
-                            <form method="POST" action="{{ url_for('atualizar_avaria', id=a.id) }}" class="row g-1 align-items-center">
-                                <div class="col-auto">
-                                    <select name="estado" class="form-select form-select-sm">
-                                        <option value="Pendente" {{ 'selected' if a.estado=='Pendente' }}>Pendente</option>
-                                        <option value="Analisar" {{ 'selected' if a.estado=='Analisar' }}>Analisar</option>
-                                        <option value="Resolvido" {{ 'selected' if a.estado=='Resolvido' }}>Resolvido</option>
-                                    </select>
-                                </div>
-                                <div class="col-auto">
-                                    <input type="number" name="kms" class="form-control form-control-sm" value="{{ a.kms or '' }}" placeholder="Kms" style="width:70px">
-                                </div>
-                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Oficina' %}
-                                <div class="col-auto form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="resp_oficina" id="resp_oficina_{{ a.id }}" {{ 'checked' if a.responsavel_oficina }}>
-                                    <label class="form-check-label small" for="resp_oficina_{{ a.id }}">Oficina</label>
-                                </div>
-                                {% endif %}
-                                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                                <div class="col-auto form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="comando_verificado" id="comando_{{ a.id }}" {{ 'checked' if a.comando_verificado }}>
-                                    <label class="form-check-label small" for="comando_{{ a.id }}">Comando</label>
-                                </div>
-                                {% endif %}
-                                <div class="col-auto">
-                                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
-                                </div>
-                            </form>
-                            <!-- Botão de impressão -->
-                            <a href="{{ url_for('imprimir_avaria', id=a.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
-                                <i class="bi bi-printer"></i> Imprimir
-                            </a>
-                        </div>
+                        <a href="{{ url_for('imprimir_avaria', id=a.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
+                            <i class="bi bi-printer"></i>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -159,6 +153,76 @@
     </div>
 </div>
 
+<!-- Modal Parecer do Responsável (Oficina) -->
+<div class="modal fade" id="modalParecerResp" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Parecer do Responsável (Oficina)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="avaria_id_parecer">
+                <div class="mb-3">
+                    <label class="form-label">Parecer / Motivo</label>
+                    <textarea id="parecer_texto" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Classificação</label>
+                    <select id="urg_despacho" class="form-select">
+                        <option value="Manutenção">Manutenção</option>
+                        <option value="Urgente">Urgente</option>
+                        <option value="Não Urgente">Não Urgente</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado do Veículo</label>
+                    <select id="estado_viatura_resp" class="form-select">
+                        <option value="operacional">Operacional</option>
+                        <option value="inoperacional">Inoperacional</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data (automática)</label>
+                    <input type="text" id="data_resp" class="form-control" readonly value="{{ date.today().strftime('%d/%m/%Y') }}">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarParecer">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Decisão do Comando -->
+<div class="modal fade" id="modalDecisaoCmd" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Decisão do Comando</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="avaria_id_decisao">
+                <div class="mb-3">
+                    <label class="form-label">Decisão / Despacho</label>
+                    <textarea id="decisao_texto" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado do Veículo</label>
+                    <select id="estado_viatura_cmd" class="form-select">
+                        <option value="operacional">Operacional</option>
+                        <option value="inoperacional">Inoperacional</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data (automática)</label>
+                    <input type="text" id="data_cmd" class="form-control" readonly value="{{ date.today().strftime('%d/%m/%Y') }}">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarDecisao">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Nova Avaria -->
 <div class="modal fade" id="modalNovaAvaria" tabindex="-1">
     <div class="modal-dialog">
@@ -181,7 +245,7 @@
     </div>
 </div>
 
-<!-- Modal para Importar Avarias (se existir) -->
+<!-- Modal Importar Avarias -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Oficina', 'Comando'] %}
 <div class="modal fade" id="modalImportarAvarias" tabindex="-1">
     <div class="modal-dialog">
@@ -199,4 +263,74 @@
 </div>
 {% endif %}
 
+<script>
+// Abrir modal de parecer e guardar ID
+document.querySelectorAll('.btn-parecer').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('avaria_id_parecer').value = this.getAttribute('data-id');
+    });
+});
+
+// Submeter parecer via AJAX
+document.getElementById('btnGuardarParecer').addEventListener('click', function() {
+    const id = document.getElementById('avaria_id_parecer').value;
+    const parecer = document.getElementById('parecer_texto').value;
+    const urg_despacho = document.getElementById('urg_despacho').value;
+    const estado_viatura = document.getElementById('estado_viatura_resp').value;
+
+    if (!parecer) {
+        alert('Por favor, preencha o parecer.');
+        return;
+    }
+
+    fetch(`/avarias/parecer_resp/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parecer: parecer, urg_despacho: urg_despacho, estado_viatura: estado_viatura })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.erro || 'Falha ao guardar'));
+        }
+    })
+    .catch(err => alert('Erro de comunicação'));
+});
+
+// Abrir modal de decisão
+document.querySelectorAll('.btn-decisao').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('avaria_id_decisao').value = this.getAttribute('data-id');
+    });
+});
+
+// Submeter decisão via AJAX
+document.getElementById('btnGuardarDecisao').addEventListener('click', function() {
+    const id = document.getElementById('avaria_id_decisao').value;
+    const decisao = document.getElementById('decisao_texto').value;
+    const estado_viatura = document.getElementById('estado_viatura_cmd').value;
+
+    if (!decisao) {
+        alert('Por favor, preencha a decisão.');
+        return;
+    }
+
+    fetch(`/avarias/decisao_cmd/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decisao: decisao, estado_viatura: estado_viatura })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.erro || 'Falha ao guardar'));
+        }
+    })
+    .catch(err => alert('Erro de comunicação'));
+});
+</script>
 {% endblock %}
