@@ -4078,37 +4078,7 @@ def pedidos_analise_bombeiro(bombeiro_id):
     return jsonify(result)
 
 
-@app.route('/tipos-farda-material/adicionar', methods=['POST'])
-@login_required
-def adicionar_tipo_farda_material():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('stock_fardamento'))
 
-    nome = request.form['nome'].strip()
-    categoria = request.form.get('categoria', 'Farda')
-    if nome:
-        if not TipoFardaMaterial.query.filter_by(nome=nome, categoria=categoria).first():
-            novo = TipoFardaMaterial(nome=nome, categoria=categoria)
-            db.session.add(novo)
-            db.session.commit()
-            flash('Tipo adicionado.', 'success')
-        else:
-            flash('Tipo já existe.', 'warning')
-    return redirect(url_for('stock_fardamento'))
-
-
-@app.route('/tipos-farda-material/apagar/<int:id>')
-@login_required
-def apagar_tipo_farda_material(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('stock_fardamento'))
-    tipo = TipoFardaMaterial.query.get_or_404(id)
-    db.session.delete(tipo)
-    db.session.commit()
-    flash('Tipo removido.', 'info')
-    return redirect(url_for('stock_fardamento'))
 
 @app.route('/fardamento-atribuido/editar/<int:id>', methods=['POST'])
 @login_required
@@ -4388,10 +4358,10 @@ def stock_fardamento():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ---- POST: criar novo item (produto ou variação) ----
     if request.method == 'POST':
         tipo_adicao = request.form.get('tipo_adicao')
 
+        # ---- Caso 1: Novo produto (cria stock_fardamento + primeira variação) ----
         if tipo_adicao == 'novo_produto':
             tipo = request.form.get('tipo', 'Outro')
             nome = request.form['nome']
@@ -4410,7 +4380,6 @@ def stock_fardamento():
                 num = 1
             codigo_farda = f"FA{num:03d}"
 
-            # Criar produto principal
             produto = StockFardamento(
                 codigo_farda=codigo_farda,
                 tipo=tipo,
@@ -4420,7 +4389,6 @@ def stock_fardamento():
             db.session.add(produto)
             db.session.flush()
 
-            # Criar primeira variação (sub_codigo = codigo_farda + '01')
             sub_codigo_farda = f"{codigo_farda}01"
             novo_item = StockFardamentoArmazem(
                 codigo_farda=codigo_farda,
@@ -4435,17 +4403,25 @@ def stock_fardamento():
             db.session.commit()
             flash(f'Produto {codigo_farda} criado com sucesso.', 'success')
 
+        # ---- Caso 2: Nova variação (apenas stock_fardamento_armazem) ----
         elif tipo_adicao == 'nova_variacao':
             codigo_farda = request.form.get('codigo_farda')
-            tamanho = request.form.get('tamanho')
+            tamanho = request.form.get('tamanho', '').strip()
             stock = request.form.get('stock', 0, type=int)
+
+            if not codigo_farda:
+                flash('Erro: Nenhum produto selecionado.', 'danger')
+                return redirect(url_for('stock_fardamento'))
+            if not tamanho:
+                flash('Erro: O tamanho é obrigatório.', 'danger')
+                return redirect(url_for('stock_fardamento'))
 
             produto = StockFardamento.query.filter_by(codigo_farda=codigo_farda).first()
             if not produto:
-                flash('Produto não encontrado.', 'danger')
+                flash(f'Erro: Produto com código {codigo_farda} não encontrado.', 'danger')
                 return redirect(url_for('stock_fardamento'))
 
-            # Gerar sub_codigo_farda sequencial (ex: FA00102, FA00103...)
+            # Gerar sub_codigo_farda sequencial (FA00101, FA00102...)
             ultimo_sub = StockFardamentoArmazem.query.filter(
                 StockFardamentoArmazem.codigo_farda == codigo_farda
             ).order_by(StockFardamentoArmazem.sub_codigo_farda.desc()).first()
@@ -4469,14 +4445,13 @@ def stock_fardamento():
             )
             db.session.add(novo_item)
             db.session.commit()
-            flash(f'Variação {sub_codigo_farda} adicionada ao produto {codigo_farda}.', 'success')
+            flash(f'Variação {sub_codigo_farda} (tamanho {tamanho}) adicionada a {produto.nome}.', 'success')
 
         else:
             flash('Opção inválida.', 'danger')
-
         return redirect(url_for('stock_fardamento'))
 
-    # ---- GET: listagem (ordenada por codigo_farda ascendente) ----
+    # ---- GET (listagem) ----
     produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
 
@@ -4539,6 +4514,7 @@ def editar_produto_fardamento(codigo_farda):
     flash('Produto atualizado.', 'success')
     return redirect(url_for('stock_fardamento'))
 
+
 @app.route('/stock-fardamento/editar-item/<int:id>', methods=['POST'])
 @login_required
 def editar_item_stock_fardamento(id):
@@ -4555,6 +4531,7 @@ def editar_item_stock_fardamento(id):
     flash('Item atualizado.', 'success')
     return redirect(url_for('stock_fardamento'))
 
+
 @app.route('/stock-fardamento/apagar-item/<int:id>')
 @login_required
 def apagar_item_stock_fardamento(id):
@@ -4565,7 +4542,7 @@ def apagar_item_stock_fardamento(id):
     codigo = item.codigo_farda
     db.session.delete(item)
     db.session.commit()
-    # Se não restarem itens para este código, apagar também o produto principal
+    # Se não restarem itens, apagar o produto principal
     restantes = StockFardamentoArmazem.query.filter_by(codigo_farda=codigo).count()
     if restantes == 0:
         produto = StockFardamento.query.filter_by(codigo_farda=codigo).first()
@@ -4574,6 +4551,150 @@ def apagar_item_stock_fardamento(id):
             db.session.commit()
     flash('Item removido.', 'info')
     return redirect(url_for('stock_fardamento'))
+
+
+@app.route('/stock-fardamento/exportar')
+@login_required
+def exportar_stock_fardamento():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Stock Fardamento"
+    cabecalhos = ['Código Produto', 'Tipo', 'Nome', 'Descrição', 'Sub-código', 'Tamanho', 'Stock']
+    ws.append(cabecalhos)
+    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
+    header_font = Font(bold=True)
+    for col in range(1, len(cabecalhos)+1):
+        ws.cell(row=1, column=col).fill = header_fill
+        ws.cell(row=1, column=col).font = header_font
+    for p in produtos:
+        for item in p.items_armazem:
+            ws.append([p.codigo_farda, p.tipo, p.nome, p.descricao or '',
+                       item.sub_codigo_farda, item.tamanho or '', item.stock])
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='stock_fardamento.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@app.route('/stock-fardamento/imprimir')
+@login_required
+def imprimir_stock_fardamento():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
+    return render_template('imprimir_stock_fardamento.html', produtos=produtos, now=date.today())
+
+
+@app.route('/stock-fardamento/importar', methods=['POST'])
+@login_required
+def importar_stock_fardamento():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    if 'ficheiro' not in request.files:
+        flash('Nenhum ficheiro enviado.', 'warning')
+        return redirect(url_for('stock_fardamento'))
+    ficheiro = request.files['ficheiro']
+    if ficheiro.filename == '' or not ficheiro.filename.endswith(('.xlsx', '.xlsm')):
+        flash('Formato inválido.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    try:
+        wb = openpyxl.load_workbook(ficheiro)
+        ws = wb.active
+    except Exception as e:
+        flash(f'Erro ao ler ficheiro: {str(e)}', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    linhas_importadas = 0
+    erros = []
+    # Colunas: Código Produto, Tipo, Nome, Descrição, Sub-código, Tamanho, Stock
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if not row or all(c is None for c in row):
+            continue
+        try:
+            codigo_farda = str(row[0]).strip() if row[0] else ''
+            tipo = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+            nome = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+            descricao = str(row[3]).strip() if len(row) > 3 and row[3] else ''
+            sub_codigo = str(row[4]).strip() if len(row) > 4 and row[4] else ''
+            tamanho = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+            stock = int(row[6]) if len(row) > 6 and row[6] is not None else 0
+        except Exception:
+            erros.append(f'Linha {row_num}: dados inválidos.')
+            continue
+        if not codigo_farda or not nome:
+            erros.append(f'Linha {row_num}: código e nome obrigatórios.')
+            continue
+        produto = StockFardamento.query.filter_by(codigo_farda=codigo_farda).first()
+        if not produto:
+            produto = StockFardamento(
+                codigo_farda=codigo_farda,
+                tipo=tipo,
+                nome=nome,
+                descricao=descricao
+            )
+            db.session.add(produto)
+            db.session.flush()
+        if StockFardamentoArmazem.query.filter_by(sub_codigo_farda=sub_codigo).first():
+            erros.append(f'Linha {row_num}: sub-código {sub_codigo} já existe. Ignorado.')
+            continue
+        item = StockFardamentoArmazem(
+            codigo_farda=codigo_farda,
+            sub_codigo_farda=sub_codigo,
+            tipo=tipo,
+            nome=nome,
+            descricao=descricao,
+            tamanho=tamanho,
+            stock=stock
+        )
+        db.session.add(item)
+        linhas_importadas += 1
+    db.session.commit()
+    if erros:
+        flash(f'{linhas_importadas} itens importados. {len(erros)} erro(s): ' + '; '.join(erros[:5]), 'warning')
+    else:
+        flash(f'{linhas_importadas} itens importados com sucesso.', 'success')
+    return redirect(url_for('stock_fardamento'))
+
+
+@app.route('/tipos-farda-material/adicionar', methods=['POST'])
+@login_required
+def adicionar_tipo_farda_material():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    nome = request.form['nome'].strip()
+    categoria = request.form.get('categoria', 'Farda')
+    if nome:
+        if not TipoFardaMaterial.query.filter_by(nome=nome, categoria=categoria).first():
+            novo = TipoFardaMaterial(nome=nome, categoria=categoria)
+            db.session.add(novo)
+            db.session.commit()
+            flash('Tipo adicionado.', 'success')
+        else:
+            flash('Tipo já existe.', 'warning')
+    return redirect(url_for('stock_fardamento'))
+
+
+@app.route('/tipos-farda-material/apagar/<int:id>')
+@login_required
+def apagar_tipo_farda_material(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    tipo = TipoFardaMaterial.query.get_or_404(id)
+    db.session.delete(tipo)
+    db.session.commit()
+    flash('Tipo removido.', 'info')
+    return redirect(url_for('stock_fardamento'))
+
+
+
 
 #-----------exportar Stock Fardamento--------------
 @app.route('/stock-fardamento/exportar')
@@ -4612,88 +4733,7 @@ def exportar_stock_fardamento():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
-#-----------Importar Stock Fardamento--------------
-@app.route('/stock-fardamento/importar', methods=['POST'])
-@login_required
-def importar_stock_fardamento():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('stock_fardamento'))
 
-    if 'ficheiro' not in request.files:
-        flash('Nenhum ficheiro enviado.', 'warning')
-        return redirect(url_for('stock_fardamento'))
-    ficheiro = request.files['ficheiro']
-    if ficheiro.filename == '' or not ficheiro.filename.endswith(('.xlsx', '.xlsm')):
-        flash('Formato inválido.', 'danger')
-        return redirect(url_for('stock_fardamento'))
-
-    try:
-        wb = openpyxl.load_workbook(ficheiro)
-        ws = wb.active
-    except Exception as e:
-        flash(f'Erro ao ler ficheiro: {str(e)}', 'danger')
-        return redirect(url_for('stock_fardamento'))
-
-    linhas_importadas = 0
-    erros = []
-
-    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        if not row or all(cell is None for cell in row):
-            continue
-
-        try:
-            tipo = str(row[0]).strip() if len(row) > 0 and row[0] else 'Outro'
-            nome = str(row[1]).strip() if row[1] else ''
-            descricao = str(row[2]).strip() if len(row) > 2 and row[2] else ''
-            tamanho = str(row[3]).strip() if len(row) > 3 and row[3] else ''
-            stock_str = str(row[4]).strip() if len(row) > 4 and row[4] else '0'
-            stock = int(stock_str)
-        except (ValueError, TypeError) as e:
-            erros.append(f'Linha {row_num}: valor inválido - {str(e)}')
-            continue
-        except Exception as e:
-            erros.append(f'Linha {row_num}: erro inesperado - {str(e)}')
-            continue
-
-        if not nome:
-            erros.append(f'Linha {row_num}: nome obrigatório.')
-            continue
-
-        novo = StockFardamento(
-            tipo=tipo,
-            nome=nome,
-            descricao=descricao,
-            tamanho=tamanho,
-            stock=stock
-        )
-        db.session.add(novo)
-        linhas_importadas += 1
-
-    db.session.commit()
-
-    if erros:
-        flash(f'{linhas_importadas} importados. {len(erros)} erro(s): ' + '; '.join(erros), 'warning')
-    else:
-        flash(f'{linhas_importadas} itens importados com sucesso!', 'success')
-    return redirect(url_for('stock_fardamento'))
-
-#-----------Imprimir Stock Fardamento--------------
-from datetime import date
-
-@app.route('/stock-fardamento/imprimir')
-@login_required
-def imprimir_stock_fardamento():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('stock_fardamento'))
-
-    # Buscar todos os produtos ordenados por código_farda ASC
-    produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
-
-    return render_template('imprimir_stock_fardamento.html',
-                           produtos=produtos,
-                           now=date.today())
 
 #------------Farmaneto Atribuido-------------
 @app.route('/fardamento-atribuido', methods=['GET', 'POST'])
