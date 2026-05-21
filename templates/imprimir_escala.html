@@ -46,15 +46,48 @@
             text-align: center;
             padding: 6px;
         }
+        .btn-group {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-print {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .btn-print:hover {
+            background-color: #0056b3;
+        }
         @media print {
-            button {
+            button, .btn-group {
                 display: none;
             }
         }
     </style>
 </head>
 <body>
-    <button onclick="window.print()" style="margin-bottom:20px;">🖨️ Imprimir</button>
+    <!-- Botões de impressão específicos -->
+    <div class="btn-group">
+        <button onclick="window.print()" class="btn-print">🖨️ Imprimir esta página</button>
+
+        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria', 'ECIN'] or tem_ecin %}
+            <a href="{{ url_for('imprimir_escala_ecin', mes=mes_atual, ano=ano) }}" target="_blank" class="btn-print" style="background-color: #28a745;">
+                📄 Imprimir Escala ECIN
+            </a>
+        {% endif %}
+
+        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria', 'ECIN'] or tem_elac %}
+            <a href="{{ url_for('imprimir_escala_elac', mes=mes_atual, ano=ano) }}" target="_blank" class="btn-print" style="background-color: #17a2b8;">
+                📄 Imprimir Escala ELAC
+            </a>
+        {% endif %}
+    </div>
 
     <h2>Escala de Serviço</h2>
 

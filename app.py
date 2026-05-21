@@ -1743,7 +1743,9 @@ def agrupar_ferias(lista_ferias):
 
 
 
-# ---------- Escala ----------
+from datetime import date
+from sqlalchemy import func
+
 @app.route('/escala')
 @login_required
 def escala():
@@ -1778,13 +1780,12 @@ def escala():
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
         query = query.filter(Escala.bombeiro_id == current_user.id)
 
-    # Ordenação base (para depois aplicar a personalizada)
+    # Ordenação base
     escalas = query.order_by(Escala.data_inicio.asc()).all()
 
-    # ---------- ORDENAÇÃO PERSONALIZADA ----------
+    # ---------- ORDENAÇÃO PERSONALIZADA (mantida) ----------
     categorias_ordem = ['Motorista', 'Socorrista', 'Centralista', 'EIP',
                         'ECIN', 'ELAC', 'Piquete']
-
     prioridades = {
         'Motorista': ['Luís Matias', 'Jorge Pereira', 'José Soldado', 'José Seco', 'Pedro Fernandes',
                       'David Charrinho', 'Fábio Leirinha', 'Soeiro Mendes', 'Ana Marzia',
@@ -1832,7 +1833,7 @@ def escala():
             if tem:
                 dias_com_escalas.append(dia)
 
-    # Trocas e dispensas de hoje (para indicadores)
+    # Trocas e dispensas de hoje
     hoje = date.today()
     trocas_hoje = set()
     for t in TrocaServico.query.filter(
@@ -1848,9 +1849,27 @@ def escala():
         Dispensa.aprovada == True
     ).all())
 
-    # Verificar se o utilizador tem registos ECIN / ELAC
-    tem_ecin = Ecin.query.filter(Ecin.bombeiro_id == current_user.id, Ecin.categoria == 'ECIN').first() is not None
-    tem_elac = Ecin.query.filter(Ecin.bombeiro_id == current_user.id, Ecin.categoria == 'ELAC').first() is not None
+    # ---------- NOVO: Verificar se utilizador tem escalas ECIN/ELAC no mês/ano seleccionado ----------
+    tem_ecin_no_mes = False
+    tem_elac_no_mes = False
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
+        # Verifica na tabela Escala (não na Ecin, pois a escala é que define a categoria)
+        tem_ecin_no_mes = Escala.query.filter(
+            Escala.bombeiro_id == current_user.id,
+            db.extract('year', Escala.data_inicio) == ano,
+            db.extract('month', Escala.data_inicio) == mes,
+            Escala.categoria == 'ECIN'
+        ).first() is not None
+        tem_elac_no_mes = Escala.query.filter(
+            Escala.bombeiro_id == current_user.id,
+            db.extract('year', Escala.data_inicio) == ano,
+            db.extract('month', Escala.data_inicio) == mes,
+            Escala.categoria == 'ELAC'
+        ).first() is not None
+    else:
+        # Utilizadores com permissão podem sempre ver
+        tem_ecin_no_mes = True
+        tem_elac_no_mes = True
 
     # Listas auxiliares
     meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -1859,7 +1878,7 @@ def escala():
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).all()
     mecanograficos_ativos = [b.mecanografico for b in bombeiros_ativos]
 
-    # ---------- FÉRIAS DO PROFISSIONAL ----------
+    # Férias do profissional (mantido)
     ferias_intervalos = []
     if current_user.tipo_bombeiro == 'Profissional':
         mes_ref = mes or date.today().month
@@ -1872,11 +1891,9 @@ def escala():
             db.extract('year', Ferias.data_inicio) == ano_ref,
             db.extract('year', Ferias.data_fim) == ano_ref
         ).order_by(Ferias.data_inicio).all()
-        # A função 'agrupar_ferias' deve estar definida no seu app.py
         ferias_intervalos = agrupar_ferias(ferias_mes)
 
     if categoria == 'Férias':
-        # Obter bombeiros com férias no mês selecionado
         ferias_do_mes = Ferias.query.filter(
             Ferias.estado == 'Aprovado',
             db.extract('month', Ferias.data_fim) >= mes,
@@ -1886,7 +1903,6 @@ def escala():
         ).all()
         ids_ferias = [f.bombeiro_id for f in ferias_do_mes]
         query = query.filter(Escala.bombeiro_id.in_(ids_ferias))
-
 
     return render_template('escala.html',
                            escalas=escalas,
@@ -1908,8 +1924,8 @@ def escala():
                            trocas_hoje=trocas_hoje,
                            dispensas_hoje=dispensas_hoje,
                            hoje=hoje,
-                           tem_ecin=tem_ecin,
-                           tem_elac=tem_elac,
+                           tem_ecin=tem_ecin_no_mes,     # ← variável renomeada para clareza
+                           tem_elac=tem_elac_no_mes,     # ← variável renomeada
                            ferias_intervalos=ferias_intervalos,
                            now=date.today())
 
