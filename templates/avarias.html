@@ -80,11 +80,14 @@
                             {% endif %}
                         {% endif %}
                     </td>
-                    <td>
-                        <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else ('info' if a.estado=='Oficina' else 'success')) }}">
-                            {{ a.estado }}
-                        </span>
-                    </td>
+                    <td class="estado-cell">
+    <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else ('info' if a.estado=='Oficina' else 'success')) }}">
+        {{ a.estado }}
+        {% if a.estado == 'Analisar' and a.urg_despacho %}
+            ({{ a.urg_despacho }})
+        {% endif %}
+    </span>
+</td>
                     <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>
                         <a href="{{ url_for('imprimir_avaria', id=a.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
