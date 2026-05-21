@@ -270,21 +270,7 @@ class StockFardamento(db.Model):
 
 class StockFardamentoArmazem(db.Model):
     __tablename__ = 'stock_fardamento_armazem'
-    id = db.Column(db.Integer, primary_key=True)
-    codigo_farda = db.Column(db.String(20), db.ForeignKey('stock_fardamento.codigo_farda'), nullable=False)
-    sub_codigo_farda = db.Column(db.String(20), unique=True, nullable=False)
-    tipo = db.Column(db.String(50), default='Outro')
-    nome = db.Column(db.String(100), nullable=False)
-    descricao = db.Column(db.Text)
-    tamanho = db.Column(db.String(20))
-    stock = db.Column(db.Integer, default=0)
-
-    produto = db.relationship('StockFardamento', back_populates='items_armazem')
-
-
-# ---------- Fardamento Atribuído ----------
-class StockFardamentoArmazem(db.Model):
-    __tablename__ = 'stock_fardamento_armazem'
+    __table_args__ = {'extend_existing': True}   # ← permite redefinir a tabela se já existir
     id = db.Column(db.Integer, primary_key=True)
     codigo_farda = db.Column(db.String(20), db.ForeignKey('stock_fardamento.codigo_farda'), nullable=False)
     sub_codigo_farda = db.Column(db.String(20), unique=True, nullable=False)
@@ -296,6 +282,23 @@ class StockFardamentoArmazem(db.Model):
 
     # Relação com o produto principal
     produto = db.relationship('StockFardamento', back_populates='items_armazem')
+
+
+# ---------- Fardamento Atribuído ----------
+class FardamentoAtribuido(db.Model):
+    __tablename__ = 'fardamento_atribuido'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
+    tipo = db.Column(db.String(50))
+    nome = db.Column(db.String(100))
+    tamanho = db.Column(db.String(20))
+    data_entrega = db.Column(db.Date, nullable=False)
+    data_devolucao = db.Column(db.Date, nullable=True)
+    estado = db.Column(db.String(20), default='Entregue')
+    idpedido = db.Column(db.Integer, db.ForeignKey('fardamentos.id'), nullable=True)
+
+    bombeiro = db.relationship('Bombeiro', back_populates='fardamentos_atribuidos')
+    pedido = db.relationship('Fardamento', back_populates='atribuicao')
 
 
 # ---------- Tipo de Farda/Material ----------
