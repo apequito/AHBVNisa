@@ -7927,6 +7927,7 @@ def monitor():
     return render_template('monitor.html', config=config)
 
 
+
 @app.route('/monitor/config', methods=['GET', 'POST'])
 @login_required
 def monitor_config():

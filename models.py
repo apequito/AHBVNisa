@@ -481,6 +481,7 @@ class Deslocacao(db.Model):
     viatura = db.relationship('Viatura', back_populates='deslocacoes')
 
 
+
 class Mobilidade(db.Model):
     __tablename__ = 'mobilidades'
 
