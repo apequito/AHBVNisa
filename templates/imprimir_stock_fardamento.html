@@ -33,7 +33,7 @@
                 <td>{{ produto.descricao or '-' }}</td>
                 <td>{{ produto.tipo }}</td>
                 <td>
-                    {% set items = produto.items_armazem %}
+                    {% set items = produto.items_armazem|sort(attribute='tamanho') %}
                     {% if items %}
                         <ul>
                         {% for item in items %}
@@ -44,7 +44,7 @@
                         -
                     {% endif %}
                 </td>
-             </tr>
+            </tr>
             {% else %}
             <tr><td colspan="5" class="text-center">Nenhum produto cadastrado.</td></tr>
             {% endfor %}

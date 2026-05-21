@@ -4651,15 +4651,21 @@ def importar_stock_fardamento():
     return redirect(url_for('stock_fardamento'))
 
 #-----------Imprimir Stock Fardamento--------------
+from datetime import date
+
 @app.route('/stock-fardamento/imprimir')
 @login_required
 def imprimir_stock_fardamento():
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('stock_fardamento'))
-    # Buscar todos os produtos principais (sem incluir os sub‑itens directamente; no template usamos produtos)
-    produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
-    return render_template('imprimir_stock_fardamento.html', produtos=produtos)
+
+    # Buscar todos os produtos ordenados por código_farda ASC
+    produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
+
+    return render_template('imprimir_stock_fardamento.html',
+                           produtos=produtos,
+                           now=date.today())
 
 #------------Farmaneto Atribuido-------------
 @app.route('/fardamento-atribuido', methods=['GET', 'POST'])
