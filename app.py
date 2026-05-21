@@ -2651,12 +2651,17 @@ def aprovar_troca(id):
 @app.route('/dispensas', methods=['GET', 'POST'])
 @login_required
 def dispensas():
+    # Restrição: apenas Profissionais, Admin ou Comando
+    if current_user.tipo_bombeiro != 'Profissional' and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito apenas a bombeiros profissionais, administradores ou comando.', 'danger')
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
         data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date()
         motivo = request.form.get('motivo', '')
-        categoria = request.form.get('categoria_disp', '')   # NOVO
-        turno = request.form.get('turno_disp', '')           # NOVO
+        categoria = request.form.get('categoria_disp', '')
+        turno = request.form.get('turno_disp', '')
         creditos_ids_str = request.form.get('creditos_selecionados', '')
         creditos_ids = [int(x.strip()) for x in creditos_ids_str.split(',') if x.strip().isdigit()] if creditos_ids_str else []
 
@@ -2680,12 +2685,15 @@ def dispensas():
         flash('Pedido de dispensa enviado.', 'success')
         return redirect(url_for('dispensas'))
 
-    # GET – listagem (igual ao seu código)
+    # GET – listagem
     if current_user.tipo_user == 'Admin':
         dispensas_lista = Dispensa.query.order_by(Dispensa.id.desc()).all()
     else:
         dispensas_lista = Dispensa.query.filter_by(bombeiro_id=current_user.id).order_by(Dispensa.id.desc()).all()
+
     return render_template('dispensas.html', dispensas=dispensas_lista)
+
+
 
 
 @app.route('/dispensas/detalhes/<int:id>')
@@ -3024,8 +3032,13 @@ def importar_creditos():
 @app.route('/meus-creditos', methods=['GET', 'POST'])
 @login_required
 def meus_creditos():
+    # Restrição: apenas Profissionais, Admin ou Comando
+    if current_user.tipo_bombeiro != 'Profissional' and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        flash('Acesso restrito apenas a bombeiros profissionais, administradores ou comando.', 'danger')
+        return redirect(url_for('dashboard'))
+
     # Filtro por estado (Gozado / Não Gozado)
-    estado = request.args.get('estado', '')  # 'Gozado', 'Não Gozado' ou vazio (todos)
+    estado = request.args.get('estado', '')
 
     if request.method == 'POST':
         data_str = request.form['data']
@@ -3043,21 +3056,19 @@ def meus_creditos():
             data=data,
             descricao=descricao,
             horas=horas,
-            observacao='Em Análise'  # ← agora fica pendente
+            observacao='Em Análise'
         )
         db.session.add(novo)
         db.session.commit()
         flash('Crédito registado e em análise.', 'success')
         return redirect(url_for('meus_creditos'))
 
-    # Construir query para os créditos do utilizador atual
+    # GET – listagem dos créditos do utilizador
     query = CreditoDispensa.query.filter_by(bombeiro_id=current_user.id)
     if estado:
         query = query.filter_by(observacao=estado)
 
     creditos = query.order_by(CreditoDispensa.data.desc()).all()
-
-    # Estados disponíveis para o filtro
     estados = ['Não Gozado', 'Gozado']
 
     return render_template('meus_creditos.html',
