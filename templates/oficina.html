@@ -57,30 +57,36 @@
                         </span>
                     </td>
                     <td>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-warning btn-editar-oficina"
-                                    data-id="{{ r.id }}"
-                                    data-nome_oficina="{{ r.nome_oficina or '' }}"
-                                    data-data_recepcao="{{ r.data_recepcao.strftime('%Y-%m-%d') if r.data_recepcao else '' }}"
-                                    data-motivo="{{ r.motivo or '' }}"
-                                    data-avaria_id="{{ r.avaria_id or '' }}"
-                                    data-viatura_id="{{ r.viatura_id or '' }}"
-                                    data-kms="{{ r.kms or '' }}"
-                                    data-inoperacional="{{ 'on' if r.inoperacional else '' }}"
-                                    data-descricao_oficina="{{ r.descricao_oficina or '' }}"
-                                    data-n_orc_fat="{{ r.n_orc_fat or '' }}"
-                                    data-data_entrega="{{ r.data_entrega.strftime('%Y-%m-%d') if r.data_entrega else '' }}"
-                                    data-chefe_oficina="{{ 'on' if r.chefe_oficina else '' }}"
-                                    data-comando="{{ 'on' if r.comando else '' }}"
-                                    data-operacional="{{ 'on' if r.operacional else '' }}"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarOficina"
-                                    title="Editar">✏️</button>
-                            <a href="{{ url_for('apagar_registo_oficina', id=r.id) }}"
-                               class="btn btn-danger"
-                               onclick="return confirm('Apagar registo {{ r.codigo }}?')"
-                               title="Apagar">🗑️</a>
-                        </div>
-                    </td>
+    <div class="btn-group btn-group-sm">
+        {% if r.estado != 'Resolvido' %}
+        <button class="btn btn-warning btn-editar-oficina"
+                data-id="{{ r.id }}"
+                data-nome_oficina="{{ r.nome_oficina or '' }}"
+                data-data_recepcao="{{ r.data_recepcao.strftime('%Y-%m-%d') if r.data_recepcao else '' }}"
+                data-motivo="{{ r.motivo or '' }}"
+                data-avaria_id="{{ r.avaria_id or '' }}"
+                data-viatura_id="{{ r.viatura.matricula if r.viatura else '' }}"
+                data-kms="{{ r.kms or '' }}"
+                data-inoperacional="{{ 'on' if r.inoperacional else '' }}"
+                data-descricao_oficina="{{ r.descricao_oficina or '' }}"
+                data-n_orc_fat="{{ r.n_orc_fat or '' }}"
+                data-data_entrega="{{ r.data_entrega.strftime('%Y-%m-%d') if r.data_entrega else '' }}"
+                data-chefe_oficina="{{ 'on' if r.chefe_oficina else '' }}"
+                data-comando="{{ 'on' if r.comando else '' }}"
+                data-operacional="{{ 'on' if r.operacional else '' }}"
+                data-bs-toggle="modal" data-bs-target="#modalEditarOficina"
+                title="Editar">✏️</button>
+        {% else %}
+        <button class="btn btn-secondary btn-sm" disabled title="Registo resolvido – não editável">
+            ✏️
+        </button>
+        {% endif %}
+        <a href="{{ url_for('apagar_registo_oficina', id=r.id) }}"
+           class="btn btn-danger"
+           onclick="return confirm('Apagar registo {{ r.codigo }}?')"
+           title="Apagar">🗑️</a>
+    </div>
+</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -188,7 +194,7 @@
                     <label>Motivo</label>
                     <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
 
-                    <label>Nº Avaria (estado "Analisar")</label>
+                    <label>Nº Avaria (estado "Oficina")</label>
                     <select name="avaria_id" id="avariaSelect" class="form-select mb-2" onchange="preencherViatura()">
     <option value="">-- Nenhuma --</option>
     {% for av in avarias_oficina %}   <!-- ← alterado -->
@@ -275,7 +281,7 @@
                     <label>Motivo</label>
                     <textarea name="motivo" id="edit_motivo" class="form-control mb-2" rows="2"></textarea>
 
-                    <label>Nº Avaria (estado "Analisar")</label>
+                    <label>Nº Avaria (estado "Oficina")</label>
                     <select name="avaria_id" id="edit_avaria_id" class="form-select mb-2" onchange="preencherViaturaEditar()">
     <option value="">-- Nenhuma --</option>
     {% for av in avarias_oficina %}   <!-- ← alterado -->
