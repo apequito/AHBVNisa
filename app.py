@@ -1303,7 +1303,7 @@ def oficina():
     nomes_oficina = [row[0] for row in db.session.query(Oficina.nome_oficina).distinct().all()]
 
     # Listas para a aba Registo
-    avarias_analisar = Avaria.query.filter_by(estado='Analisar').all()
+    avarias_oficina = Avaria.query.filter_by(estado='Oficina').all()
     viaturas = Viatura.query.all()
     registos = Oficina.query.order_by(Oficina.id.desc()).all()
 
@@ -1325,7 +1325,7 @@ def oficina():
 
     return render_template('oficina.html',
                            registos=registos,
-                           avarias_analisar=avarias_analisar,
+                           avarias_oficina=avarias_oficina,  # ← alterado
                            viaturas=viaturas,
                            todas_viaturas=todas_viaturas,
                            nomes_oficina=nomes_oficina,

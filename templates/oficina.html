@@ -190,13 +190,13 @@
 
                     <label>Nº Avaria (estado "Analisar")</label>
                     <select name="avaria_id" id="avariaSelect" class="form-select mb-2" onchange="preencherViatura()">
-                        <option value="">-- Nenhuma --</option>
-                        {% for av in avarias_analisar %}
-                        <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
-                            {{ av.codigo }} - {{ av.viatura.matricula }}
-                        </option>
-                        {% endfor %}
-                    </select>
+    <option value="">-- Nenhuma --</option>
+    {% for av in avarias_oficina %}   <!-- ← alterado -->
+    <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
+        {{ av.codigo }} - {{ av.viatura.matricula }}
+    </option>
+    {% endfor %}
+</select>
 
                     <div class="row">
                         <div class="col-md-6">
@@ -277,13 +277,13 @@
 
                     <label>Nº Avaria (estado "Analisar")</label>
                     <select name="avaria_id" id="edit_avaria_id" class="form-select mb-2" onchange="preencherViaturaEditar()">
-                        <option value="">-- Nenhuma --</option>
-                        {% for av in avarias_analisar %}
-                        <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
-                            {{ av.codigo }} - {{ av.viatura.matricula }}
-                        </option>
-                        {% endfor %}
-                    </select>
+    <option value="">-- Nenhuma --</option>
+    {% for av in avarias_oficina %}   <!-- ← alterado -->
+    <option value="{{ av.id }}" data-viatura="{{ av.viatura.matricula }}" data-kms="{{ av.kms or '' }}">
+        {{ av.codigo }} - {{ av.viatura.matricula }}
+    </option>
+    {% endfor %}
+</select>
 
                     <div class="row">
                         <div class="col-md-6">
