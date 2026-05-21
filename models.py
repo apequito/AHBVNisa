@@ -253,6 +253,8 @@ class Fardamento(db.Model):
     bombeiro = db.relationship('Bombeiro', back_populates='fardamentos')
     # Relação unidirecional com StockFardamento (apenas leitura, sem back_populates)
     produto_stock = db.relationship('StockFardamento', foreign_keys=[stock_id])
+    atribuicao = db.relationship('FardamentoAtribuido', back_populates='pedido', uselist=False,
+                                 cascade='all, delete-orphan')
 
 
 # ---------- Stock Fardamento ----------
