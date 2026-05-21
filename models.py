@@ -243,7 +243,7 @@ class Fardamento(db.Model):
     tamanho = db.Column(db.String(20))
     motivo = db.Column(db.String(20))
     descricao_motivo = db.Column(db.Text)
-    stock_id = db.Column(db.Integer, db.ForeignKey('stock_fardamento.id'), nullable=True)
+    stock_id = db.Column(db.Integer, db.ForeignKey('stock_fardamento.id'), nullable=True)   # FK para o produto genérico
     estado = db.Column(db.String(20), default='Pedido')
     responsavel = db.Column(db.Boolean, default=False)
     comando = db.Column(db.Boolean, default=False)
@@ -251,8 +251,8 @@ class Fardamento(db.Model):
     data_entrega = db.Column(db.DateTime, nullable=True)
 
     bombeiro = db.relationship('Bombeiro', back_populates='fardamentos')
-    stock = db.relationship('StockFardamento', back_populates='fardamentos')
-    atribuicao = db.relationship('FardamentoAtribuido', back_populates='pedido', uselist=False)
+    # Relação unidirecional com StockFardamento (apenas leitura, sem back_populates)
+    produto_stock = db.relationship('StockFardamento', foreign_keys=[stock_id])
 
 
 # ---------- Stock Fardamento ----------
@@ -264,7 +264,9 @@ class StockFardamento(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     descricao = db.Column(db.Text)
 
+    # Relação com os itens no armazém (tamanhos/stocks)
     items_armazem = db.relationship('StockFardamentoArmazem', back_populates='produto', cascade='all, delete-orphan')
+
 
 class StockFardamentoArmazem(db.Model):
     __tablename__ = 'stock_fardamento_armazem'
@@ -281,20 +283,19 @@ class StockFardamentoArmazem(db.Model):
 
 
 # ---------- Fardamento Atribuído ----------
-class FardamentoAtribuido(db.Model):
-    __tablename__ = 'fardamento_atribuido'
+class StockFardamentoArmazem(db.Model):
+    __tablename__ = 'stock_fardamento_armazem'
     id = db.Column(db.Integer, primary_key=True)
-    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
-    tipo = db.Column(db.String(50))
-    nome = db.Column(db.String(100))
+    codigo_farda = db.Column(db.String(20), db.ForeignKey('stock_fardamento.codigo_farda'), nullable=False)
+    sub_codigo_farda = db.Column(db.String(20), unique=True, nullable=False)
+    tipo = db.Column(db.String(50), default='Outro')
+    nome = db.Column(db.String(100), nullable=False)
+    descricao = db.Column(db.Text)
     tamanho = db.Column(db.String(20))
-    data_entrega = db.Column(db.Date, nullable=False)
-    data_devolucao = db.Column(db.Date, nullable=True)
-    estado = db.Column(db.String(20), default='Entregue')
-    idpedido = db.Column(db.Integer, db.ForeignKey('fardamentos.id'), nullable=True)
+    stock = db.Column(db.Integer, default=0)
 
-    bombeiro = db.relationship('Bombeiro', back_populates='fardamentos_atribuidos')
-    pedido = db.relationship('Fardamento', back_populates='atribuicao')
+    # Relação com o produto principal
+    produto = db.relationship('StockFardamento', back_populates='items_armazem')
 
 
 # ---------- Tipo de Farda/Material ----------
