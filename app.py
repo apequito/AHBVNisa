@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
 
-from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor
+from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem
 
 app = Flask(__name__)
 
@@ -4393,7 +4393,7 @@ def stock_fardamento():
         tamanho = request.form.get('tamanho', '')
         stock = request.form.get('stock', 0, type=int)
 
-        # Verificar se já existe produto com mesmo nome, tipo e descrição
+        # Verificar se já existe produto com mesmo nome, tipo e descrição (ignorar tamanho/stock)
         produto = StockFardamento.query.filter_by(nome=nome, tipo=tipo, descricao=descricao).first()
         if not produto:
             # Gerar novo codigo_farda (FA001, FA002...)
@@ -4444,7 +4444,7 @@ def stock_fardamento():
         flash('Item adicionado ao stock.', 'success')
         return redirect(url_for('stock_fardamento'))
 
-    # GET: listar produtos principais e seus itens de armazém
+    # GET - listar produtos principais e seus itens de armazém
     produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
     return render_template('stock_fardamento.html', produtos=produtos, tipos=tipos)
@@ -4643,9 +4643,9 @@ def imprimir_stock_fardamento():
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('stock_fardamento'))
-
-    itens = StockFardamento.query.order_by(StockFardamento.nome).all()
-    return render_template('imprimir_stock_fardamento.html', itens=itens)
+    # Buscar todos os produtos principais (sem incluir os sub‑itens directamente; no template usamos produtos)
+    produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
+    return render_template('imprimir_stock_fardamento.html', produtos=produtos)
 
 #------------Farmaneto Atribuido-------------
 @app.route('/fardamento-atribuido', methods=['GET', 'POST'])

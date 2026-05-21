@@ -1,392 +1,56 @@
-{% extends "base.html" %}
-{% block content %}
-<h2><i class="bi bi-box-seam me-2"></i>Stock de Fardamento</h2>
-
-<!-- Cartões de resumo -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm text-white bg-primary">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ produtos|length }}</h4>
-                <small>Produtos diferentes</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm text-white bg-success">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ produtos|sum(attribute='items_armazem')|length }}</h4>
-                <small>Total de variações</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm text-white bg-warning">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ produtos|selectattr('items_armazem', 'defined')|list|length }}</h4>
-                <small>Produtos com stock</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Botões de ação -->
-<div class="d-flex flex-wrap gap-2 mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoItem">
-        <i class="bi bi-plus-circle me-1"></i> Novo Item
-    </button>
-    <a href="{{ url_for('exportar_stock_fardamento') }}" class="btn btn-outline-success">
-        <i class="bi bi-download me-1"></i> Exportar Excel
-    </a>
-    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalImportarStock">
-        <i class="bi bi-upload me-1"></i> Importar Excel
-    </a>
-    <a href="{{ url_for('imprimir_stock_fardamento') }}" target="_blank" class="btn btn-outline-secondary">
-        <i class="bi bi-printer me-1"></i> Imprimir Stock
-    </a>
-    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalGerirTipos">
-        <i class="bi bi-gear me-1"></i> Gerir Tipos
-    </button>
-</div>
-
-<!-- Tabela de itens agrupada -->
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-hover table-bordered mb-0">
-            <thead class="table-light">
-                <tr class="text-center">
-                    <th style="width: 40px;"></th>
-                    <th>Código</th>
-                    <th>Nome</th>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Tamanho</th>
-                    <th>Stock</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for produto in produtos %}
-                {% set items = produto.items_armazem|sort(attribute='tamanho') %}
-                <tr class="group-row" data-group="{{ produto.codigo_farda }}">
-                    <td class="text-center">
-                        {% if items|length > 1 %}
-                        <button class="btn btn-sm btn-link expand-btn" data-group="{{ produto.codigo_farda }}">
-                            <i class="bi bi-plus-circle"></i>
-                        </button>
-                        {% else %}
-                        <span style="visibility: hidden;">·</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center">{{ produto.codigo_farda }}</td>
-                    <td>{{ produto.nome }}</td>
-                    <td>{{ produto.descricao or '-' }}</td>
-                    <td>{{ produto.tipo }}</td>
-                    <td class="text-center">
-                        {% if items|length == 1 %}
-                            {{ items[0].tamanho or '-' }}
-                        {% else %}
-                            <span class="text-muted">(vários)</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center">
-                        {% set total_stock = items|sum(attribute='stock') %}
-                        {% if total_stock == 0 %}
-                            <span class="badge bg-danger">0</span>
-                        {% else %}
-                            {{ total_stock }}
-                        {% endif %}
-                    </td>
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                            <button class="btn btn-sm btn-outline-primary btn-editar-produto"
-                                    data-codigo="{{ produto.codigo_farda }}"
-                                    data-tipo="{{ produto.tipo }}"
-                                    data-nome="{{ produto.nome }}"
-                                    data-descricao="{{ produto.descricao or '' }}"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarProduto"
-                                    title="Editar produto"><i class="bi bi-pencil-square"></i></button>
-                            {% if items|length == 1 %}
-                                {% set item = items[0] %}
-                                <button class="btn btn-sm btn-outline-warning btn-editar-item"
-                                        data-id="{{ item.id }}"
-                                        data-codigo="{{ item.codigo_farda }}"
-                                        data-subcodigo="{{ item.sub_codigo_farda }}"
-                                        data-nome="{{ item.nome }}"
-                                        data-descricao="{{ item.descricao or '' }}"
-                                        data-tipo="{{ item.tipo }}"
-                                        data-tamanho="{{ item.tamanho or '' }}"
-                                        data-stock="{{ item.stock }}"
-                                        data-bs-toggle="modal" data-bs-target="#modalEditarItem"
-                                        title="Editar item"><i class="bi bi-pencil"></i></button>
-                                <a href="{{ url_for('apagar_item_stock_fardamento', id=item.id) }}"
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Apagar este item?')"
-                                   title="Apagar"><i class="bi bi-trash"></i></a>
-                            {% else %}
-                                <span class="text-muted">(ver subitens)</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% for item in items %}
-                <tr class="sub-row-{{ produto.codigo_farda }}" style="display: none; background-color: #f9f9f9;">
-                    <td class="text-center">↳</td>
-                    <td class="text-center">{{ item.sub_codigo_farda }}</td>
-                    <td>{{ item.nome }}</td>
-                    <td>{{ item.descricao or '-' }}</td>
-                    <td>{{ item.tipo }}</td>
-                    <td class="text-center">{{ item.tamanho or '-' }}</td>
-                    <td class="text-center">
-                        {% if item.stock == 0 %}
-                            <span class="badge bg-danger">0</span>
-                        {% else %}
-                            {{ item.stock }}
-                        {% endif %}
-                    </td>
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                            <button class="btn btn-sm btn-outline-warning btn-editar-item"
-                                    data-id="{{ item.id }}"
-                                    data-codigo="{{ item.codigo_farda }}"
-                                    data-subcodigo="{{ item.sub_codigo_farda }}"
-                                    data-nome="{{ item.nome }}"
-                                    data-descricao="{{ item.descricao or '' }}"
-                                    data-tipo="{{ item.tipo }}"
-                                    data-tamanho="{{ item.tamanho or '' }}"
-                                    data-stock="{{ item.stock }}"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarItem"
-                                    title="Editar item"><i class="bi bi-pencil"></i></button>
-                            <a href="{{ url_for('apagar_item_stock_fardamento', id=item.id) }}"
-                               class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Apagar este item?')"
-                               title="Apagar"><i class="bi bi-trash"></i></a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-                {% else %}
-                <tr class="text-center text-muted">
-                    <td colspan="8">Nenhum produto cadastrado.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- ========== MODAL NOVO ITEM ========== -->
-<div class="modal fade" id="modalNovoItem" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Item de Fardamento</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-select mb-3" required>
-                        <option value="">-- Selecione --</option>
-                        {% for t in tipos %}
-                        <option value="{{ t.nome }}">{{ t.nome }}</option>
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock de Fardamento</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+        th { background-color: #f0f0f0; }
+        .footer { margin-top: 30px; text-align: center; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <h1>Stock de Fardamento</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nome</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Variações (Tamanho / Stock)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produto in produtos %}
+            <tr>
+                <td>{{ produto.codigo_farda }}</td>
+                <td>{{ produto.nome }}</td>
+                <td>{{ produto.descricao or '-' }}</td>
+                <td>{{ produto.tipo }}</td>
+                <td>
+                    {% set items = produto.items_armazem %}
+                    {% if items %}
+                        <ul>
+                        {% for item in items %}
+                            <li>{{ item.tamanho or '--' }}: {{ item.stock }} unidades</li>
                         {% endfor %}
-                    </select>
-                    <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do item" required>
-                    <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
-                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
-                    <label class="form-label">Stock</label>
-                    <input type="number" name="stock" class="form-control" placeholder="Quantidade em stock" value="0" min="0" required>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Adicionar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ========== MODAL EDITAR PRODUTO ========== -->
-<div class="modal fade" id="modalEditarProduto" tabindex="-1">
-    <div class="modal-dialog">
-        <form id="formEditarProduto" method="POST" action="">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5><i class="bi bi-pencil-square me-1"></i> Editar Produto</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" id="edit_prod_tipo" class="form-select mb-3" required>
-                        {% for t in tipos %}
-                        <option value="{{ t.nome }}">{{ t.nome }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="text" name="nome" id="edit_prod_nome" class="form-control mb-2" required>
-                    <textarea name="descricao" id="edit_prod_descricao" class="form-control mb-2"></textarea>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ========== MODAL EDITAR ITEM ========== -->
-<div class="modal fade" id="modalEditarItem" tabindex="-1">
-    <div class="modal-dialog">
-        <form id="formEditarItem" method="POST" action="">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5><i class="bi bi-pencil me-1"></i> Editar Item de Armazém</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" id="edit_item_tipo" class="form-select mb-3" required>
-                        {% for t in tipos %}
-                        <option value="{{ t.nome }}">{{ t.nome }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="text" name="nome" id="edit_item_nome" class="form-control mb-2" required>
-                    <textarea name="descricao" id="edit_item_descricao" class="form-control mb-2"></textarea>
-                    <input type="text" name="tamanho" id="edit_item_tamanho" class="form-control mb-2">
-                    <label class="form-label">Stock</label>
-                    <input type="number" name="stock" id="edit_item_stock" class="form-control" min="0" required>
-                    <input type="hidden" id="edit_item_id">
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-warning">Guardar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ========== MODAL IMPORTAR ========== -->
-<div class="modal fade" id="modalImportarStock" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="{{ url_for('importar_stock_fardamento') }}" enctype="multipart/form-data">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5><i class="bi bi-upload me-1"></i> Importar Stock (Excel)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="file" name="ficheiro" class="form-control" accept=".xlsx" required>
-                    <small class="text-muted mt-2 d-block">Colunas: Tipo, Nome, Descrição, Tamanho, Stock</small>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Importar</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ========== MODAL GERIR TIPOS ========== -->
-<div class="modal fade" id="modalGerirTipos" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5><i class="bi bi-gear me-1"></i> Gerir Tipos de Farda / Material</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-primary"><i class="bi bi-vest me-1"></i> Fardas</h6>
-                        <ul class="list-group mb-3">
-                            {% for t in tipos if t.categoria == 'Farda' %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ t.nome }}
-                                <a href="{{ url_for('apagar_tipo_farda_material', id=t.id) }}"
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Apagar este tipo?')">🗑️</a>
-                            </li>
-                            {% else %}
-                            <li class="list-group-item text-muted">Nenhum tipo de farda definido.</li>
-                            {% endfor %}
                         </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-success"><i class="bi bi-tools me-1"></i> Materiais</h6>
-                        <ul class="list-group mb-3">
-                            {% for t in tipos if t.categoria == 'Material' %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ t.nome }}
-                                <a href="{{ url_for('apagar_tipo_farda_material', id=t.id) }}"
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Apagar este tipo?')">🗑️</a>
-                            </li>
-                            {% else %}
-                            <li class="list-group-item text-muted">Nenhum tipo de material definido.</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                <hr>
-                <h6>Adicionar Novo Tipo</h6>
-                <form method="POST" action="{{ url_for('adicionar_tipo_farda_material') }}">
-                    <div class="input-group">
-                        <input type="text" name="nome" class="form-control" placeholder="Nome do tipo" required>
-                        <select name="categoria" class="form-select" style="max-width: 150px;">
-                            <option value="Farda">Farda</option>
-                            <option value="Material">Material</option>
-                        </select>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Expansão dos sub‑itens
-document.querySelectorAll('.expand-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const group = this.getAttribute('data-group');
-        const icon = this.querySelector('i');
-        const subRows = document.querySelectorAll(`.sub-row-${group}`);
-        subRows.forEach(row => {
-            if (row.style.display === 'none') {
-                row.style.display = '';
-                icon.classList.remove('bi-plus-circle');
-                icon.classList.add('bi-dash-circle');
-            } else {
-                row.style.display = 'none';
-                icon.classList.remove('bi-dash-circle');
-                icon.classList.add('bi-plus-circle');
-            }
-        });
-    });
-});
-
-// Modal editar produto
-const modalEditarProduto = document.getElementById('modalEditarProduto');
-modalEditarProduto.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const codigo = button.getAttribute('data-codigo');
-    document.getElementById('formEditarProduto').action = '/stock-fardamento/editar-produto/' + codigo;
-    document.getElementById('edit_prod_tipo').value = button.getAttribute('data-tipo') || '';
-    document.getElementById('edit_prod_nome').value = button.getAttribute('data-nome');
-    document.getElementById('edit_prod_descricao').value = button.getAttribute('data-descricao') || '';
-});
-
-// Modal editar item
-const modalEditarItem = document.getElementById('modalEditarItem');
-modalEditarItem.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const id = button.getAttribute('data-id');
-    document.getElementById('formEditarItem').action = '/stock-fardamento/editar-item/' + id;
-    document.getElementById('edit_item_id').value = id;
-    document.getElementById('edit_item_tipo').value = button.getAttribute('data-tipo') || '';
-    document.getElementById('edit_item_nome').value = button.getAttribute('data-nome');
-    document.getElementById('edit_item_descricao').value = button.getAttribute('data-descricao') || '';
-    document.getElementById('edit_item_tamanho').value = button.getAttribute('data-tamanho') || '';
-    document.getElementById('edit_item_stock').value = button.getAttribute('data-stock');
-});
-</script>
-{% endblock %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+             </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center">Nenhum produto cadastrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="footer">Gerado em {{ now.strftime('%d/%m/%Y %H:%M') }}</div>
+    <script>window.print();</script>
+</body>
+</html>

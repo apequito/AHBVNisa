@@ -7,7 +7,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm text-white bg-primary">
             <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ itens|length }}</h4>
+                <h4 class="mb-0">{{ produtos|length }}</h4>
                 <small>Itens no Stock</small>
             </div>
         </div>
@@ -15,7 +15,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm text-white bg-success">
             <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ itens|sum(attribute='stock') }}</h4>
+                <h4 class="mb-0">{{ produtos|sum(attribute='items_armazem')|length }}</h4>
                 <small>Unidades Totais</small>
             </div>
         </div>
