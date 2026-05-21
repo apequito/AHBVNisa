@@ -22,28 +22,41 @@
     .reopen-card {
         margin-top: 10px;
     }
-    /* Estilo para checkboxes */
-    .form-check-inline {
-        margin-right: 1.5rem;
-    }
-    .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tv me-2"></i>Monitorização de Ocorrências</h2>
     <div>
-        <button class="btn btn-secondary me-2" onclick="window.location.reload();">
+        <button class="btn btn-secondary" onclick="window.location.reload();">
             <i class="bi bi-arrow-repeat"></i> Atualizar Dados
         </button>
     </div>
 </div>
 
-<!-- Checkboxes de seleção dos visualizadores -->
+<!-- Painel de Coordenadas e Rotas + Checkboxes -->
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-pin-map me-2"></i>Coordenadas para Google Maps</h5>
+        <div class="row g-2 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Coordenadas (ex: 39.5167, -7.6500)</label>
+                <input type="text" id="coordsInput" class="form-control" placeholder="39.5167, -7.6500">
+            </div>
+            <div class="col-md-2">
+                <button id="btnVerMapa" class="btn btn-primary w-100"><i class="bi bi-map"></i> Ver no Mapa</button>
+            </div>
+            <div class="col-md-2">
+                <button id="btnRotaAtual" class="btn btn-success w-100"><i class="bi bi-compass"></i> Rota (GPS)</button>
+            </div>
+            <div class="col-md-2">
+                <button id="btnRotaEscritorio" class="btn btn-secondary w-100"><i class="bi bi-building"></i> Quartel</button>
+            </div>
+        </div>
+        <div class="mt-2 small text-muted">
+            <i class="bi bi-info-circle"></i> As coordenadas devem estar no formato decimal (ex: 39.5167, -7.6500).
+            <span id="coordStatus"></span>
+        </div>
+        <hr>
         <h5 class="card-title mb-3"><i class="bi bi-eye me-2"></i>Selecione os painéis que pretende visualizar</h5>
         <div class="form-check form-check-inline">
             <input class="form-check-input" type="checkbox" id="chkFogos" {% if config.fogos %}checked{% endif %}>
@@ -101,7 +114,6 @@
         </div>
     </div>
 
-
     <!-- 2. Google Maps - Concelho de Nisa -->
     <div class="col-md-6 monitor-card" id="card-google-maps" style="{% if not config.google_maps %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
@@ -129,7 +141,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- 3. Bombeiros.pt - Ocorrências -->
     <div class="col-md-6 monitor-card" id="card-bombeiros" style="{% if not config.bombeiros_pt %}display: none;{% endif %}">
@@ -190,7 +201,7 @@
     </div>
 </div>
 
-<!-- Botões para reabrir cartões fechados (mantido) -->
+<!-- Botões para reabrir cartões fechados (fechamento temporário) -->
 <div class="row mt-4" id="reopen-buttons" style="display: none;">
     <div class="col text-center">
         <button class="btn btn-secondary me-2" id="reopen-fogos">Mostrar Fogos.pt</button>
@@ -200,7 +211,7 @@
     </div>
 </div>
 
-<!-- Modais de Ecrã Inteiro (mantido) -->
+<!-- Modais de Ecrã Inteiro -->
 <div class="modal fade modal-fullscreen" id="modalExpand" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen">
         <div class="modal-content">
@@ -216,7 +227,7 @@
 </div>
 
 <script>
-    // --- Lógica para guardar configuração via AJAX e esconder/mostrar cards ---
+    // --- Variáveis e elementos para checkboxes e visibilidade ---
     const chkFogos = document.getElementById('chkFogos');
     const chkGoogleMaps = document.getElementById('chkGoogleMaps');
     const chkBombeiros = document.getElementById('chkBombeiros');
@@ -226,6 +237,7 @@
     const cardBombeiros = document.getElementById('card-bombeiros');
     const cardIpma = document.getElementById('card-ipma');
 
+    // Guardar configuração via AJAX
     function saveConfig() {
         const data = {
             fogos: chkFogos.checked,
@@ -241,6 +253,7 @@
           .then(data => { if (data.success) console.log('Configuração guardada'); });
     }
 
+    // Atualizar visibilidade dos cards com base nos checkboxes
     function updateVisibility() {
         cardFogos.style.display = chkFogos.checked ? '' : 'none';
         cardGoogleMaps.style.display = chkGoogleMaps.checked ? '' : 'none';
@@ -268,12 +281,12 @@
             }
         });
     });
-    // Limpar o src do iframe ao fechar o modal, para parar carregamentos
+    // Limpar o src do iframe ao fechar o modal
     document.getElementById('modalExpand').addEventListener('hidden.bs.modal', function () {
         document.getElementById('fullscreenIframe').src = '';
     });
 
-    // --- Lógica para Fechar e Reabrir Cartões (fechamento temporário, não afeta a configuração) ---
+    // --- Lógica para Fechar e Reabrir Cartões (apenas temporário, não afecta BD) ---
     const reopenButtonsDiv = document.getElementById('reopen-buttons');
     let closedCards = {};
 
@@ -305,7 +318,7 @@
     document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
     document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
 
-    // --- Lógica para Filtrar o fogos.pt para Portalegre (mantido) ---
+    // --- Lógica para Filtrar o fogos.pt para Portalegre ---
     const fogosFrame = document.getElementById('fogosFrame');
     const filterButton = document.querySelector('.filter-portalegre');
     const resetButton = document.querySelector('.reset-map');
@@ -323,6 +336,86 @@
             }
         });
     }
+
+    // --- Funcionalidade de coordenadas e rotas ---
+    const coordsInput = document.getElementById('coordsInput');
+    const btnVerMapa = document.getElementById('btnVerMapa');
+    const btnRotaAtual = document.getElementById('btnRotaAtual');
+    const btnRotaEscritorio = document.getElementById('btnRotaEscritorio');
+    const coordStatus = document.getElementById('coordStatus');
+
+    // Coordenadas do quartel (substitua pelas reais)
+    const QUARTEL_LAT = 39.5167;
+    const QUARTEL_LNG = -7.6500;
+
+    function parseCoordenadas(texto) {
+        let limpo = texto.trim().replace(/[^\d.,\-]/g, '');
+        let partes = limpo.split(',').map(p => parseFloat(p));
+        if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) {
+            return { lat: partes[0], lng: partes[1] };
+        }
+        partes = limpo.split(/\s+/).map(p => parseFloat(p));
+        if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) {
+            return { lat: partes[0], lng: partes[1] };
+        }
+        return null;
+    }
+
+    function abrirGoogleMaps(destLat, destLng, modo = 'place', origemLat = null, origemLng = null) {
+        let url;
+        if (modo === 'directions' && origemLat !== null && origemLng !== null) {
+            url = `https://www.google.com/maps/dir/?api=1&origin=${origemLat},${origemLng}&destination=${destLat},${destLng}&travelmode=driving`;
+        } else {
+            url = `https://www.google.com/maps/search/?api=1&query=${destLat},${destLng}&zoom=14`;
+        }
+        window.open(url, '_blank');
+    }
+
+    btnVerMapa.addEventListener('click', () => {
+        const coords = parseCoordenadas(coordsInput.value);
+        if (coords) {
+            abrirGoogleMaps(coords.lat, coords.lng, 'place');
+            coordStatus.innerText = '';
+        } else {
+            coordStatus.innerText = '❌ Coordenadas inválidas. Use formato como 39.5167, -7.6500';
+        }
+    });
+
+    btnRotaAtual.addEventListener('click', () => {
+        const coords = parseCoordenadas(coordsInput.value);
+        if (!coords) {
+            coordStatus.innerText = '❌ Coordenadas inválidas para calcular rota.';
+            return;
+        }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const origem = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    abrirGoogleMaps(coords.lat, coords.lng, 'directions', origem.lat, origem.lng);
+                    coordStatus.innerText = '';
+                },
+                (error) => {
+                    let msg = 'Não foi possível obter a sua localização. ';
+                    if (error.code === error.PERMISSION_DENIED) msg += 'Permissão negada.';
+                    else if (error.code === error.POSITION_UNAVAILABLE) msg += 'Localização indisponível.';
+                    else msg += 'Erro desconhecido.';
+                    coordStatus.innerText = '⚠️ ' + msg;
+                }
+            );
+        } else {
+            coordStatus.innerText = '⚠️ O seu navegador não suporta geolocalização.';
+        }
+    });
+
+    btnRotaEscritorio.addEventListener('click', () => {
+        const coords = parseCoordenadas(coordsInput.value);
+        if (coords) {
+            abrirGoogleMaps(coords.lat, coords.lng, 'directions', QUARTEL_LAT, QUARTEL_LNG);
+            coordStatus.innerText = '';
+        } else {
+            coordStatus.innerText = '❌ Coordenadas inválidas para calcular rota.';
+        }
+    });
 </script>
 
 {% endblock %}
