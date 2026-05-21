@@ -2,7 +2,6 @@
 {% block content %}
 
 <style>
-    /* Estilos para os modais de ecrã inteiro */
     .modal-fullscreen .modal-content {
         height: 100vh;
         border: none;
@@ -33,7 +32,7 @@
 </div>
 
 <div class="row g-4">
-    <!-- 1. Fogos.pt - Incêndios Ativos (com filtro para Portalegre) -->
+    <!-- 1. Fogos.pt - Incêndios Ativos -->
     <div class="col-md-6 monitor-card" id="card-fogos">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
@@ -69,11 +68,11 @@
         </div>
     </div>
 
-    <!-- 2. fogos.online - Ocorrências Ativas de Proteção Civil -->
-    <div class="col-md-6 monitor-card" id="card-fogos-online">
+    <!-- 2. CIGeoE - Visualizador de Cartas Militares (Nisa) -->
+    <div class="col-md-6 monitor-card" id="card-cigeoe">
         <div class="card h-100 shadow-sm">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-exclamation-triangle me-2"></i> Ocorrências Ativas (fogos.online)</span>
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-map me-2"></i> CIGeoE - Cartas Militares (Nisa)</span>
                 <div>
                     <button class="btn btn-sm btn-light me-2 expand-card" title="Expandir">
                         <i class="bi bi-arrows-fullscreen"></i>
@@ -84,16 +83,16 @@
                 </div>
             </div>
             <div class="card-body p-0">
-                <iframe src="https://fogos.online/occurrences/"
+                <iframe src="https://www.igeoe.pt/index.php?id=44&tx_cigeoe_sig%5Baction%5D=show&tx_cigeoe_sig%5Bcontroller%5D=Viewer&cHash=10f0e8b02a1f1e2b5c3d4e5f6a7b8c9d"  <!-- URL atualizada -->
                         class="w-100 border-0"
                         style="height: 600px;"
-                        title="Ocorrências Ativas"
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        title="Visualizador de Cartas Militares"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
                         referrerpolicy="no-referrer">
                 </iframe>
             </div>
             <div class="card-footer text-muted small">
-                Fonte: <a href="https://fogos.online" target="_blank">fogos.online</a>
+                Fonte: <a href="https://www.igeoe.pt" target="_blank">Instituto Geográfico do Exército (CIGeoE)</a>
             </div>
         </div>
     </div>
@@ -101,7 +100,7 @@
     <!-- 3. Bombeiros.pt - Ocorrências -->
     <div class="col-md-6 monitor-card" id="card-bombeiros">
         <div class="card h-100 shadow-sm">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-truck me-2"></i> Bombeiros.pt - Ocorrências</span>
                 <div>
                     <button class="btn btn-sm btn-light me-2 expand-card" title="Expandir">
@@ -157,11 +156,11 @@
     </div>
 </div>
 
-<!-- Botões para reabrir cartões fechados (inicialmente ocultos) -->
+<!-- Botões para reabrir cartões fechados -->
 <div class="row mt-4" id="reopen-buttons" style="display: none;">
     <div class="col text-center">
         <button class="btn btn-secondary me-2" id="reopen-fogos">Mostrar Fogos.pt</button>
-        <button class="btn btn-secondary me-2" id="reopen-fogos-online">Mostrar fogos.online</button>
+        <button class="btn btn-secondary me-2" id="reopen-cigeoe">Mostrar Cartas Militares</button>
         <button class="btn btn-secondary me-2" id="reopen-bombeiros">Mostrar Bombeiros.pt</button>
         <button class="btn btn-secondary" id="reopen-ipma">Mostrar IPMA</button>
     </div>
@@ -183,16 +182,18 @@
 </div>
 
 <script>
-    // --- Lógica para Expandir (Modal) ---
+    // Lógica para Expandir (Modal)
     document.querySelectorAll('.expand-card').forEach(button => {
         button.addEventListener('click', function() {
             const card = this.closest('.card');
             const iframe = card.querySelector('iframe');
-            const iframeSrc = iframe.src;
-            document.getElementById('fullscreenIframe').src = iframeSrc;
-            const modalTitle = card.querySelector('.card-header span').innerText;
-            document.querySelector('#modalExpand .modal-title').innerText = modalTitle;
-            new bootstrap.Modal(document.getElementById('modalExpand')).show();
+            if (iframe) {
+                const iframeSrc = iframe.src;
+                document.getElementById('fullscreenIframe').src = iframeSrc;
+                const modalTitle = card.querySelector('.card-header span').innerText;
+                document.querySelector('#modalExpand .modal-title').innerText = modalTitle;
+                new bootstrap.Modal(document.getElementById('modalExpand')).show();
+            }
         });
     });
     // Limpar o src do iframe ao fechar o modal, para parar carregamentos
@@ -200,7 +201,7 @@
         document.getElementById('fullscreenIframe').src = '';
     });
 
-    // --- Lógica para Fechar Cartão ---
+    // --- Lógica para Fechar e Reabrir Cartões ---
     const reopenButtonsDiv = document.getElementById('reopen-buttons');
     let closedCards = {};
 
@@ -216,12 +217,6 @@
         });
     });
 
-    // --- Lógica para Reabrir Cartão ---
-    document.getElementById('reopen-fogos').addEventListener('click', () => reopenCard('card-fogos'));
-    document.getElementById('reopen-fogos-online').addEventListener('click', () => reopenCard('card-fogos-online'));
-    document.getElementById('reopen-bombeiros').addEventListener('click', () => reopenCard('card-bombeiros'));
-    document.getElementById('reopen-ipma').addEventListener('click', () => reopenCard('card-ipma'));
-
     function reopenCard(cardId) {
         const card = document.getElementById(cardId);
         if (card) {
@@ -233,19 +228,29 @@
         }
     }
 
-    // --- Lógica para Filtrar o fogos.pt para Portalegre ---
+    document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
+    document.getElementById('reopen-cigeoe')?.addEventListener('click', () => reopenCard('card-cigeoe'));
+    document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
+    document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
+
+    // --- Lógica para Filtrar o fogos.pt para Portalegre (mantido) ---
     const fogosFrame = document.getElementById('fogosFrame');
-    document.querySelector('.filter-portalegre')?.addEventListener('click', () => {
-        // Tenta pesquisar por 'Portalegre' no site do fogos.pt
-        if (fogosFrame) {
-            fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre';
-        }
-    });
-    document.querySelector('.reset-map')?.addEventListener('click', () => {
-        if (fogosFrame) {
-            fogosFrame.src = 'https://www.fogos.pt';
-        }
-    });
+    const filterButton = document.querySelector('.filter-portalegre');
+    const resetButton = document.querySelector('.reset-map');
+    if (filterButton) {
+        filterButton.addEventListener('click', () => {
+            if (fogosFrame) {
+                fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre';
+            }
+        });
+    }
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            if (fogosFrame) {
+                fogosFrame.src = 'https://www.fogos.pt';
+            }
+        });
+    }
 </script>
 
 {% endblock %}
