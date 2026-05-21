@@ -167,7 +167,11 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('perfil') }}"><i class="bi bi-person-gear"></i> Meu Perfil</a></li>
+
+                            {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                             <li><a class="dropdown-item" href="{{ url_for('meus_creditos') }}"><i class="bi bi-clock-history"></i> Crédito Horas</a></li>
+                            {% endif %}
+
                             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('gerir_bombeiros') }}"><i class="bi bi-people-fill"></i> Gerir Bombeiros</a></li>
@@ -203,7 +207,10 @@
                                 <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS</a></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('trocas') }}"><i class="bi bi-arrow-left-right"></i> Trocas</a></li>
+
+                            {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                             <li><a class="dropdown-item" href="{{ url_for('dispensas') }}"><i class="bi bi-calendar-x"></i> Dispensas</a></li>
+                            {% endif %}
                         </ul>
                     </li>
 
