@@ -68,11 +68,11 @@
         </div>
     </div>
 
-    <!-- 2. CIGeoE - Visualizador de Cartas Militares (Nisa) -->
-    <div class="col-md-6 monitor-card" id="card-cigeoe">
+    <!-- 2. Google Maps - Concelho de Nisa -->
+    <div class="col-md-6 monitor-card" id="card-google-maps">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-map me-2"></i> CIGeoE - Cartas Militares (Nisa)</span>
+                <span><i class="bi bi-geo-alt me-2"></i> Google Maps - Concelho de Nisa</span>
                 <div>
                     <button class="btn btn-sm btn-light me-2 expand-card" title="Expandir">
                         <i class="bi bi-arrows-fullscreen"></i>
@@ -83,16 +83,15 @@
                 </div>
             </div>
             <div class="card-body p-0">
-                <iframe src="https://www.igeoe.pt/index.php?id=44&tx_cigeoe_sig%5Baction%5D=show&tx_cigeoe_sig%5Bcontroller%5D=Viewer&cHash=10f0e8b02a1f1e2b5c3d4e5f6a7b8c9d"  <!-- URL atualizada -->
+                <iframe src="https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=Nisa,Portugal&zoom=12"
                         class="w-100 border-0"
                         style="height: 600px;"
-                        title="Visualizador de Cartas Militares"
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
-                        referrerpolicy="no-referrer">
+                        title="Google Maps - Concelho de Nisa"
+                        allowfullscreen>
                 </iframe>
             </div>
             <div class="card-footer text-muted small">
-                Fonte: <a href="https://www.igeoe.pt" target="_blank">Instituto Geográfico do Exército (CIGeoE)</a>
+                Fonte: <a href="https://www.google.com/maps" target="_blank">Google Maps</a>
             </div>
         </div>
     </div>
@@ -160,7 +159,7 @@
 <div class="row mt-4" id="reopen-buttons" style="display: none;">
     <div class="col text-center">
         <button class="btn btn-secondary me-2" id="reopen-fogos">Mostrar Fogos.pt</button>
-        <button class="btn btn-secondary me-2" id="reopen-cigeoe">Mostrar Cartas Militares</button>
+        <button class="btn btn-secondary me-2" id="reopen-google-maps">Mostrar Google Maps</button>
         <button class="btn btn-secondary me-2" id="reopen-bombeiros">Mostrar Bombeiros.pt</button>
         <button class="btn btn-secondary" id="reopen-ipma">Mostrar IPMA</button>
     </div>
@@ -182,7 +181,7 @@
 </div>
 
 <script>
-    // Lógica para Expandir (Modal)
+    // --- Lógica para Expandir (Modal) ---
     document.querySelectorAll('.expand-card').forEach(button => {
         button.addEventListener('click', function() {
             const card = this.closest('.card');
@@ -228,12 +227,13 @@
         }
     }
 
+    // Botões de reabertura (IDs atualizados)
     document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
-    document.getElementById('reopen-cigeoe')?.addEventListener('click', () => reopenCard('card-cigeoe'));
+    document.getElementById('reopen-google-maps')?.addEventListener('click', () => reopenCard('card-google-maps'));
     document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
     document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
 
-    // --- Lógica para Filtrar o fogos.pt para Portalegre (mantido) ---
+    // --- Lógica para Filtrar o fogos.pt para Portalegre ---
     const fogosFrame = document.getElementById('fogosFrame');
     const filterButton = document.querySelector('.filter-portalegre');
     const resetButton = document.querySelector('.reset-map');
