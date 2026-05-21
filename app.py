@@ -6977,7 +6977,7 @@ def inject_pendencias():
 
         # --- Valores comuns a Admin/Comando ---
         if user.tipo_user == 'Admin' or user.resp_departamento == 'Comando':
-            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
+            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Oficina', 'Analisar'])).count()
             pendencias['trocas'] = TrocaServico.query.filter_by(estado='aceite_colega').count()
             pendencias['dispensas'] = Dispensa.query.filter_by(aprovada=False).count()
             pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()

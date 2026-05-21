@@ -17,9 +17,14 @@
             <td>{{ a.data_reporte.strftime('%d/%m/%Y %H:%M') }}</td>
             <td>{{ a.descricao }}</td>
             <td>
-                <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else 'success') }}">
-                    {{ a.estado }}
-                </span>
+                <td>
+    <span class="badge bg-{{ 'danger' if a.estado=='Pendente' else ('warning' if a.estado=='Analisar' else ('info' if a.estado=='Oficina' else 'success')) }}">
+        {{ a.estado }}
+        {% if a.estado == 'Analisar' and a.urg_despacho %}
+            ({{ a.urg_despacho }})
+        {% endif %}
+    </span>
+</td>
             </td>
             <td>{{ a.kms or '-' }}</td>
             <td class="text-center">{{ '✔️' if a.responsavel_oficina else '❌' }}</td>
