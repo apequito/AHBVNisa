@@ -4388,17 +4388,17 @@ def stock_fardamento():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ---- POST: criar novo item (variação de stock) ----
+    # ---- POST: criar novo item (produto ou variação) ----
     if request.method == 'POST':
-        tipo = request.form.get('tipo', 'Outro')
-        nome = request.form['nome']
-        descricao = request.form.get('descricao', '')
-        tamanho = request.form.get('tamanho', '')
-        stock = request.form.get('stock', 0, type=int)
+        tipo_adicao = request.form.get('tipo_adicao')
 
-        # Verificar se já existe produto principal com mesmo nome, tipo, descrição
-        produto = StockFardamento.query.filter_by(nome=nome, tipo=tipo, descricao=descricao).first()
-        if not produto:
+        if tipo_adicao == 'novo_produto':
+            tipo = request.form.get('tipo', 'Outro')
+            nome = request.form['nome']
+            descricao = request.form.get('descricao', '')
+            tamanho = request.form.get('tamanho', '')
+            stock = request.form.get('stock', 0, type=int)
+
             # Gerar novo codigo_farda (FA001, FA002...)
             ultimo = StockFardamento.query.order_by(StockFardamento.codigo_farda.desc()).first()
             if ultimo and ultimo.codigo_farda.startswith('FA'):
@@ -4409,6 +4409,8 @@ def stock_fardamento():
             else:
                 num = 1
             codigo_farda = f"FA{num:03d}"
+
+            # Criar produto principal
             produto = StockFardamento(
                 codigo_farda=codigo_farda,
                 tipo=tipo,
@@ -4417,41 +4419,67 @@ def stock_fardamento():
             )
             db.session.add(produto)
             db.session.flush()
-        else:
-            codigo_farda = produto.codigo_farda
 
-        # Gerar sub_codigo_farda sequencial para o novo item (ex: FA00101, FA00102...)
-        ultimo_sub = StockFardamentoArmazem.query.filter(
-            StockFardamentoArmazem.codigo_farda == codigo_farda
-        ).order_by(StockFardamentoArmazem.sub_codigo_farda.desc()).first()
-        if ultimo_sub and ultimo_sub.sub_codigo_farda:
-            try:
-                num_sub = int(ultimo_sub.sub_codigo_farda[-2:]) + 1
-            except:
+            # Criar primeira variação (sub_codigo = codigo_farda + '01')
+            sub_codigo_farda = f"{codigo_farda}01"
+            novo_item = StockFardamentoArmazem(
+                codigo_farda=codigo_farda,
+                sub_codigo_farda=sub_codigo_farda,
+                tipo=tipo,
+                nome=nome,
+                descricao=descricao,
+                tamanho=tamanho,
+                stock=stock
+            )
+            db.session.add(novo_item)
+            db.session.commit()
+            flash(f'Produto {codigo_farda} criado com sucesso.', 'success')
+
+        elif tipo_adicao == 'nova_variacao':
+            codigo_farda = request.form.get('codigo_farda')
+            tamanho = request.form.get('tamanho')
+            stock = request.form.get('stock', 0, type=int)
+
+            produto = StockFardamento.query.filter_by(codigo_farda=codigo_farda).first()
+            if not produto:
+                flash('Produto não encontrado.', 'danger')
+                return redirect(url_for('stock_fardamento'))
+
+            # Gerar sub_codigo_farda sequencial (ex: FA00102, FA00103...)
+            ultimo_sub = StockFardamentoArmazem.query.filter(
+                StockFardamentoArmazem.codigo_farda == codigo_farda
+            ).order_by(StockFardamentoArmazem.sub_codigo_farda.desc()).first()
+            if ultimo_sub and ultimo_sub.sub_codigo_farda:
+                try:
+                    num_sub = int(ultimo_sub.sub_codigo_farda[-2:]) + 1
+                except:
+                    num_sub = 1
+            else:
                 num_sub = 1
-        else:
-            num_sub = 1
-        sub_codigo_farda = f"{codigo_farda}{num_sub:02d}"
+            sub_codigo_farda = f"{codigo_farda}{num_sub:02d}"
 
-        novo_item = StockFardamentoArmazem(
-            codigo_farda=codigo_farda,
-            sub_codigo_farda=sub_codigo_farda,
-            tipo=tipo,
-            nome=nome,
-            descricao=descricao,
-            tamanho=tamanho,
-            stock=stock
-        )
-        db.session.add(novo_item)
-        db.session.commit()
-        flash('Item adicionado ao stock.', 'success')
+            novo_item = StockFardamentoArmazem(
+                codigo_farda=codigo_farda,
+                sub_codigo_farda=sub_codigo_farda,
+                tipo=produto.tipo,
+                nome=produto.nome,
+                descricao=produto.descricao,
+                tamanho=tamanho,
+                stock=stock
+            )
+            db.session.add(novo_item)
+            db.session.commit()
+            flash(f'Variação {sub_codigo_farda} adicionada ao produto {codigo_farda}.', 'success')
+
+        else:
+            flash('Opção inválida.', 'danger')
+
         return redirect(url_for('stock_fardamento'))
 
-    # ---- GET: listagem ----
+    # ---- GET: listagem (ordenada por codigo_farda ascendente) ----
     produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
 
-    # Calcular estatísticas para os cartões de resumo
     total_produtos = len(produtos)
     total_variacoes = sum(len(p.items_armazem) for p in produtos)
     total_esgotados = sum(1 for p in produtos for i in p.items_armazem if i.stock == 0)

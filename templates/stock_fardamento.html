@@ -30,7 +30,7 @@
     </div>
 </div>
 
-<!-- Botões de ação -->
+<!-- Botões de ação (apenas um botão para abrir o modal) -->
 <div class="d-flex flex-wrap gap-2 mb-3">
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoItem">
         <i class="bi bi-plus-circle me-1"></i> Novo Item
@@ -167,37 +167,76 @@
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-3">Nenhum produto cadastrado.{% endfor %}
+                    <td colspan="8" class="text-center text-muted py-3">Nenhum produto cadastrado.</td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- ========== MODAL NOVO ITEM ========== -->
+<!-- ========== MODAL ÚNICO (Novo Item) com escolha entre produto ou variação ========== -->
 <div class="modal fade" id="modalNovoItem" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Item de Fardamento</h5>
+                    <h5><i class="bi bi-plus-circle me-1"></i> Adicionar ao Stock</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-select mb-3" required>
-                        <option value="">-- Selecione --</option>
-                        {% for t in tipos %}
-                        <option value="{{ t.nome }}">{{ t.nome }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do item" required>
-                    <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
-                    <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (opcional)">
-                    <label class="form-label">Stock</label>
-                    <input type="number" name="stock" class="form-control" placeholder="Quantidade em stock" value="0" min="0" required>
+                    <!-- Opção de escolha -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tipo de adição:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo_adicao" id="radioNovoProduto" value="novo_produto" checked>
+                            <label class="form-check-label" for="radioNovoProduto">
+                                <i class="bi bi-box-seam"></i> Novo produto (com primeira variação)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo_adicao" id="radioNovaVariacao" value="nova_variacao">
+                            <label class="form-check-label" for="radioNovaVariacao">
+                                <i class="bi bi-plus-slash-minus"></i> Nova variação (tamanho) para produto existente
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Campos para Novo Produto (visível por padrão) -->
+                    <div id="camposNovoProduto">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select mb-3" required>
+                            <option value="">-- Selecione --</option>
+                            {% for t in tipos %}
+                            <option value="{{ t.nome }}">{{ t.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="nome" class="form-control mb-2" placeholder="Nome do produto" required>
+                        <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
+                        <hr>
+                        <h6>Primeira Variação (Tamanho/Stock)</h6>
+                        <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (ex: M, G, XL)" required>
+                        <input type="number" name="stock" class="form-control" placeholder="Stock inicial" value="0" min="0" required>
+                    </div>
+
+                    <!-- Campos para Nova Variação (inicialmente ocultos) -->
+                    <div id="camposNovaVariacao" style="display: none;">
+                        <label class="form-label">Produto existente</label>
+                        <select name="codigo_farda" class="form-select mb-3" required>
+                            <option value="">-- Selecione o produto --</option>
+                            {% for produto in produtos %}
+                            <option value="{{ produto.codigo_farda }}">{{ produto.codigo_farda }} - {{ produto.nome }} ({{ produto.tipo }})</option>
+                            {% endfor %}
+                        </select>
+                        <label class="form-label">Tamanho</label>
+                        <input type="text" name="tamanho" class="form-control mb-2" placeholder="Ex: M, G, XL" required>
+                        <label class="form-label">Stock</label>
+                        <input type="number" name="stock" class="form-control" placeholder="Quantidade" value="0" min="0" required>
+                        <small class="text-muted">Os campos Tipo, Nome e Descrição serão herdados do produto selecionado.</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Adicionar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
                 </div>
             </div>
         </form>
@@ -231,7 +270,7 @@
     </div>
 </div>
 
-<!-- ========== MODAL EDITAR ITEM ========== -->
+<!-- ========== MODAL EDITAR ITEM (Armazém) ========== -->
 <div class="modal fade" id="modalEditarItem" tabindex="-1">
     <div class="modal-dialog">
         <form id="formEditarItem" method="POST" action="">
@@ -262,7 +301,7 @@
     </div>
 </div>
 
-<!-- ========== MODAL IMPORTAR ========== -->
+<!-- ========== MODAL IMPORTAR (Excel) ========== -->
 <div class="modal fade" id="modalImportarStock" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('importar_stock_fardamento') }}" enctype="multipart/form-data">
@@ -361,6 +400,32 @@ document.querySelectorAll('.expand-btn').forEach(btn => {
         });
     });
 });
+
+// Alternar campos do modal conforme a escolha do radio
+const radioNovo = document.getElementById('radioNovoProduto');
+const radioVariacao = document.getElementById('radioNovaVariacao');
+const camposNovo = document.getElementById('camposNovoProduto');
+const camposVariacao = document.getElementById('camposNovaVariacao');
+
+function toggleCampos() {
+    if (radioNovo.checked) {
+        camposNovo.style.display = 'block';
+        camposVariacao.style.display = 'none';
+        // Remover required dos campos ocultos
+        document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = false);
+        document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = true);
+    } else {
+        camposNovo.style.display = 'none';
+        camposVariacao.style.display = 'block';
+        document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = false);
+        document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = true);
+    }
+}
+
+radioNovo.addEventListener('change', toggleCampos);
+radioVariacao.addEventListener('change', toggleCampos);
+// Inicializar estado
+toggleCampos();
 
 // Modal editar produto
 const modalEditarProduto = document.getElementById('modalEditarProduto');
