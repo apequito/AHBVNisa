@@ -1208,6 +1208,9 @@ def importar_avarias():
     return redirect(url_for('avarias'))
 
 # ---------- Oficina ----------
+# ------------------------------
+# Rota principal da Oficina (listagem, criação, filtros)
+# ------------------------------
 @app.route('/oficina', methods=['GET', 'POST'])
 @login_required
 def oficina():
@@ -1217,33 +1220,25 @@ def oficina():
 
     tab = request.args.get('tab', 'registo')
 
+    # ----- Criação de novo registo (POST) -----
     if request.method == 'POST':
-        # Gerar código
+        # Gerar código único
         ultimo = Oficina.query.order_by(Oficina.id.desc()).first()
-        proximo = 1
-        if ultimo:
-            try:
-                proximo = int(ultimo.codigo[2:]) + 1
-            except Exception:
-                pass
+        proximo = 1 if not ultimo else int(ultimo.codigo[2:]) + 1
         codigo = f"OF{proximo:04d}"
 
-        avaria_id_str = request.form.get('avaria_id')
-        avaria_id = int(avaria_id_str) if avaria_id_str else None
+        avaria_id = request.form.get('avaria_id', type=int)
+        viatura_id = request.form.get('viatura_id', type=int)
+        kms = request.form.get('kms', type=int)
 
-        viatura_id = None
-        kms = None
+        # Se veio de uma avaria, usar os dados dela
         if avaria_id:
             avaria = Avaria.query.get(avaria_id)
             if avaria:
                 viatura_id = avaria.viatura_id
                 kms = avaria.kms
-        if not viatura_id:
-            viatura_id = request.form.get('viatura_id_manual', type=int)
-        if not kms:
-            kms = request.form.get('kms', type=int)
 
-        nome_oficina = request.form['nome_oficina']
+        nome_oficina = request.form.get('nome_oficina')
         data_recepcao = datetime.strptime(request.form['data_recepcao'], '%Y-%m-%d').date()
         motivo = request.form.get('motivo', '')
         descricao_oficina = request.form.get('descricao_oficina', '')
@@ -1256,11 +1251,13 @@ def oficina():
         comando = request.form.get('comando') == 'on'
         operacional = request.form.get('operacional') == 'on'
 
-        estado = 'Oficina'
+        # Determinar estado
         if operacional or (chefe_oficina and comando):
             estado = 'Resolvido'
+        else:
+            estado = 'Oficina'
 
-        nova_oficina = Oficina(
+        novo = Oficina(
             codigo=codigo,
             nome_oficina=nome_oficina,
             data_recepcao=data_recepcao,
@@ -1277,22 +1274,35 @@ def oficina():
             operacional=operacional,
             estado=estado
         )
-        db.session.add(nova_oficina)
+        db.session.add(novo)
 
         # Atualizar estado da viatura
         viatura = Viatura.query.get(viatura_id)
         if viatura:
-            if operacional:
-                viatura.estado = 'operacional'
-                nova_oficina.inoperacional = False
-            elif inoperacional:
+            if inoperacional:
                 viatura.estado = 'Inoperacional'
+            elif estado == 'Resolvido':
+                viatura.estado = 'operacional'
+
+        # Sincronizar avaria (se existir e estado for Resolvido)
+        if estado == 'Resolvido' and avaria_id:
+            avaria = Avaria.query.get(avaria_id)
+            if avaria and avaria.estado != 'Resolvido':
+                avaria.estado = 'Resolvido'
+                db.session.add(avaria)
 
         db.session.commit()
         flash(f'Registo de oficina {codigo} criado.', 'success')
         return redirect(url_for('oficina', tab='registo'))
 
-    # ---- GET ----
+    # ----- GET (listagens) -----
+    # Avarias com estado 'Oficina' (para dropdown)
+    avarias_oficina = Avaria.query.filter_by(estado='Oficina').all()
+
+    # Todos os registos de oficina (aba Registo)
+    registos = Oficina.query.order_by(Oficina.id.desc()).all()
+
+    # Listas para filtros (aba Histórico)
     filtro_viatura_id = request.args.get('viatura_id', type=int)
     filtro_nome_oficina = request.args.get('nome_oficina', '')
     filtro_mes = request.args.get('mes', type=int)
@@ -1301,11 +1311,6 @@ def oficina():
 
     todas_viaturas = Viatura.query.order_by(Viatura.matricula).all()
     nomes_oficina = [row[0] for row in db.session.query(Oficina.nome_oficina).distinct().all()]
-
-    # Listas para a aba Registo
-    avarias_oficina = Avaria.query.filter_by(estado='Oficina').all()
-    viaturas = Viatura.query.all()
-    registos = Oficina.query.order_by(Oficina.id.desc()).all()
 
     # Histórico filtrado
     historico_oficina = []
@@ -1323,9 +1328,12 @@ def oficina():
             query = query.filter_by(estado=filtro_estado)
         historico_oficina = query.order_by(Oficina.data_registo.desc()).all()
 
+    # Viaturas para o formulário (fallback)
+    viaturas = Viatura.query.all()
+
     return render_template('oficina.html',
                            registos=registos,
-                           avarias_oficina=avarias_oficina,  # ← alterado
+                           avarias_oficina=avarias_oficina,
                            viaturas=viaturas,
                            todas_viaturas=todas_viaturas,
                            nomes_oficina=nomes_oficina,
@@ -1337,16 +1345,82 @@ def oficina():
                            filtro_estado=filtro_estado,
                            tab=tab)
 
-# ---------- Histórico Oficina ----------
-@app.route('/oficina/historico/<int:viatura_id>')
-@login_required
-def historico_oficina(viatura_id):
-    viatura = Viatura.query.get_or_404(viatura_id)
-    registos = Oficina.query.filter_by(viatura_id=viatura_id)\
-                            .order_by(Oficina.data_registo.desc()).all()
-    return render_template('_historico_oficina.html', viatura=viatura, registos=registos)
 
-# ---------- Apagar Reg. Oficina ----------
+# ------------------------------
+# Editar registo de Oficina
+# ------------------------------
+@app.route('/oficina/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_registo_oficina(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Oficina']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('oficina'))
+
+    registo = Oficina.query.get_or_404(id)
+
+    # Recolher dados do formulário
+    registo.nome_oficina = request.form['nome_oficina']
+    registo.data_recepcao = datetime.strptime(request.form['data_recepcao'], '%Y-%m-%d').date()
+    registo.motivo = request.form.get('motivo', '')
+    registo.descricao_oficina = request.form.get('descricao_oficina', '')
+    registo.n_orc_fat = request.form.get('n_orc_fat', '')
+    data_entrega_str = request.form.get('data_entrega')
+    registo.data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date() if data_entrega_str else None
+
+    # Tratamento da avaria e viatura
+    avaria_id_str = request.form.get('avaria_id')
+    if avaria_id_str:
+        avaria_id = int(avaria_id_str)
+        avaria = Avaria.query.get(avaria_id)
+        if avaria:
+            registo.avaria_id = avaria_id
+            registo.viatura_id = avaria.viatura_id
+            registo.kms = avaria.kms
+    else:
+        registo.avaria_id = None
+        viatura_id = request.form.get('viatura_id', type=int)
+        if viatura_id:
+            registo.viatura_id = viatura_id
+        kms = request.form.get('kms', type=int)
+        if kms is not None:
+            registo.kms = kms
+
+    # Checkboxes
+    registo.inoperacional = request.form.get('inoperacional') == 'on'
+    registo.chefe_oficina = request.form.get('chefe_oficina') == 'on'
+    registo.comando = request.form.get('comando') == 'on'
+    registo.operacional = request.form.get('operacional') == 'on'
+
+    # Determinar estado
+    if registo.operacional or (registo.chefe_oficina and registo.comando):
+        registo.estado = 'Resolvido'
+        registo.operacional = True
+    else:
+        registo.estado = 'Oficina'
+
+    # Actualizar estado da viatura
+    viatura = Viatura.query.get(registo.viatura_id)
+    if viatura:
+        if registo.inoperacional:
+            viatura.estado = 'Inoperacional'
+        elif registo.estado == 'Resolvido':
+            viatura.estado = 'operacional'
+
+    # ⭐ Sincronizar avaria (se o estado for Resolvido e existir avaria)
+    if registo.estado == 'Resolvido' and registo.avaria_id:
+        avaria_associada = Avaria.query.get(registo.avaria_id)
+        if avaria_associada and avaria_associada.estado != 'Resolvido':
+            avaria_associada.estado = 'Resolvido'
+            db.session.add(avaria_associada)
+
+    db.session.commit()
+    flash(f'Registo {registo.codigo} atualizado e avaria sincronizada.', 'success')
+    return redirect(url_for('oficina'))
+
+
+# ------------------------------
+# Apagar registo de Oficina
+# ------------------------------
 @app.route('/oficina/apagar/<int:id>')
 @login_required
 def apagar_registo_oficina(id):
@@ -1360,76 +1434,16 @@ def apagar_registo_oficina(id):
     flash(f'Registo {registo.codigo} removido.', 'info')
     return redirect(url_for('oficina'))
 
-# ---------- Editar Reg. Oficina ----------
 
-@app.route('/oficina/editar/<int:id>', methods=['POST'])
+
+# ---------- Histórico Oficina ----------
+@app.route('/oficina/historico/<int:viatura_id>')
 @login_required
-def editar_registo_oficina(id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Oficina']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('oficina'))
-
-    registo = Oficina.query.get_or_404(id)
-
-    # Atualizar campos básicos
-    registo.nome_oficina = request.form['nome_oficina']
-    registo.data_recepcao = datetime.strptime(request.form['data_recepcao'], '%Y-%m-%d').date()
-    registo.motivo = request.form.get('motivo', '')
-    registo.descricao_oficina = request.form.get('descricao_oficina', '')
-    registo.n_orc_fat = request.form.get('n_orc_fat', '')
-    data_entrega_str = request.form.get('data_entrega')
-    registo.data_entrega = datetime.strptime(data_entrega_str, '%Y-%m-%d').date() if data_entrega_str else None
-
-    # Avaria e viatura/kms
-    avaria_id_str = request.form.get('avaria_id')
-    if avaria_id_str:
-        avaria_id = int(avaria_id_str)
-        avaria = Avaria.query.get(avaria_id)
-        if avaria:
-            registo.avaria_id = avaria_id
-            registo.viatura_id = avaria.viatura_id
-            registo.kms = avaria.kms
-    else:
-        registo.avaria_id = None
-        # Se não veio da avaria, permite escolher viatura diretamente (caso exista no formulário)
-        viatura_id = request.form.get('viatura_id', type=int)
-        if viatura_id:
-            registo.viatura_id = viatura_id
-        kms = request.form.get('kms', type=int)
-        if kms is not None:
-            registo.kms = kms
-
-    # Checkboxes
-    inoperacional = request.form.get('inoperacional') == 'on'
-    chefe_oficina = request.form.get('chefe_oficina') == 'on'
-    comando = request.form.get('comando') == 'on'
-    operacional = request.form.get('operacional') == 'on'
-
-    registo.inoperacional = inoperacional
-    registo.chefe_oficina = chefe_oficina
-    registo.comando = comando
-    registo.operacional = operacional
-
-    # Determinar estado
-    if operacional or (chefe_oficina and comando):
-        registo.estado = 'Resolvido'
-        registo.operacional = True   # força se ambos chefe+comando foram marcados
-    else:
-        registo.estado = 'Oficina'
-
-    # Atualizar estado da viatura
-    viatura = Viatura.query.get(registo.viatura_id)
-    if viatura:
-        if inoperacional:
-            viatura.estado = 'Inoperacional'
-        elif operacional or registo.estado == 'Resolvido':
-            viatura.estado = 'operacional'
-            registo.inoperacional = False  # retirar visto inoperacional no registo
-        # Se não é inoperacional nem operacional, mantém o estado atual
-
-    db.session.commit()
-    flash(f'Registo {registo.codigo} atualizado.', 'success')
-    return redirect(url_for('oficina'))
+def historico_oficina(viatura_id):
+    viatura = Viatura.query.get_or_404(viatura_id)
+    registos = Oficina.query.filter_by(viatura_id=viatura_id)\
+                            .order_by(Oficina.data_registo.desc()).all()
+    return render_template('_historico_oficina.html', viatura=viatura, registos=registos)
 
 
 # ---------- Exportar Oficina ----------
