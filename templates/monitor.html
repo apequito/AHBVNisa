@@ -22,18 +22,51 @@
     .reopen-card {
         margin-top: 10px;
     }
+    /* Estilo para checkboxes */
+    .form-check-inline {
+        margin-right: 1.5rem;
+    }
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tv me-2"></i>Monitorização de Ocorrências</h2>
-    <button class="btn btn-secondary" onclick="window.location.reload();">
-        <i class="bi bi-arrow-repeat"></i> Atualizar Dados
-    </button>
+    <div>
+        <button class="btn btn-secondary me-2" onclick="window.location.reload();">
+            <i class="bi bi-arrow-repeat"></i> Atualizar Dados
+        </button>
+    </div>
 </div>
 
-<div class="row g-4">
+<!-- Checkboxes de seleção dos visualizadores -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-eye me-2"></i>Selecione os painéis que pretende visualizar</h5>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="chkFogos" {% if config.fogos %}checked{% endif %}>
+            <label class="form-check-label" for="chkFogos">🔥 Fogos.pt</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="chkGoogleMaps" {% if config.google_maps %}checked{% endif %}>
+            <label class="form-check-label" for="chkGoogleMaps">🗺️ Google Maps (Nisa)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="chkBombeiros" {% if config.bombeiros_pt %}checked{% endif %}>
+            <label class="form-check-label" for="chkBombeiros">🚒 Bombeiros.pt</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="chkIpma" {% if config.ipma %}checked{% endif %}>
+            <label class="form-check-label" for="chkIpma">📊 IPMA - Risco Incêndio</label>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4" id="monitor-cards">
     <!-- 1. Fogos.pt - Incêndios Ativos -->
-    <div class="col-md-6 monitor-card" id="card-fogos">
+    <div class="col-md-6 monitor-card" id="card-fogos" style="{% if not config.fogos %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-fire me-2"></i> Fogos.pt - Incêndios Ativos</span>
@@ -69,7 +102,7 @@
     </div>
 
     <!-- 2. Google Maps - Concelho de Nisa -->
-    <div class="col-md-6 monitor-card" id="card-google-maps">
+    <div class="col-md-6 monitor-card" id="card-google-maps" style="{% if not config.google_maps %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-geo-alt me-2"></i> Google Maps - Concelho de Nisa</span>
@@ -97,7 +130,7 @@
     </div>
 
     <!-- 3. Bombeiros.pt - Ocorrências -->
-    <div class="col-md-6 monitor-card" id="card-bombeiros">
+    <div class="col-md-6 monitor-card" id="card-bombeiros" style="{% if not config.bombeiros_pt %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-truck me-2"></i> Bombeiros.pt - Ocorrências</span>
@@ -126,7 +159,7 @@
     </div>
 
     <!-- 4. IPMA - Perigo de Incêndio Rural -->
-    <div class="col-md-6 monitor-card" id="card-ipma">
+    <div class="col-md-6 monitor-card" id="card-ipma" style="{% if not config.ipma %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-map me-2"></i> IPMA - Risco de Incêndio</span>
@@ -155,7 +188,7 @@
     </div>
 </div>
 
-<!-- Botões para reabrir cartões fechados -->
+<!-- Botões para reabrir cartões fechados (mantido) -->
 <div class="row mt-4" id="reopen-buttons" style="display: none;">
     <div class="col text-center">
         <button class="btn btn-secondary me-2" id="reopen-fogos">Mostrar Fogos.pt</button>
@@ -165,7 +198,7 @@
     </div>
 </div>
 
-<!-- Modais de Ecrã Inteiro -->
+<!-- Modais de Ecrã Inteiro (mantido) -->
 <div class="modal fade modal-fullscreen" id="modalExpand" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen">
         <div class="modal-content">
@@ -181,6 +214,44 @@
 </div>
 
 <script>
+    // --- Lógica para guardar configuração via AJAX e esconder/mostrar cards ---
+    const chkFogos = document.getElementById('chkFogos');
+    const chkGoogleMaps = document.getElementById('chkGoogleMaps');
+    const chkBombeiros = document.getElementById('chkBombeiros');
+    const chkIpma = document.getElementById('chkIpma');
+    const cardFogos = document.getElementById('card-fogos');
+    const cardGoogleMaps = document.getElementById('card-google-maps');
+    const cardBombeiros = document.getElementById('card-bombeiros');
+    const cardIpma = document.getElementById('card-ipma');
+
+    function saveConfig() {
+        const data = {
+            fogos: chkFogos.checked,
+            google_maps: chkGoogleMaps.checked,
+            bombeiros_pt: chkBombeiros.checked,
+            ipma: chkIpma.checked
+        };
+        fetch('/monitor/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+          .then(data => { if (data.success) console.log('Configuração guardada'); });
+    }
+
+    function updateVisibility() {
+        cardFogos.style.display = chkFogos.checked ? '' : 'none';
+        cardGoogleMaps.style.display = chkGoogleMaps.checked ? '' : 'none';
+        cardBombeiros.style.display = chkBombeiros.checked ? '' : 'none';
+        cardIpma.style.display = chkIpma.checked ? '' : 'none';
+        saveConfig();
+    }
+
+    chkFogos.addEventListener('change', updateVisibility);
+    chkGoogleMaps.addEventListener('change', updateVisibility);
+    chkBombeiros.addEventListener('change', updateVisibility);
+    chkIpma.addEventListener('change', updateVisibility);
+
     // --- Lógica para Expandir (Modal) ---
     document.querySelectorAll('.expand-card').forEach(button => {
         button.addEventListener('click', function() {
@@ -200,7 +271,7 @@
         document.getElementById('fullscreenIframe').src = '';
     });
 
-    // --- Lógica para Fechar e Reabrir Cartões ---
+    // --- Lógica para Fechar e Reabrir Cartões (fechamento temporário, não afeta a configuração) ---
     const reopenButtonsDiv = document.getElementById('reopen-buttons');
     let closedCards = {};
 
@@ -227,13 +298,12 @@
         }
     }
 
-    // Botões de reabertura (IDs atualizados)
     document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
     document.getElementById('reopen-google-maps')?.addEventListener('click', () => reopenCard('card-google-maps'));
     document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
     document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
 
-    // --- Lógica para Filtrar o fogos.pt para Portalegre ---
+    // --- Lógica para Filtrar o fogos.pt para Portalegre (mantido) ---
     const fogosFrame = document.getElementById('fogosFrame');
     const filterButton = document.querySelector('.filter-portalegre');
     const resetButton = document.querySelector('.reset-map');

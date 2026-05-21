@@ -7919,7 +7919,43 @@ def correio_apagar(id):
 @app.route('/monitor')
 @login_required
 def monitor():
-    return render_template('monitor.html')
+    config = Monitor.query.filter_by(bombeiro_id=current_user.id).first()
+    if not config:
+        config = Monitor(bombeiro_id=current_user.id)
+        db.session.add(config)
+        db.session.commit()
+    return render_template('monitor.html', config=config)
+
+
+@app.route('/monitor/config', methods=['GET', 'POST'])
+@login_required
+def monitor_config():
+    if request.method == 'GET':
+        config = Monitor.query.filter_by(bombeiro_id=current_user.id).first()
+        if not config:
+            # Criar configuração padrão se não existir
+            config = Monitor(bombeiro_id=current_user.id)
+            db.session.add(config)
+            db.session.commit()
+        return jsonify({
+            'fogos': config.fogos,
+            'google_maps': config.google_maps,
+            'bombeiros_pt': config.bombeiros_pt,
+            'ipma': config.ipma
+        })
+    else:  # POST
+        data = request.get_json()
+        config = Monitor.query.filter_by(bombeiro_id=current_user.id).first()
+        if not config:
+            config = Monitor(bombeiro_id=current_user.id)
+            db.session.add(config)
+        config.fogos = data.get('fogos', True)
+        config.google_maps = data.get('google_maps', True)
+        config.bombeiros_pt = data.get('bombeiros_pt', True)
+        config.ipma = data.get('ipma', True)
+        db.session.commit()
+        return jsonify({'success': True})
+
 
 
 @app.route('/correio/apagar-em-massa', methods=['POST'])

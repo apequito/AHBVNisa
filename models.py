@@ -494,3 +494,14 @@ class Mobilidade(db.Model):
     # Relações – ambas com back_populates
     ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], back_populates='mobilidades')
     bombeiro_substituto = db.relationship('Bombeiro', foreign_keys=[bombeiro_substituto_id])
+
+class Monitor(db.Model):
+    __tablename__ = 'monitor'
+    id = db.Column(db.Integer, primary_key=True)
+    bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False, unique=True)
+    fogos = db.Column(db.Boolean, default=True)
+    google_maps = db.Column(db.Boolean, default=True)
+    bombeiros_pt = db.Column(db.Boolean, default=True)
+    ipma = db.Column(db.Boolean, default=True)
+
+    bombeiro = db.relationship('Bombeiro', backref='monitor_config', uselist=False)
