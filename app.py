@@ -4412,9 +4412,8 @@ def stock_fardamento():
             if not codigo_farda:
                 flash('Erro: Nenhum produto selecionado.', 'danger')
                 return redirect(url_for('stock_fardamento'))
-            if not tamanho:
-                flash('Erro: O tamanho é obrigatório.', 'danger')
-                return redirect(url_for('stock_fardamento'))
+            if tamanho == '':
+                tamanho = None
 
             produto = StockFardamento.query.filter_by(codigo_farda=codigo_farda).first()
             if not produto:

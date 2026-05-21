@@ -215,7 +215,7 @@
                         <textarea name="descricao" class="form-control mb-2" placeholder="Descrição (opcional)"></textarea>
                         <hr>
                         <h6>Primeira Variação (Tamanho/Stock)</h6>
-                        <input type="text" name="tamanho" class="form-control mb-2" placeholder="Tamanho (ex: M, G, XL)" required>
+                        <input type="text" name="tamanho" class="form-control mb-2" placeholder="Ex: M, G, XL (opcional)">
                         <input type="number" name="stock" class="form-control" placeholder="Stock inicial" value="0" min="0" required>
                     </div>
 
@@ -411,7 +411,6 @@ function toggleCampos() {
     if (radioNovo.checked) {
         camposNovo.style.display = 'block';
         camposVariacao.style.display = 'none';
-        // Remover required dos campos ocultos
         document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = false);
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = true);
     } else {
@@ -419,6 +418,9 @@ function toggleCampos() {
         camposVariacao.style.display = 'block';
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = false);
         document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = true);
+        // Tornar o campo tamanho opcional
+        const tamanhoField = document.querySelector('#camposNovaVariacao input[name="tamanho"]');
+        if (tamanhoField) tamanhoField.required = false;
     }
 }
 
