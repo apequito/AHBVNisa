@@ -81,6 +81,9 @@
             ✏️
         </button>
         {% endif %}
+        <a href="{{ url_for('imprimir_registo_oficina', id=r.id) }}" target="_blank" class="btn btn-info btn-sm" title="Imprimir">
+            <i class="bi bi-printer"></i>
+        </a>
         <a href="{{ url_for('apagar_registo_oficina', id=r.id) }}"
            class="btn btn-danger"
            onclick="return confirm('Apagar registo {{ r.codigo }}?')"

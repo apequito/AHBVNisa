@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Registo de Oficina - {{ registo.codigo }}</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; background: white; margin: 0; padding: 0; }
+        .container { width: 100%; margin: 0 auto; }
+        .cabecalho { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #aaa; padding-bottom: 8px; margin-bottom: 20px; }
+        .logo { height: 60px; width: auto; }
+        .info-associacao { font-size: 10pt; line-height: 1.2; }
+        .associacao { font-weight: bold; text-transform: uppercase; }
+        .contactos { font-size: 8pt; color: #333; }
+        .titulo { text-align: center; font-weight: bold; font-size: 16pt; margin: 20px 0 25px; text-transform: uppercase; }
+        .tabela-dados { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .tabela-dados td, .tabela-dados th { border: 1px solid #000; padding: 8px 10px; vertical-align: top; }
+        .rotulo { font-weight: bold; width: 30%; background-color: #f9f9f9; }
+        .assinatura { border-top: 1px solid #000; margin-top: 30px; padding-top: 8px; text-align: center; width: 250px; }
+        .no-print { margin-top: 30px; text-align: center; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="cabecalho">
+        <img class="logo" src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="BVN">
+        <div class="info-associacao">
+            <div class="associacao">ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA</div>
+            <div class="contactos">Email: comandonisa@gmail.com | Rua Prof. Cruz Malpique S/N | 6050-341 Nisa | Tel 245412303</div>
+        </div>
+    </div>
+    <div class="titulo">REGISTO DE OFICINA</div>
+
+    <table class="tabela-dados">
+        <tr><td class="rotulo">Código</td><td>{{ registo.codigo }}</td></tr>
+        <tr><td class="rotulo">Data de Registo</td><td>{{ registo.data_registo.strftime('%d/%m/%Y %H:%M') if registo.data_registo else '' }}</td></tr>
+        <tr><td class="rotulo">Nome da Oficina</td><td>{{ registo.nome_oficina }}</td></tr>
+        <tr><td class="rotulo">Data de Recepção</td><td>{{ registo.data_recepcao.strftime('%d/%m/%Y') if registo.data_recepcao else '' }}</td></tr>
+        <tr><td class="rotulo">Motivo</td><td>{{ registo.motivo or '' }}</td></tr>
+        <tr><td class="rotulo">Avaria Associada</td><td>{{ registo.avaria.codigo if registo.avaria else '' }}</td></tr>
+        <tr><td class="rotulo">Viatura</td><td>{{ registo.viatura.matricula if registo.viatura else '' }}</td></tr>
+        <tr><td class="rotulo">Kms</td><td>{{ registo.kms or '' }}</td></tr>
+        <tr><td class="rotulo">Inoperacional</td><td>{{ 'Sim' if registo.inoperacional else 'Não' }}</td></tr>
+        <tr><td class="rotulo">Descrição da Oficina</td><td>{{ registo.descricao_oficina or '' }}</td></tr>
+        <tr><td class="rotulo">Nº Orçamento/Fatura</td><td>{{ registo.n_orc_fat or '' }}</td></tr>
+        <tr><td class="rotulo">Data de Entrega</td><td>{{ registo.data_entrega.strftime('%d/%m/%Y') if registo.data_entrega else '' }}</td></tr>
+        <tr><td class="rotulo">Chefe Oficina</td><td>{{ '✔️' if registo.chefe_oficina else '❌' }}</td></tr>
+        <tr><td class="rotulo">Comando</td><td>{{ '✔️' if registo.comando else '❌' }}</td></tr>
+        <tr><td class="rotulo">Operacional</td><td>{{ '✔️' if registo.operacional else '❌' }}</td></tr>
+        <tr><td class="rotulo">Estado</td><td>{{ registo.estado }}</td></tr>
+    </table>
+
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close()">❌ Fechar</button>
+    </div>
+</div>
+</body>
+</html>

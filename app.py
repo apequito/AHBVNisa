@@ -1032,12 +1032,9 @@ def avaria_decisao_cmd(id):
     estado_viatura = data.get('estado_viatura')  # 'operacional', 'inoperacional' ou 'oficina'
 
     if avaria.viatura:
-        if estado_viatura == 'oficina':
-            avaria.viatura.estado = 'inoperacional'  # ou mantém, mas indicação de oficina
-            avaria.estado = 'Oficina'  # novo estado da avaria
-        elif estado_viatura == 'inoperacional':
+        if estado_viatura == 'oficina' or estado_viatura == 'inoperacional':
             avaria.viatura.estado = 'inoperacional'
-            avaria.estado = 'Analisar'  # mantém em análise
+            avaria.estado = 'Oficina'
         else:  # operacional
             avaria.viatura.estado = 'operacional'
             avaria.estado = 'Resolvido'
@@ -1445,6 +1442,14 @@ def historico_oficina(viatura_id):
                             .order_by(Oficina.data_registo.desc()).all()
     return render_template('_historico_oficina.html', viatura=viatura, registos=registos)
 
+@app.route('/oficina/imprimir/<int:id>')
+@login_required
+def imprimir_registo_oficina(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Oficina']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('oficina'))
+    registo = Oficina.query.get_or_404(id)
+    return render_template('imprimir_oficina.html', registo=registo)
 
 # ---------- Exportar Oficina ----------
 @app.route('/oficina/exportar')
