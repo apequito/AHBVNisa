@@ -4379,6 +4379,8 @@ def importar_fardamento():
 
 
 #-----------Stock Fardamento--------------
+from models import StockFardamento, StockFardamentoArmazem, TipoFardaMaterial
+
 @app.route('/stock-fardamento', methods=['GET', 'POST'])
 @login_required
 def stock_fardamento():
@@ -4386,6 +4388,7 @@ def stock_fardamento():
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
+    # ---- POST: criar novo item (variação de stock) ----
     if request.method == 'POST':
         tipo = request.form.get('tipo', 'Outro')
         nome = request.form['nome']
@@ -4393,7 +4396,7 @@ def stock_fardamento():
         tamanho = request.form.get('tamanho', '')
         stock = request.form.get('stock', 0, type=int)
 
-        # Verificar se já existe produto com mesmo nome, tipo e descrição (ignorar tamanho/stock)
+        # Verificar se já existe produto principal com mesmo nome, tipo, descrição
         produto = StockFardamento.query.filter_by(nome=nome, tipo=tipo, descricao=descricao).first()
         if not produto:
             # Gerar novo codigo_farda (FA001, FA002...)
@@ -4444,10 +4447,21 @@ def stock_fardamento():
         flash('Item adicionado ao stock.', 'success')
         return redirect(url_for('stock_fardamento'))
 
-    # GET - listar produtos principais e seus itens de armazém
+    # ---- GET: listagem ----
     produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
-    return render_template('stock_fardamento.html', produtos=produtos, tipos=tipos)
+
+    # Calcular estatísticas para os cartões de resumo
+    total_produtos = len(produtos)
+    total_variacoes = sum(len(p.items_armazem) for p in produtos)
+    total_esgotados = sum(1 for p in produtos for i in p.items_armazem if i.stock == 0)
+
+    return render_template('stock_fardamento.html',
+                           produtos=produtos,
+                           tipos=tipos,
+                           total_produtos=total_produtos,
+                           total_variacoes=total_variacoes,
+                           total_esgotados=total_esgotados)
 
 #-----------Editar Stock Fardamento--------------
 
