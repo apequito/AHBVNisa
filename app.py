@@ -4448,7 +4448,7 @@ def stock_fardamento():
         return redirect(url_for('stock_fardamento'))
 
     # ---- GET: listagem ----
-    produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
+    produtos = StockFardamento.query.order_by(StockFardamento.codigo_farda.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
 
     # Calcular estatísticas para os cartões de resumo
