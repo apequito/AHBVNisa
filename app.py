@@ -4392,22 +4392,62 @@ def stock_fardamento():
         descricao = request.form.get('descricao', '')
         tamanho = request.form.get('tamanho', '')
         stock = request.form.get('stock', 0, type=int)
-        novo = StockFardamento(
+
+        # Verificar se já existe produto com mesmo nome, tipo e descrição
+        produto = StockFardamento.query.filter_by(nome=nome, tipo=tipo, descricao=descricao).first()
+        if not produto:
+            # Gerar novo codigo_farda (FA001, FA002...)
+            ultimo = StockFardamento.query.order_by(StockFardamento.codigo_farda.desc()).first()
+            if ultimo and ultimo.codigo_farda.startswith('FA'):
+                try:
+                    num = int(ultimo.codigo_farda[2:]) + 1
+                except:
+                    num = 1
+            else:
+                num = 1
+            codigo_farda = f"FA{num:03d}"
+            produto = StockFardamento(
+                codigo_farda=codigo_farda,
+                tipo=tipo,
+                nome=nome,
+                descricao=descricao
+            )
+            db.session.add(produto)
+            db.session.flush()
+        else:
+            codigo_farda = produto.codigo_farda
+
+        # Gerar sub_codigo_farda sequencial para o novo item (ex: FA00101, FA00102...)
+        ultimo_sub = StockFardamentoArmazem.query.filter(
+            StockFardamentoArmazem.codigo_farda == codigo_farda
+        ).order_by(StockFardamentoArmazem.sub_codigo_farda.desc()).first()
+        if ultimo_sub and ultimo_sub.sub_codigo_farda:
+            try:
+                num_sub = int(ultimo_sub.sub_codigo_farda[-2:]) + 1
+            except:
+                num_sub = 1
+        else:
+            num_sub = 1
+        sub_codigo_farda = f"{codigo_farda}{num_sub:02d}"
+
+        novo_item = StockFardamentoArmazem(
+            codigo_farda=codigo_farda,
+            sub_codigo_farda=sub_codigo_farda,
             tipo=tipo,
             nome=nome,
             descricao=descricao,
             tamanho=tamanho,
             stock=stock
         )
-        db.session.add(novo)
+        db.session.add(novo_item)
         db.session.commit()
-        flash('Item de fardamento adicionado ao stock.', 'success')
+        flash('Item adicionado ao stock.', 'success')
         return redirect(url_for('stock_fardamento'))
 
-    itens = StockFardamento.query.order_by(StockFardamento.nome).all()
-    # NOVA LINHA: obter todos os tipos de farda/material
+    # GET: listar produtos principais e seus itens de armazém
+    produtos = StockFardamento.query.order_by(StockFardamento.tipo.asc(), StockFardamento.nome.asc()).all()
     tipos = TipoFardaMaterial.query.order_by(TipoFardaMaterial.nome).all()
-    return render_template('stock_fardamento.html', itens=itens, tipos=tipos)
+    return render_template('stock_fardamento.html', produtos=produtos, tipos=tipos)
 
 #-----------Editar Stock Fardamento--------------
 
@@ -4439,6 +4479,57 @@ def apagar_stock_fardamento(id):
     item = StockFardamento.query.get_or_404(id)
     db.session.delete(item)
     db.session.commit()
+    flash('Item removido.', 'info')
+    return redirect(url_for('stock_fardamento'))
+
+
+@app.route('/stock-fardamento/editar-produto/<string:codigo_farda>', methods=['POST'])
+@login_required
+def editar_produto_fardamento(codigo_farda):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    produto = StockFardamento.query.filter_by(codigo_farda=codigo_farda).first_or_404()
+    produto.tipo = request.form.get('tipo', 'Outro')
+    produto.nome = request.form['nome']
+    produto.descricao = request.form.get('descricao', '')
+    db.session.commit()
+    flash('Produto atualizado.', 'success')
+    return redirect(url_for('stock_fardamento'))
+
+@app.route('/stock-fardamento/editar-item/<int:id>', methods=['POST'])
+@login_required
+def editar_item_stock_fardamento(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    item = StockFardamentoArmazem.query.get_or_404(id)
+    item.tipo = request.form.get('tipo', 'Outro')
+    item.nome = request.form['nome']
+    item.descricao = request.form.get('descricao', '')
+    item.tamanho = request.form.get('tamanho', '')
+    item.stock = request.form.get('stock', 0, type=int)
+    db.session.commit()
+    flash('Item atualizado.', 'success')
+    return redirect(url_for('stock_fardamento'))
+
+@app.route('/stock-fardamento/apagar-item/<int:id>')
+@login_required
+def apagar_item_stock_fardamento(id):
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        flash('Acesso restrito.', 'danger')
+        return redirect(url_for('stock_fardamento'))
+    item = StockFardamentoArmazem.query.get_or_404(id)
+    codigo = item.codigo_farda
+    db.session.delete(item)
+    db.session.commit()
+    # Se não restarem itens para este código, apagar também o produto principal
+    restantes = StockFardamentoArmazem.query.filter_by(codigo_farda=codigo).count()
+    if restantes == 0:
+        produto = StockFardamento.query.filter_by(codigo_farda=codigo).first()
+        if produto:
+            db.session.delete(produto)
+            db.session.commit()
     flash('Item removido.', 'info')
     return redirect(url_for('stock_fardamento'))
 

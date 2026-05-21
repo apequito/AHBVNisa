@@ -259,13 +259,25 @@ class Fardamento(db.Model):
 class StockFardamento(db.Model):
     __tablename__ = 'stock_fardamento'
     id = db.Column(db.Integer, primary_key=True)
+    codigo_farda = db.Column(db.String(20), unique=True, nullable=False)
+    tipo = db.Column(db.String(50), default='Outro')
+    nome = db.Column(db.String(100), nullable=False)
+    descricao = db.Column(db.Text)
+
+    items_armazem = db.relationship('StockFardamentoArmazem', back_populates='produto', cascade='all, delete-orphan')
+
+class StockFardamentoArmazem(db.Model):
+    __tablename__ = 'stock_fardamento_armazem'
+    id = db.Column(db.Integer, primary_key=True)
+    codigo_farda = db.Column(db.String(20), db.ForeignKey('stock_fardamento.codigo_farda'), nullable=False)
+    sub_codigo_farda = db.Column(db.String(20), unique=True, nullable=False)
+    tipo = db.Column(db.String(50), default='Outro')
     nome = db.Column(db.String(100), nullable=False)
     descricao = db.Column(db.Text)
     tamanho = db.Column(db.String(20))
-    tipo = db.Column(db.String(50), default='Outro')
     stock = db.Column(db.Integer, default=0)
 
-    fardamentos = db.relationship('Fardamento', back_populates='stock')
+    produto = db.relationship('StockFardamento', back_populates='items_armazem')
 
 
 # ---------- Fardamento Atribuído ----------
