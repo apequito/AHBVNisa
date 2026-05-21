@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-tv me-2"></i>Monitorização de Ocorrências</h2>
+    <button class="btn btn-secondary" onclick="window.location.reload();">
+        <i class="bi bi-arrow-repeat"></i> Atualizar Dados
+    </button>
+</div>
+
+<div class="row g-4">
+    <!-- 1. Fogos.pt - Lista de incêndios ativos -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-fire me-2"></i> Fogos.pt - Incêndios Ativos
+            </div>
+            <div class="card-body p-0">
+                <iframe src="https://www.fogos.pt/lista" 
+                        class="w-100 border-0" 
+                        style="height: 600px;"
+                        title="Incêndios Ativos"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        referrerpolicy="no-referrer">
+                </iframe>
+            </div>
+            <div class="card-footer text-muted small">
+                Fonte: <a href="https://www.fogos.pt" target="_blank">fogos.pt</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Ocorrências Ativas (ocorrenciasativas.pt) -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-exclamation-triangle me-2"></i> Ocorrências Ativas
+            </div>
+            <div class="card-body p-0">
+                <iframe src="https://ocorrenciasativas.pt" 
+                        class="w-100 border-0" 
+                        style="height: 600px;"
+                        title="Ocorrências Ativas"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        referrerpolicy="no-referrer">
+                </iframe>
+            </div>
+            <div class="card-footer text-muted small">
+                Fonte: <a href="https://ocorrenciasativas.pt" target="_blank">ocorrenciasativas.pt</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Bombeiros.pt - Ocorrências ativas -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-truck me-2"></i> Bombeiros.pt - Ocorrências
+            </div>
+            <div class="card-body p-0">
+                <iframe src="https://bombeiros.pt/ocorrencias/ocorrencias.html" 
+                        class="w-100 border-0" 
+                        style="height: 600px;"
+                        title="Ocorrências Bombeiros"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        referrerpolicy="no-referrer">
+                </iframe>
+            </div>
+            <div class="card-footer text-muted small">
+                Fonte: <a href="https://bombeiros.pt" target="_blank">bombeiros.pt</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. IPMA - Perigo de Incêndio Rural -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <i class="bi bi-map me-2"></i> IPMA - Risco de Incêndio
+            </div>
+            <div class="card-body p-0">
+                <iframe src="https://www.ipma.pt/pt/riscoincendio/" 
+                        class="w-100 border-0" 
+                        style="height: 600px;"
+                        title="Risco de Incêndio"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        referrerpolicy="no-referrer">
+                </iframe>
+            </div>
+            <div class="card-footer text-muted small">
+                Fonte: <a href="https://www.ipma.pt" target="_blank">ipma.pt</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

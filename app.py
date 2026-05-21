@@ -7916,6 +7916,12 @@ def correio_apagar(id):
     flash('Mensagem removida.', 'info')
     return redirect(url_for('correio'))
 
+@app.route('/monitor')
+@login_required
+def monitor():
+    return render_template('monitor.html')
+
+
 @app.route('/correio/apagar-em-massa', methods=['POST'])
 @login_required
 def apagar_correio_massa():
@@ -7939,6 +7945,7 @@ def apagar_correio_massa():
     db.session.commit()
     flash(f'{len(ids)} mensagens removidas com sucesso.', 'success')
     return redirect(url_for('correio'))
+
 
 
 
