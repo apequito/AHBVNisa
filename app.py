@@ -4696,45 +4696,6 @@ def apagar_tipo_farda_material(id):
 
 
 
-#-----------exportar Stock Fardamento--------------
-@app.route('/stock-fardamento/exportar')
-@login_required
-def exportar_stock_fardamento():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('stock_fardamento'))
-
-    itens = StockFardamento.query.order_by(StockFardamento.nome).all()
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Stock Fardamento"
-
-    cabecalhos = ['Tipo','Nome', 'Descrição', 'Tamanho', 'Stock']
-    ws.append(cabecalhos)
-
-    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
-    header_font = Font(bold=True)
-    for col in range(1, len(cabecalhos)+1):
-        cell = ws.cell(row=1, column=col)
-        cell.fill = header_fill
-        cell.font = header_font
-
-    for i in itens:
-        ws.append([i.tipo, i.nome, i.descricao or '', i.tamanho or '', i.stock])
-
-    col_widths = [30, 40, 12, 22, 10]
-    for j, width in enumerate(col_widths, 1):
-        ws.column_dimensions[ws.cell(row=1, column=j).column_letter].width = width
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return send_file(output, as_attachment=True, download_name='stock_fardamento.xlsx',
-                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-
-
-
 #------------Farmaneto Atribuido-------------
 @app.route('/fardamento-atribuido', methods=['GET', 'POST'])
 @login_required
