@@ -22,18 +22,30 @@
     .reopen-card {
         margin-top: 10px;
     }
+    .ponto-marcador {
+        cursor: pointer;
+    }
+    .info-window-ponto {
+        font-size: 12px;
+        max-width: 250px;
+    }
 </style>
 
+<!-- ========== TOPO COM RELÓGIO ========== -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h2><i class="bi bi-tv me-2"></i>Monitorização de Ocorrências</h2>
     <div>
+        <h2><i class="bi bi-tv me-2"></i>Monitorização de Ocorrências</h2>
+        <div id="relogio" class="small text-muted"></div>
+    </div>
+    <div>
+        <div id="perigoIncendio" class="badge bg-secondary me-2">Carregando...</div>
         <button class="btn btn-secondary" onclick="window.location.reload();">
             <i class="bi bi-arrow-repeat"></i> Atualizar Dados
         </button>
     </div>
 </div>
 
-<!-- Painel de Coordenadas e Rotas + Checkboxes -->
+<!-- ========== PAINEL DE COORDENADAS ========== -->
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <h5 class="card-title mb-3"><i class="bi bi-pin-map me-2"></i>Coordenadas para Google Maps</h5>
@@ -42,6 +54,10 @@
                 <label class="form-label">Coordenadas</label>
                 <input type="text" id="coordsInput" class="form-control"
                        placeholder="Ex: 39.514699, -7.651982 ou 39359614 7324602">
+                <div class="mt-2">
+                    <label class="form-label small">Histórico recente:</label>
+                    <div id="historicoCoords" class="d-flex flex-wrap gap-1"></div>
+                </div>
             </div>
             <div class="col-md-2">
                 <button id="btnVerMapa" class="btn btn-primary w-100">
@@ -64,13 +80,25 @@
                 </button>
             </div>
         </div>
+        <div class="row g-2 mt-2">
+            <div class="col-md-3">
+                <button id="btnCopiarCoords" class="btn btn-outline-info w-100" title="Copiar coordenadas">
+                    <i class="bi bi-clipboard"></i> Copiar coordenadas
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button id="btnCentrarQuartel" class="btn btn-outline-secondary w-100" title="Centrar mapa no quartel">
+                    <i class="bi bi-building"></i> Centrar Mapa
+                </button>
+            </div>
+        </div>
         <div class="mt-2 small text-muted" id="coordStatus">
             <i class="bi bi-info-circle"></i> As coordenadas podem ser decimais (ex: 39.514699, -7.651982) ou SIRESP (ex: 39359614 7324602).
         </div>
     </div>
 </div>
 
-<!-- Painel de seleção dos visualizadores -->
+<!-- ========== PAINEL DE SELEÇÃO DOS VISUALIZADORES ========== -->
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <h5 class="card-title mb-3"><i class="bi bi-eye me-2"></i>Selecione os painéis que pretende visualizar</h5>
@@ -93,6 +121,7 @@
     </div>
 </div>
 
+<!-- ========== CARTÕES DOS VISUALIZADORES ========== -->
 <div class="row g-4" id="monitor-cards">
     <!-- 1. Fogos.pt - Incêndios Ativos -->
     <div class="col-md-6 monitor-card" id="card-fogos" style="{% if not config.fogos %}display: none;{% endif %}">
@@ -145,7 +174,7 @@
                 </div>
             </div>
             <div class="card-body p-0">
-                <iframe src="https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=Nisa,Portugal&zoom=12"
+                <iframe id="googleMapsFrame" src="https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=Nisa,Portugal&zoom=12"
                         class="w-100 border-0"
                         style="height: 600px;"
                         title="Google Maps - Concelho de Nisa"
@@ -215,6 +244,47 @@
             </div>
         </div>
     </div>
+
+    <!-- 5. Pontos de Água (NOVO) -->
+    <div class="col-md-6 monitor-card" id="card-pontos-agua">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-droplet me-2"></i> Pontos de Água</span>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" id="btnAdicionarPonto" title="Adicionar ponto de água">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light me-2 expand-card" title="Expandir">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light close-card" title="Fechar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="p-2 border-bottom">
+                    <div class="row g-2">
+                        <div class="col">
+                            <input type="text" id="pesquisaConcelho" class="form-control form-control-sm" placeholder="Pesquisar por concelho...">
+                        </div>
+                        <div class="col-auto">
+                            <button id="btnFiltrarConcelho" class="btn btn-sm btn-primary">Filtrar</button>
+                            <button id="btnLimparFiltro" class="btn btn-sm btn-outline-secondary">Limpar</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="mapaPontosAgua" style="height: 500px; width: 100%;"></div>
+                <div id="infoPonto" class="p-2 border-top bg-light" style="font-size: 12px; display: none;">
+                    <span id="infoNome"></span> - <span id="infoTipo"></span><br>
+                    <span id="infoLocal"></span>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">
+                Clique no mapa para adicionar um ponto de água. Clique num ponto para ver detalhes.
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Botões para reabrir cartões fechados -->
@@ -223,11 +293,12 @@
         <button class="btn btn-secondary me-2" id="reopen-fogos">Mostrar Fogos.pt</button>
         <button class="btn btn-secondary me-2" id="reopen-google-maps">Mostrar Google Maps</button>
         <button class="btn btn-secondary me-2" id="reopen-bombeiros">Mostrar Bombeiros.pt</button>
-        <button class="btn btn-secondary" id="reopen-ipma">Mostrar IPMA</button>
+        <button class="btn btn-secondary me-2" id="reopen-ipma">Mostrar IPMA</button>
+        <button class="btn btn-secondary" id="reopen-pontos-agua">Mostrar Pontos de Água</button>
     </div>
 </div>
 
-<!-- Modal para converter coordenadas SIRESP -->
+<!-- ========== MODAL SIRESP ========== -->
 <div class="modal fade" id="modalSIRESP" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -249,6 +320,9 @@
                     <input type="text" id="coordsConvertidas" class="form-control" readonly>
                 </div>
                 <div id="sirespStatus" class="alert alert-warning d-none"></div>
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-info-circle"></i> Dica: Pressione Ctrl+Enter para converter rapidamente.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -256,7 +330,7 @@
                     <i class="bi bi-arrow-repeat me-1"></i>Converter
                 </button>
                 <button type="button" id="btnUsarCoordenadas" class="btn btn-success" disabled>
-                    <i class="bi bi-geo-alt-fill me-1"></i>Usar no Mapa
+                    <i class="bi bi-geo-alt-fill me-1"></i>Usar
                 </button>
             </div>
         </div>
@@ -278,7 +352,30 @@
     </div>
 </div>
 
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=inicializarMapaAgua&loading=async" defer></script>
+
 <script>
+    // ========== RELÓGIO ==========
+    function atualizarRelogio() {
+        const agora = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        document.getElementById('relogio').innerHTML = agora.toLocaleDateString('pt-PT', options);
+    }
+    atualizarRelogio();
+    setInterval(atualizarRelogio, 1000);
+
+    // ========== NÍVEL DE PERIGO (SIMULADO) ==========
+    function atualizarPerigoIncendio() {
+        const niveis = ['Muito Baixo', 'Baixo', 'Moderado', 'Elevado', 'Muito Elevado'];
+        const nivel = niveis[Math.floor(Math.random() * niveis.length)];
+        const cores = { 'Muito Baixo': 'success', 'Baixo': 'info', 'Moderado': 'warning', 'Elevado': 'orange', 'Muito Elevado': 'danger' };
+        const badge = document.getElementById('perigoIncendio');
+        badge.textContent = `🔥 Risco de Incêndio: ${nivel}`;
+        badge.className = `badge bg-${cores[nivel] || 'secondary'} me-2`;
+    }
+    atualizarPerigoIncendio();
+    setInterval(atualizarPerigoIncendio, 600000);
+
     // ========== CONFIGURAÇÕES DOS VISUALIZADORES ==========
     const chkFogos = document.getElementById('chkFogos');
     const chkGoogleMaps = document.getElementById('chkGoogleMaps');
@@ -288,6 +385,7 @@
     const cardGoogleMaps = document.getElementById('card-google-maps');
     const cardBombeiros = document.getElementById('card-bombeiros');
     const cardIpma = document.getElementById('card-ipma');
+    const cardPontosAgua = document.getElementById('card-pontos-agua');
 
     function saveConfig() {
         const data = {
@@ -317,89 +415,47 @@
     chkBombeiros.addEventListener('change', updateVisibility);
     chkIpma.addEventListener('change', updateVisibility);
 
-    // ========== EXPANDIR MODAL ==========
-    document.querySelectorAll('.expand-card').forEach(button => {
-        button.addEventListener('click', function() {
-            const card = this.closest('.card');
-            const iframe = card.querySelector('iframe');
-            if (iframe) {
-                document.getElementById('fullscreenIframe').src = iframe.src;
-                const modalTitle = card.querySelector('.card-header span').innerText;
-                document.querySelector('#modalExpand .modal-title').innerText = modalTitle;
-                new bootstrap.Modal(document.getElementById('modalExpand')).show();
-            }
-        });
-    });
-
-    document.getElementById('modalExpand').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('fullscreenIframe').src = '';
-    });
-
-    // ========== FECHAR E REABRIR CARTÕES ==========
-    const reopenButtonsDiv = document.getElementById('reopen-buttons');
-    let closedCards = {};
-
-    document.querySelectorAll('.close-card').forEach(button => {
-        button.addEventListener('click', function() {
-            const cardDiv = this.closest('.monitor-card');
-            const cardId = cardDiv.id;
-            if (cardId) {
-                closedCards[cardId] = true;
-                cardDiv.classList.add('card-closed');
-                reopenButtonsDiv.style.display = 'block';
-            }
-        });
-    });
-
-    function reopenCard(cardId) {
-        const card = document.getElementById(cardId);
-        if (card) {
-            card.classList.remove('card-closed');
-            delete closedCards[cardId];
-            if (Object.keys(closedCards).length === 0) {
-                reopenButtonsDiv.style.display = 'none';
-            }
-        }
-    }
-
-    document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
-    document.getElementById('reopen-google-maps')?.addEventListener('click', () => reopenCard('card-google-maps'));
-    document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
-    document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
-
-    // ========== FILTRAR FOGOS.PT ==========
-    const fogosFrame = document.getElementById('fogosFrame');
-    const filterButton = document.querySelector('.filter-portalegre');
-    const resetButton = document.querySelector('.reset-map');
-    if (filterButton) {
-        filterButton.addEventListener('click', () => {
-            if (fogosFrame) {
-                fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre';
-            }
-        });
-    }
-    if (resetButton) {
-        resetButton.addEventListener('click', () => {
-            if (fogosFrame) {
-                fogosFrame.src = 'https://www.fogos.pt';
-            }
-        });
-    }
-
     // ========== COORDENADAS DO QUARTEL ==========
     const QUARTEL_LAT = 39.51469904404126;
     const QUARTEL_LNG = -7.651982289220224;
 
-    // ========== COORDENADAS E ROTAS (DECIMAIS) ==========
+    // ========== HISTÓRICO DE COORDENADAS ==========
+    function carregarHistorico() {
+        const historico = JSON.parse(localStorage.getItem('coords_historico') || '[]');
+        const container = document.getElementById('historicoCoords');
+        if (!container) return;
+        container.innerHTML = '';
+        historico.slice(0, 5).forEach(coord => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm btn-outline-secondary';
+            btn.textContent = coord.length > 30 ? coord.substring(0, 30) + '...' : coord;
+            btn.onclick = () => {
+                coordsInput.value = coord;
+                coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Histórico carregado: ${coord}`;
+                salvarHistorico(coord);
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    function salvarHistorico(coord) {
+        let historico = JSON.parse(localStorage.getItem('coords_historico') || '[]');
+        historico = [coord, ...historico.filter(c => c !== coord)].slice(0, 5);
+        localStorage.setItem('coords_historico', JSON.stringify(historico));
+        carregarHistorico();
+    }
+
+    // ========== COORDENADAS E ROTAS ==========
     const coordsInput = document.getElementById('coordsInput');
     const btnVerMapa = document.getElementById('btnVerMapa');
     const btnRotaAtual = document.getElementById('btnRotaAtual');
     const btnRotaEscritorio = document.getElementById('btnRotaEscritorio');
     const coordStatus = document.getElementById('coordStatus');
     const btnAbrirSIRESP = document.getElementById('btnAbrirSIRESP');
+    const btnCopiarCoords = document.getElementById('btnCopiarCoords');
+    const btnCentrarQuartel = document.getElementById('btnCentrarQuartel');
 
     function parseCoordenadas(texto) {
-        // Se já tiver vírgula, tenta como decimais
         if (texto.includes(',')) {
             let limpo = texto.trim().replace(/[^\d.,\-]/g, '');
             let partes = limpo.split(',').map(p => parseFloat(p));
@@ -411,8 +467,6 @@
                 return { lat: partes[0], lng: partes[1] };
             }
         }
-
-        // Tentar converter como SIRESP
         const siresp = converterSIRESP(texto);
         if (siresp && !siresp.error) {
             coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Coordenada convertida de SIRESP: ${siresp.lat.toFixed(6)}, ${siresp.lng.toFixed(6)}`;
@@ -434,10 +488,11 @@
     btnVerMapa.addEventListener('click', () => {
         const coords = parseCoordenadas(coordsInput.value);
         if (coords) {
+            salvarHistorico(coordsInput.value);
             abrirGoogleMaps(coords.lat, coords.lng, 'place');
             coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> A abrir coordenadas: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
         } else {
-            coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas. Use formato decimal (39.514699, -7.651982) ou SIRESP (39359614 7324602).';
+            coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas.';
         }
     });
 
@@ -477,9 +532,31 @@
         }
     });
 
-    // ========== FORMATAÇÃO AUTOMÁTICA DE COORDENADAS SIRESP ==========
+    btnCopiarCoords.addEventListener('click', () => {
+        if (coordsInput.value) {
+            navigator.clipboard.writeText(coordsInput.value);
+            coordStatus.innerHTML = '<i class="bi bi-check-circle"></i> Coordenadas copiadas para a área de transferência!';
+            setTimeout(() => {
+                if (coordStatus.innerHTML.includes('copiadas')) coordStatus.innerHTML = '';
+            }, 3000);
+        }
+    });
+
+    btnCentrarQuartel.addEventListener('click', () => {
+        const googleMapsFrame = document.getElementById('googleMapsFrame');
+        if (googleMapsFrame) {
+            googleMapsFrame.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=${QUARTEL_LAT},${QUARTEL_LNG}&zoom=15`;
+            coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> Mapa centrado no quartel.';
+        }
+    });
+
+    // ========== FORMATAÇÃO E CONVERSÃO SIRESP ==========
     const sirespInput = document.getElementById('sirespInput');
     const sirespPreview = document.getElementById('sirespPreview');
+    const coordsConvertidas = document.getElementById('coordsConvertidas');
+    const sirespStatus = document.getElementById('sirespStatus');
+    const btnConverterSIRESP = document.getElementById('btnConverterSIRESP');
+    const btnUsarCoordenadas = document.getElementById('btnUsarCoordenadas');
 
     function formatarCoordenadaSIRESP(inputText) {
         let numeros = inputText.replace(/[^\d]/g, '');
@@ -541,9 +618,7 @@
             lngFormatada = `${lngNumeros.substring(0, 2)}ºO`;
         }
 
-        if (latFormatada && lngFormatada) {
-            return `${latFormatada} ${lngFormatada}`;
-        }
+        if (latFormatada && lngFormatada) return `${latFormatada} ${lngFormatada}`;
         return latFormatada || '';
     }
 
@@ -562,8 +637,13 @@
     }
 
     sirespInput.addEventListener('input', atualizarPreview);
+    sirespInput.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            btnConverterSIRESP.click();
+        }
+    });
 
-    // ========== CONVERSÃO SIRESP PARA DECIMAL ==========
     function converterSIRESP(sirespString) {
         let texto = sirespString.trim();
         let numeros = texto.replace(/[^\d]/g, '');
@@ -618,21 +698,6 @@
         return { lat: lat, lng: lng };
     }
 
-    // ========== MODAL SIRESP ==========
-    const coordsConvertidas = document.getElementById('coordsConvertidas');
-    const sirespStatus = document.getElementById('sirespStatus');
-    const btnConverterSIRESP = document.getElementById('btnConverterSIRESP');
-    const btnUsarCoordenadas = document.getElementById('btnUsarCoordenadas');
-
-    btnAbrirSIRESP.addEventListener('click', () => {
-        sirespInput.value = '';
-        coordsConvertidas.value = '';
-        sirespStatus.classList.add('d-none');
-        sirespPreview.innerHTML = '';
-        btnUsarCoordenadas.disabled = true;
-        new bootstrap.Modal(document.getElementById('modalSIRESP')).show();
-    });
-
     btnConverterSIRESP.addEventListener('click', () => {
         const input = sirespInput.value.trim();
         if (!input) {
@@ -665,12 +730,245 @@
         const lat = parseFloat(btnUsarCoordenadas.getAttribute('data-lat'));
         const lng = parseFloat(btnUsarCoordenadas.getAttribute('data-lng'));
         if (isNaN(lat) || isNaN(lng)) return;
-
         coordsInput.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         bootstrap.Modal.getInstance(document.getElementById('modalSIRESP')).hide();
-        // Não abre o mapa automaticamente – o bombeiro decide qual ação tomar
         coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Coordenadas preenchidas: ${coordsInput.value}`;
+        salvarHistorico(coordsInput.value);
     });
+
+    btnAbrirSIRESP.addEventListener('click', () => {
+        sirespInput.value = '';
+        coordsConvertidas.value = '';
+        sirespStatus.classList.add('d-none');
+        sirespPreview.innerHTML = '';
+        btnUsarCoordenadas.disabled = true;
+        new bootstrap.Modal(document.getElementById('modalSIRESP')).show();
+    });
+
+    // ========== EXPANDIR MODAL ==========
+    document.querySelectorAll('.expand-card').forEach(button => {
+        button.addEventListener('click', function() {
+            const card = this.closest('.card');
+            const iframe = card.querySelector('iframe');
+            if (iframe) {
+                document.getElementById('fullscreenIframe').src = iframe.src;
+                const modalTitle = card.querySelector('.card-header span').innerText;
+                document.querySelector('#modalExpand .modal-title').innerText = modalTitle;
+                new bootstrap.Modal(document.getElementById('modalExpand')).show();
+            }
+        });
+    });
+
+    document.getElementById('modalExpand').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('fullscreenIframe').src = '';
+    });
+
+    // ========== FECHAR E REABRIR CARTÕES ==========
+    const reopenButtonsDiv = document.getElementById('reopen-buttons');
+    let closedCards = {};
+
+    document.querySelectorAll('.close-card').forEach(button => {
+        button.addEventListener('click', function() {
+            const cardDiv = this.closest('.monitor-card');
+            const cardId = cardDiv.id;
+            if (cardId) {
+                closedCards[cardId] = true;
+                cardDiv.classList.add('card-closed');
+                reopenButtonsDiv.style.display = 'block';
+            }
+        });
+    });
+
+    function reopenCard(cardId) {
+        const card = document.getElementById(cardId);
+        if (card) {
+            card.classList.remove('card-closed');
+            delete closedCards[cardId];
+            if (Object.keys(closedCards).length === 0) {
+                reopenButtonsDiv.style.display = 'none';
+            }
+        }
+    }
+
+    document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
+    document.getElementById('reopen-google-maps')?.addEventListener('click', () => reopenCard('card-google-maps'));
+    document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
+    document.getElementById('reopen-ipma')?.addEventListener('click', () => reopenCard('card-ipma'));
+    document.getElementById('reopen-pontos-agua')?.addEventListener('click', () => reopenCard('card-pontos-agua'));
+
+    // ========== FILTRAR FOGOS.PT ==========
+    const fogosFrame = document.getElementById('fogosFrame');
+    const filterButton = document.querySelector('.filter-portalegre');
+    const resetButton = document.querySelector('.reset-map');
+    if (filterButton) {
+        filterButton.addEventListener('click', () => {
+            if (fogosFrame) {
+                fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre';
+            }
+        });
+    }
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            if (fogosFrame) {
+                fogosFrame.src = 'https://www.fogos.pt';
+            }
+        });
+    }
+
+    // ========== PONTOS DE ÁGUA ==========
+    let mapaAgua = null;
+    let pontosMarkers = [];
+
+    function inicializarMapaAgua() {
+        const container = document.getElementById('mapaPontosAgua');
+        if (!container || mapaAgua) return;
+
+        mapaAgua = new google.maps.Map(container, {
+            center: { lat: QUARTEL_LAT, lng: QUARTEL_LNG },
+            zoom: 12,
+            mapTypeId: 'roadmap'
+        });
+
+        carregarPontosAgua();
+
+        mapaAgua.addListener('click', (event) => {
+            abrirModalAdicionarPonto(event.latLng.lat(), event.latLng.lng());
+        });
+    }
+
+    function carregarPontosAgua(filtroConcelho = '') {
+        let url = '/api/pontos-agua';
+        if (filtroConcelho) {
+            url += `?concelho=${encodeURIComponent(filtroConcelho)}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                pontosMarkers.forEach(marker => marker.setMap(null));
+                pontosMarkers = [];
+
+                if (!data.features) return;
+
+                data.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const props = feature.properties;
+
+                    let iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                    if (props.tipo === 'Hidrante') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+                    else if (props.tipo === 'Tanque') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                    else if (props.tipo === 'Rio') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/water.png';
+
+                    const marker = new google.maps.Marker({
+                        position: { lat: coords[1], lng: coords[0] },
+                        map: mapaAgua,
+                        title: props.nome,
+                        icon: iconUrl,
+                        animation: google.maps.Animation.DROP
+                    });
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div class="info-window-ponto">
+                                <strong>${props.nome}</strong><br>
+                                Tipo: ${props.tipo}<br>
+                                ${props.concelho ? `Concelho: ${props.concelho}<br>` : ''}
+                                ${props.freguesia ? `Freguesia: ${props.freguesia}<br>` : ''}
+                                ${props.descricao ? `Descrição: ${props.descricao}<br>` : ''}
+                                ${props.capacidade ? `Capacidade: ${props.capacidade}<br>` : ''}
+                                <button class="btn btn-sm btn-danger mt-1" onclick="eliminarPonto(${props.id})">Eliminar</button>
+                            </div>
+                        `
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(mapaAgua, marker);
+                    });
+
+                    pontosMarkers.push(marker);
+                });
+            });
+    }
+
+    window.eliminarPonto = function(id) {
+        if (!confirm('Tem a certeza que pretende eliminar este ponto de água?')) return;
+
+        fetch(`/api/pontos-agua/${id}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    carregarPontosAgua(document.getElementById('pesquisaConcelho').value);
+                    alert('Ponto eliminado!');
+                }
+            });
+    };
+
+    function abrirModalAdicionarPonto(lat, lng) {
+        const nome = prompt('Nome do ponto de água:', 'Hidrante');
+        if (!nome) return;
+
+        const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Poço/Outro):', 'Hidrante');
+        const descricao = prompt('Descrição (opcional):', '');
+        const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
+
+        fetch('/api/pontos-agua', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome,
+                tipo: tipo || 'Hidrante',
+                latitude: lat,
+                longitude: lng,
+                descricao: descricao,
+                capacidade: capacidade
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                carregarPontosAgua(document.getElementById('pesquisaConcelho').value);
+                alert('Ponto de água adicionado com sucesso!');
+            } else {
+                alert('Erro ao adicionar ponto.');
+            }
+        });
+    }
+
+    document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
+        if (mapaAgua) {
+            const center = mapaAgua.getCenter();
+            abrirModalAdicionarPonto(center.lat(), center.lng());
+        } else {
+            alert('Aguardando carregamento do mapa...');
+        }
+    });
+
+    document.getElementById('btnFiltrarConcelho')?.addEventListener('click', () => {
+        const concelho = document.getElementById('pesquisaConcelho').value;
+        carregarPontosAgua(concelho);
+        const infoDiv = document.getElementById('infoPonto');
+        if (infoDiv) {
+            infoDiv.style.display = 'block';
+            document.getElementById('infoNome').innerHTML = `Filtrado por: ${concelho || 'todos'}`;
+        }
+    });
+
+    document.getElementById('btnLimparFiltro')?.addEventListener('click', () => {
+        document.getElementById('pesquisaConcelho').value = '';
+        carregarPontosAgua();
+        const infoDiv = document.getElementById('infoPonto');
+        if (infoDiv) infoDiv.style.display = 'none';
+    });
+
+    document.querySelector('#card-pontos-agua .expand-card')?.addEventListener('click', () => {
+        setTimeout(() => {
+            if (mapaAgua) google.maps.event.trigger(mapaAgua, 'resize');
+            else inicializarMapaAgua();
+        }, 100);
+    });
+
+    // Inicializar
+    carregarHistorico();
 </script>
 
 {% endblock %}

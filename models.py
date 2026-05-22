@@ -524,3 +524,20 @@ class Monitor(db.Model):
     ipma = db.Column(db.Boolean, default=True)
 
     bombeiro = db.relationship('Bombeiro', backref='monitor_config', uselist=False)
+
+
+class PontoAgua(db.Model):
+    __tablenome__ = 'pontos_agua'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    tipo = db.Column(db.String(50), default='Hidrante')  # Hidrante, Tanque, Rio, Poço, etc.
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    concelho = db.Column(db.String(100))
+    freguesia = db.Column(db.String(100))
+    descricao = db.Column(db.Text)
+    capacidade = db.Column(db.String(50))  # opcional
+    criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])

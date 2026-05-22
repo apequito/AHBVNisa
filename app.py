@@ -8132,6 +8132,99 @@ def monitor_config():
         return jsonify({'success': True})
 
 
+from geopy.geocoders import Nominatim  # pip install geopy
+from sqlalchemy import func
+
+geolocator = Nominatim(user_agent="bombeiros_nisa")
+
+
+@app.route('/api/pontos-agua', methods=['GET'])
+@login_required
+def get_pontos_agua():
+    """Retorna todos os pontos de água em GeoJSON"""
+    concelho = request.args.get('concelho', '')
+    query = PontoAgua.query
+    if concelho:
+        query = query.filter(PontoAgua.concelho.ilike(f'%{concelho}%'))
+
+    pontos = query.all()
+
+    features = []
+    for p in pontos:
+        features.append({
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [p.longitude, p.latitude]
+            },
+            'properties': {
+                'id': p.id,
+                'nome': p.nome,
+                'tipo': p.tipo,
+                'concelho': p.concelho,
+                'freguesia': p.freguesia,
+                'descricao': p.descricao,
+                'capacidade': p.capacidade
+            }
+        })
+
+    return jsonify({
+        'type': 'FeatureCollection',
+        'features': features
+    })
+
+
+@app.route('/api/pontos-agua', methods=['POST'])
+@login_required
+def add_ponto_agua():
+    """Adiciona um novo ponto de água"""
+    data = request.get_json()
+
+    # Opcional: geocoding reverso para obter concelho/freguesia
+    try:
+        location = geolocator.reverse(f"{data['latitude']}, {data['longitude']}")
+        address = location.raw.get('address', {})
+        concelho = address.get('county', address.get('town', address.get('city', '')))
+        freguesia = address.get('suburb', address.get('hamlet', address.get('village', '')))
+    except:
+        concelho = data.get('concelho', '')
+        freguesia = data.get('freguesia', '')
+
+    ponto = PontoAgua(
+        nome=data['nome'],
+        tipo=data.get('tipo', 'Hidrante'),
+        latitude=data['latitude'],
+        longitude=data['longitude'],
+        concelho=concelho,
+        freguesia=freguesia,
+        descricao=data.get('descricao', ''),
+        capacidade=data.get('capacidade', ''),
+        criado_por=current_user.id
+    )
+    db.session.add(ponto)
+    db.session.commit()
+
+    return jsonify({'success': True, 'id': ponto.id})
+
+
+@app.route('/api/pontos-agua/<int:id>', methods=['DELETE'])
+@login_required
+def delete_ponto_agua(id):
+    """Remove um ponto de água"""
+    ponto = PontoAgua.query.get_or_404(id)
+    db.session.delete(ponto)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/concelhos', methods=['GET'])
+@login_required
+def get_concelhos():
+    """Retorna lista de concelhos com pontos de água"""
+    concelhos = db.session.query(PontoAgua.concelho).distinct().all()
+    return jsonify([c[0] for c in concelhos if c[0]])
+
+
 
 @app.route('/correio/apagar-em-massa', methods=['POST'])
 @login_required
