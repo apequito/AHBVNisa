@@ -562,69 +562,139 @@
     sirespInput.addEventListener('input', atualizarPreview);
 
     // ========== CONVERSÃO SIRESP ==========
-    function converterSIRESP(sirespString) {
-        let texto = sirespString.trim();
+// ========== FORMATAÇÃO AUTOMÁTICA DE COORDENADAS SIRESP ==========
+function formatarCoordenadaSIRESP(inputText) {
+    // Remove tudo que não for número
+    let numeros = inputText.replace(/[^\d]/g, '');
+    let latNumeros = '';
+    let lngNumeros = '';
 
-        // Extrair apenas os números
-        let numeros = texto.replace(/[^\d]/g, '');
-        let latNumeros = '';
-        let lngNumeros = '';
-
-        // Tentar separar por espaço
-        if (texto.includes(' ')) {
-            let partes = texto.split(/\s+/);
-            if (partes.length >= 2) {
-                latNumeros = partes[0].replace(/[^\d]/g, '');
-                lngNumeros = partes[1].replace(/[^\d]/g, '');
-            }
-        } else {
-            if (numeros.length >= 15) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8, 15);
-            } else if (numeros.length >= 8) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8);
-            } else {
-                return { error: 'Número insuficiente de dígitos. Mínimo 8 dígitos para latitude.' };
-            }
+    // Tentar separar por espaço
+    if (inputText.includes(' ')) {
+        let partes = inputText.split(/\s+/);
+        if (partes.length >= 2) {
+            latNumeros = partes[0].replace(/[^\d]/g, '');
+            lngNumeros = partes[1].replace(/[^\d]/g, '');
         }
-
-        if (latNumeros.length < 4) {
-            return { error: 'Latitude inválida. Mínimo 4 dígitos.' };
+    } else {
+        // Sem espaço: latitude = primeiros 8 dígitos, longitude = restantes
+        if (numeros.length >= 15) {
+            latNumeros = numeros.substring(0, 8);
+            lngNumeros = numeros.substring(8, 15);
+        } else if (numeros.length >= 8) {
+            latNumeros = numeros.substring(0, 8);
+            lngNumeros = numeros.substring(8);
         }
-
-        // Converter latitude
-        let latGraus = parseInt(latNumeros.substring(0, 2));
-        let latMinutos = parseInt(latNumeros.substring(2, 4));
-        let latSegundos = 0;
-        if (latNumeros.length >= 6) {
-            latSegundos = parseFloat(latNumeros.substring(4)) / 100;
-        }
-        let lat = latGraus + (latMinutos / 60) + (latSegundos / 3600);
-
-        // Converter longitude
-        let lngGraus, lngMinutos, lngSegundos = 0;
-        if (lngNumeros.length >= 7) {
-            lngGraus = parseInt(lngNumeros.substring(0, 3));
-            lngMinutos = parseInt(lngNumeros.substring(3, 5));
-            if (lngNumeros.length >= 6) {
-                lngSegundos = parseFloat(lngNumeros.substring(5)) / 10;
-            }
-        } else if (lngNumeros.length >= 5) {
-            lngGraus = parseInt(lngNumeros.substring(0, 2));
-            lngMinutos = parseInt(lngNumeros.substring(2, 4));
-            if (lngNumeros.length >= 5) {
-                lngSegundos = parseFloat(lngNumeros.substring(4)) / 10;
-            }
-        } else {
-            return { error: 'Longitude inválida. Mínimo 5 dígitos.' };
-        }
-
-        let lng = lngGraus + (lngMinutos / 60) + (lngSegundos / 3600);
-        lng = -lng; // Oeste é negativo
-
-        return { lat: lat, lng: lng };
     }
+
+    // Formatar latitude (GGMMSSSS -> GGºMM.SSSS'N)
+    let latFormatada = '';
+    if (latNumeros.length >= 5) {
+        let graus = latNumeros.substring(0, 2);
+        let minutosInteiros = latNumeros.substring(2, 4);
+        let minutosDecimais = latNumeros.substring(4, 8);
+        if (minutosDecimais.length < 4) minutosDecimais = minutosDecimais.padEnd(4, '0');
+        let minutos = parseInt(minutosInteiros) + (parseInt(minutosDecimais) / 10000);
+        latFormatada = `${graus}º${minutos.toFixed(4)}'N`;
+    } else if (latNumeros.length >= 4) {
+        let graus = latNumeros.substring(0, 2);
+        let minutos = latNumeros.substring(2, 4);
+        latFormatada = `${graus}º${minutos}'N`;
+    } else if (latNumeros.length >= 2) {
+        latFormatada = `${latNumeros.substring(0, 2)}ºN`;
+    }
+
+    // Formatar longitude (GGGMMSSSS ou GGMMSSSS -> GGGºMM.SSSS'O)
+    let lngFormatada = '';
+    if (lngNumeros.length >= 6) {
+        let graus, minutosInteiros, minutosDecimais;
+        if (lngNumeros.length >= 7) {
+            graus = lngNumeros.substring(0, 3);
+            minutosInteiros = lngNumeros.substring(3, 5);
+            minutosDecimais = lngNumeros.substring(5, 9);
+        } else {
+            graus = lngNumeros.substring(0, 2);
+            minutosInteiros = lngNumeros.substring(2, 4);
+            minutosDecimais = lngNumeros.substring(4, 8);
+        }
+        if (minutosDecimais.length < 4) minutosDecimais = minutosDecimais.padEnd(4, '0');
+        let minutos = parseInt(minutosInteiros) + (parseInt(minutosDecimais) / 10000);
+        lngFormatada = `${graus}º${minutos.toFixed(4)}'O`;
+    } else if (lngNumeros.length >= 4) {
+        let graus = lngNumeros.substring(0, 2);
+        let minutos = lngNumeros.substring(2, 4);
+        lngFormatada = `${graus}º${minutos}'O`;
+    } else if (lngNumeros.length >= 2) {
+        lngFormatada = `${lngNumeros.substring(0, 2)}ºO`;
+    }
+
+    if (latFormatada && lngFormatada) {
+        return `${latFormatada} ${lngFormatada}`;
+    } else if (latFormatada) {
+        return latFormatada;
+    }
+    return '';
+}
+
+// ========== CONVERSÃO SIRESP PARA DECIMAL ==========
+function converterSIRESP(sirespString) {
+    let texto = sirespString.trim();
+
+    // Extrair apenas os números
+    let numeros = texto.replace(/[^\d]/g, '');
+    let latNumeros = '';
+    let lngNumeros = '';
+
+    // Tentar separar por espaço
+    if (texto.includes(' ')) {
+        let partes = texto.split(/\s+/);
+        if (partes.length >= 2) {
+            latNumeros = partes[0].replace(/[^\d]/g, '');
+            lngNumeros = partes[1].replace(/[^\d]/g, '');
+        }
+    } else {
+        if (numeros.length >= 15) {
+            latNumeros = numeros.substring(0, 8);
+            lngNumeros = numeros.substring(8, 15);
+        } else if (numeros.length >= 8) {
+            latNumeros = numeros.substring(0, 8);
+            lngNumeros = numeros.substring(8);
+        } else {
+            return { error: 'Número insuficiente de dígitos. Mínimo 8 dígitos para latitude.' };
+        }
+    }
+
+    if (latNumeros.length < 5) {
+        return { error: 'Latitude inválida. Formato: GGMMSSSS (8 dígitos)' };
+    }
+
+    // Converter latitude: GGMMDDDD -> GG + (MM + DDDD/10000) / 60
+    let latGraus = parseInt(latNumeros.substring(0, 2));
+    let latMinutosInteiros = parseInt(latNumeros.substring(2, 4));
+    let latMinutosDecimais = parseInt(latNumeros.substring(4, 8)) / 10000;
+    let latMinutosTotal = latMinutosInteiros + latMinutosDecimais;
+    let lat = latGraus + (latMinutosTotal / 60);
+
+    // Converter longitude: GGGMMDDDD ou GGMMDDDD
+    let lngGraus, lngMinutosInteiros, lngMinutosDecimais;
+    if (lngNumeros.length >= 7) {
+        lngGraus = parseInt(lngNumeros.substring(0, 3));
+        lngMinutosInteiros = parseInt(lngNumeros.substring(3, 5));
+        lngMinutosDecimais = parseInt(lngNumeros.substring(5, 9)) / 10000;
+    } else if (lngNumeros.length >= 6) {
+        lngGraus = parseInt(lngNumeros.substring(0, 2));
+        lngMinutosInteiros = parseInt(lngNumeros.substring(2, 4));
+        lngMinutosDecimais = parseInt(lngNumeros.substring(4, 8)) / 10000;
+    } else {
+        return { error: 'Longitude inválida. Mínimo 6 dígitos.' };
+    }
+
+    let lngMinutosTotal = lngMinutosInteiros + lngMinutosDecimais;
+    let lng = lngGraus + (lngMinutosTotal / 60);
+    lng = -lng; // Oeste é negativo
+
+    return { lat: lat, lng: lng };
+}
 
     // Modal SIRESP
     const coordsConvertidas = document.getElementById('coordsConvertidas');
