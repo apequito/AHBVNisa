@@ -67,7 +67,6 @@
             </thead>
             <tbody>
                 {% for produto in produtos %}
-                {# Os subitens já estão ordenados no backend (por codigo_farda, não por tamanho) #}
                 {% set items = produto.items_armazem %}
                 <tr class="group-row" data-group="{{ produto.codigo_farda }}">
                     <td class="text-center">
@@ -168,9 +167,7 @@
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-3">Nenhum produto cadastrado.</td>
-                </tr>
-                {% endfor %}
+                    <td colspan="8" class="text-center text-muted py-3">Nenhum produto cadastrado.{% endfor %}
             </tbody>
         </table>
     </div>
@@ -412,19 +409,14 @@ function toggleCampos() {
     if (radioNovo.checked) {
         camposNovo.style.display = 'block';
         camposVariacao.style.display = 'none';
-        // Desactivar required dos campos da variação
         document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = false);
-        // Activar required dos campos do novo produto
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = true);
-        // O campo tamanho no novo produto é opcional?
         const tamanhoNovo = document.querySelector('#camposNovoProduto input[name="tamanho"]');
         if (tamanhoNovo) tamanhoNovo.required = false;
     } else {
         camposNovo.style.display = 'none';
         camposVariacao.style.display = 'block';
-        // Desactivar required dos campos do novo produto
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = false);
-        // Activar required apenas para select e stock na variação; tamanho fica opcional
         const selectProduto = document.querySelector('#camposNovaVariacao select[name="codigo_farda"]');
         const stockField = document.querySelector('#camposNovaVariacao input[name="stock"]');
         if (selectProduto) selectProduto.required = true;
