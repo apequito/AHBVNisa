@@ -482,11 +482,11 @@ function converterSIRESP(sirespString) {
     if (matchComSimbolos) {
         const latGraus = parseInt(matchComSimbolos[1]);
         const latMinutos = parseInt(matchComSimbolos[2]);
-        const latSegundos = parseInt(matchComSimbolos[3]);
+        const latSegundos = parseFloat(matchComSimbolos[3]);
         const latDir = matchComSimbolos[4].toUpperCase();
         const lngGraus = parseInt(matchComSimbolos[5]);
         const lngMinutos = parseInt(matchComSimbolos[6]);
-        const lngSegundos = parseInt(matchComSimbolos[7]);
+        const lngSegundos = parseFloat(matchComSimbolos[7]);
         const lngDir = matchComSimbolos[8].toUpperCase();
 
         let lat = latGraus + (latMinutos / 60) + (latSegundos / 3600);
@@ -498,9 +498,9 @@ function converterSIRESP(sirespString) {
         return { lat: lat, lng: lng };
     }
 
-    // FORMATO 2: Sem símbolos (ex: 39251246N 007106970O)
-    // Nota: 39º25'1246N → 39251246N (graus=39, minutos=25, segundos=1246)
-    //       007º10'6974O → 007106970O (graus=007, minutos=10, segundos=6974)
+    // FORMATO 2: Sem símbolos (ex: 39359614N 7324602O)
+    // Latitude: 8 dígitos (GGMMSSSS) onde GG=graus, MM=minutos, SSSS=segundos (com 2 decimais)
+    // Longitude: 7 dígitos (GGGMMSSS) onde GGG=graus, MM=minutos, SSS=segundos (com 1 decimal? vamos ajustar)
     let matchSemSimbolos = texto.match(/(\d+)([NS])\s+(\d+)([OE])/i);
     if (matchSemSimbolos) {
         let latStr = matchSemSimbolos[1];
@@ -508,28 +508,30 @@ function converterSIRESP(sirespString) {
         let lngStr = matchSemSimbolos[3];
         let lngDir = matchSemSimbolos[4].toUpperCase();
 
-        // Para latitude: normalmente 2 dígitos para graus, 2 para minutos, resto para segundos
-        let latGraus, latMinutos, latSegundos;
-        if (latStr.length >= 4) {
-            latGraus = parseInt(latStr.substring(0, 2));
-            latMinutos = parseInt(latStr.substring(2, 4));
-            latSegundos = parseInt(latStr.substring(4));
-        } else {
-            latGraus = parseInt(latStr.substring(0, 1));
-            latMinutos = parseInt(latStr.substring(1, 3));
-            latSegundos = parseInt(latStr.substring(3));
+        // Latitude: GGMMSSSS (8 dígitos)
+        let latGraus = parseInt(latStr.substring(0, 2));
+        let latMinutos = parseInt(latStr.substring(2, 4));
+        let latSegundos = parseFloat(latStr.substring(4, 8)) / 100; // os dois últimos dígitos são centésimos
+        if (latSegundos >= 60) {
+            // Se os segundos forem > 60, provavelmente os dígitos estão mal interpretados
+            latMinutos += Math.floor(latSegundos / 60);
+            latSegundos = latSegundos % 60;
         }
 
-        // Para longitude: normalmente 3 dígitos para graus, 2 para minutos, resto para segundos
+        // Longitude: GGGMMSSS (7 dígitos) ou GGMMSSS (6 dígitos)
         let lngGraus, lngMinutos, lngSegundos;
-        if (lngStr.length >= 5) {
+        if (lngStr.length === 7) {
             lngGraus = parseInt(lngStr.substring(0, 3));
             lngMinutos = parseInt(lngStr.substring(3, 5));
-            lngSegundos = parseInt(lngStr.substring(5));
+            lngSegundos = parseFloat(lngStr.substring(5, 7)) * 100;
+        } else if (lngStr.length === 6) {
+            lngGraus = parseInt(lngStr.substring(0, 2));
+            lngMinutos = parseInt(lngStr.substring(2, 4));
+            lngSegundos = parseFloat(lngStr.substring(4, 6)) * 100;
         } else {
             lngGraus = parseInt(lngStr.substring(0, 2));
             lngMinutos = parseInt(lngStr.substring(2, 4));
-            lngSegundos = parseInt(lngStr.substring(4));
+            lngSegundos = parseFloat(lngStr.substring(4)) / 100;
         }
 
         let lat = latGraus + (latMinutos / 60) + (latSegundos / 3600);
@@ -541,7 +543,7 @@ function converterSIRESP(sirespString) {
         return { lat: lat, lng: lng };
     }
 
-    return { error: 'Formato inválido. Use 39º25\'1246N 007º10\'6974O ou 39251246N 007106970O' };
+    return { error: 'Formato inválido. Use 39º25\'1246N 007º10\'6974O ou 39359614N 7324602O' };
 }
 
     // Modal SIRESP
