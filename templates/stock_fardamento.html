@@ -218,20 +218,21 @@
                     </div>
 
                     <!-- Campos para Nova Variação -->
-                    <div id="camposNovaVariacao" style="display: none;">
-                        <label class="form-label">Produto existente</label>
-                        <select name="codigo_farda" class="form-select mb-3" required>
-                            <option value="">-- Selecione o produto --</option>
-                            {% for produto in produtos %}
-                            <option value="{{ produto.codigo_farda }}">{{ produto.codigo_farda }} - {{ produto.nome }} ({{ produto.tipo }})</option>
-                            {% endfor %}
-                        </select>
-                        <label class="form-label">Tamanho (opcional)</label>
-                        <input type="text" name="tamanho" class="form-control mb-2" placeholder="Ex: M, G, XL (opcional)">
-                        <label class="form-label">Stock</label>
-                        <input type="number" name="stock" class="form-control" placeholder="Quantidade" value="0" min="0" required>
-                        <small class="text-muted">Os campos Tipo, Nome e Descrição serão herdados do produto selecionado.</small>
-                    </div>
+                    <!-- Campos para Nova Variação -->
+<div id="camposNovaVariacao" style="display: none;">
+    <label class="form-label">Produto existente</label>
+    <select name="codigo_farda" class="form-select mb-3" required>
+        <option value="">-- Selecione o produto --</option>
+        {% for produto in produtos %}
+        <option value="{{ produto.codigo_farda }}">{{ produto.codigo_farda }} - {{ produto.nome }} ({{ produto.tipo }})</option>
+        {% endfor %}
+    </select>
+    <label class="form-label">Tamanho (opcional)</label>
+    <input type="text" name="tamanho" id="tamanho_variacao" class="form-control mb-2" placeholder="Ex: M, G, XL (opcional)">
+    <label class="form-label">Stock</label>
+    <input type="number" name="stock" id="stock_variacao" class="form-control mb-2" placeholder="Quantidade" value="0" min="0" required>
+    <small class="text-muted">Os campos Tipo, Nome e Descrição serão herdados do produto selecionado.</small>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Adicionar</button>
@@ -409,20 +410,23 @@ function toggleCampos() {
     if (radioNovo.checked) {
         camposNovo.style.display = 'block';
         camposVariacao.style.display = 'none';
+        // Desativar required dos campos da variação
         document.querySelectorAll('#camposNovaVariacao input, #camposNovaVariacao select').forEach(el => el.required = false);
+        // Ativar required dos campos do novo produto
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = true);
         const tamanhoNovo = document.querySelector('#camposNovoProduto input[name="tamanho"]');
         if (tamanhoNovo) tamanhoNovo.required = false;
     } else {
         camposNovo.style.display = 'none';
         camposVariacao.style.display = 'block';
+        // Desativar required dos campos do novo produto
         document.querySelectorAll('#camposNovoProduto input, #camposNovoProduto select, #camposNovoProduto textarea').forEach(el => el.required = false);
+        // Ativar required apenas para select e stock na variação
         const selectProduto = document.querySelector('#camposNovaVariacao select[name="codigo_farda"]');
         const stockField = document.querySelector('#camposNovaVariacao input[name="stock"]');
         if (selectProduto) selectProduto.required = true;
         if (stockField) stockField.required = true;
-        const tamanhoField = document.querySelector('#camposNovaVariacao input[name="tamanho"]');
-        if (tamanhoField) tamanhoField.required = false;
+        // O campo tamanho permanece opcional (não tem required)
     }
 }
 
