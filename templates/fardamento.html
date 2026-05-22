@@ -10,12 +10,12 @@
         </a>
     </li>
     {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-<li class="nav-item">
-    <a class="nav-link {{ 'active' if aba == 'atribuido' }}" href="{{ url_for('fardamento', tab='atribuido') }}">
-        <i class="bi bi-box-arrow-in-down me-1"></i> Atribuído
-    </a>
-</li>
-{% endif %}
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if aba == 'atribuido' }}" href="{{ url_for('fardamento', tab='atribuido') }}">
+            <i class="bi bi-box-arrow-in-down me-1"></i> Atribuído
+        </a>
+    </li>
+    {% endif %}
 </ul>
 
 {% if aba == 'pedidos' %}
@@ -108,8 +108,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="11" class="text-center text-muted py-3">Nenhum pedido de fardamento.</td></tr>
-                    {% endfor %}
+                    <tr><td colspan="11" class="text-center text-muted py-3">Nenhum pedido de fardamento.{% endfor %}
                 </tbody>
             </table>
         </div>
@@ -117,8 +116,8 @@
 {% else %}
     <!-- ========== ABA ATRIBUÍDO ========== -->
     <div class="mb-3">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAtribuir">
-            <i class="bi bi-plus-circle me-1"></i> Atribuir Fardamento
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAtribuirMultiplo">
+            <i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento
         </button>
         <form method="GET" class="row g-2 mt-2">
             <input type="hidden" name="tab" value="atribuido">
@@ -191,17 +190,14 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" class="text-center text-muted py-3">Nenhum fardamento atribuído.</td></tr>
-                    {% endfor %}
+                    <tr><td colspan="8" class="text-center text-muted py-3">Nenhum fardamento atribuído.{% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 {% endif %}
 
-<!-- ========== MODAIS ========== -->
-
-<!-- Modal Novo Pedido (com campo tamanho livre) -->
+<!-- ========== MODAL NOVO PEDIDO ========== -->
 <div class="modal fade" id="modalNovoPedido" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ url_for('fardamento') }}">
@@ -250,21 +246,21 @@
     </div>
 </div>
 
-<!-- Modal Atribuir Fardamento (igual) -->
-<div class="modal fade" id="modalAtribuir" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ url_for('fardamento') }}">
-            <input type="hidden" name="form_type" value="atribuicao">
+<!-- ========== MODAL ATRIBUIR FARDAMENTO (MÚLTIPLOS ITENS) ========== -->
+<div class="modal fade" id="modalAtribuirMultiplo" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <form method="POST" id="formAtribuirMultiplo">
+            <input type="hidden" name="form_type" value="atribuicao_multipla">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5><i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento</h5>
+                <div class="modal-header bg-primary text-white">
+                    <h5><i class="bi bi-box-arrow-in-down me-1"></i> Atribuir Fardamento a Bombeiro</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <label>Bombeiro</label>
-                            <select name="bombeiro_id" id="bombeiroAtribSelect" class="form-select mb-2" required onchange="carregarPedidosAnalise()">
+                            <label class="form-label">Bombeiro <span class="text-danger">*</span></label>
+                            <select name="bombeiro_id" id="bombeiroAtribMultiplo" class="form-select" required>
                                 <option value="">-- Selecione --</option>
                                 {% for b in bombeiros %}
                                 <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
@@ -272,38 +268,41 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label>Pedido de Origem <span class="text-danger">*</span></label>
-                            <select name="idpedido" id="pedidoOrigemSelect" class="form-select mb-2" required onchange="preencherAtribuicaoPedido()">
-                                <option value="">-- Selecione um pedido (obrigatório) --</option>
-                            </select>
+                            <label class="form-label">Data de Entrega</label>
+                            <input type="date" name="data_entrega" class="form-control" value="{{ hoje.strftime('%Y-%m-%d') }}" required>
                         </div>
                     </div>
-                    <div id="tabelaPedidosPendentes" class="mb-2" style="display: none;">
-                        <h6>Pedidos disponíveis (Análise ou Rejeitados)</h6>
-                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                            <table class="table table-sm table-bordered">
-                                <thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Tamanho</th><th>Selecionar</th></tr></thead>
-                                <tbody id="tabelaAnaliseBody"></tbody>
-                            </table>
-                        </div>
+                    <hr>
+                    <h6>Itens disponíveis no stock</h6>
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered" id="tabelaItensStock">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%"></th>
+                                    <th>Tipo</th>
+                                    <th>Código</th>
+                                    <th>Nome</th>
+                                    <th>Tamanho</th>
+                                    <th style="width: 15%">Quantidade a atribuir</th>
+                                    <th>Stock disponível</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itensStockBody">
+                                <tr><td colspan="7" class="text-center">Carregando itens...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <label>Tipo</label>
-                    <input type="text" id="atribTipo" class="form-control mb-2" readonly>
-                    <label>Nome</label>
-                    <input type="text" id="atribNome" class="form-control mb-2" readonly>
-                    <label>Tamanho</label>
-                    <input type="text" id="atribTamanho" class="form-control mb-2" readonly>
-                    <input type="hidden" name="data_entrega" value="{{ hoje.strftime('%Y-%m-%d') }}">
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Atribuir</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Atribuir Selecionados</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Editar Atribuído -->
+<!-- ========== MODAL EDITAR ATRIBUIÇÃO ========== -->
 <div class="modal fade" id="modalEditarAtribuido" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" id="formEditarAtrib" action="">
@@ -334,12 +333,15 @@
     </div>
 </div>
 
-<!-- Modal Resposta -->
+<!-- ========== MODAL RESPOSTA ========== -->
 <div class="modal fade" id="modalResposta" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" id="formResposta" action="">
             <div class="modal-content">
-                <div class="modal-header"><h5>Resposta ao Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header">
+                    <h5>Resposta ao Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <input type="hidden" name="pedido_id" id="respostaPedidoId">
                     <div class="mb-3">
@@ -363,7 +365,7 @@
     </div>
 </div>
 
-<!-- Modal Importar (Admin/Comando) -->
+<!-- ========== MODAL IMPORTAR ========== -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
 <div class="modal fade" id="modalImportarFardamento" tabindex="-1">
     <div class="modal-dialog">
@@ -386,7 +388,7 @@
 {% endif %}
 
 <script>
-// ---------- Partilhado (carregar nomes do stock) ----------
+// ---------- Carregar nomes do stock por tipo ----------
 function carregarNomes() {
     const tipo = document.getElementById('tipoSelect').value;
     const nomeSelect = document.getElementById('nomeSelect');
@@ -417,7 +419,6 @@ function preencherDetalhes() {
     if (selected && selected.value) {
         document.getElementById('descricaoDisplay').value = selected.getAttribute('data-descricao') || '';
         document.getElementById('stockIdHidden').value = selected.getAttribute('data-id') || '';
-        // Já não preenchemos o tamanho automaticamente, pois o campo é livre
     }
 }
 
@@ -427,84 +428,91 @@ function toggleDescricaoMotivo() {
     descricaoMotivo.style.display = (motivo === 'Troca' || motivo === 'Abatido') ? 'block' : 'none';
 }
 
-// ---------- Atribuição ----------
-async function carregarPedidosAnalise() {
-    const bombeiroId = document.getElementById('bombeiroAtribSelect').value;
-    const tabelaBody = document.getElementById('tabelaAnaliseBody');
-    const selectPedido = document.getElementById('pedidoOrigemSelect');
+// ---------- Carregar itens do stock para atribuição múltipla ----------
+function carregarItensStock() {
+    const tbody = document.getElementById('itensStockBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando itens...</td></tr>';
+
+    fetch('/stock-fardamento/api/itens')
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${data.error}</td></tr>`;
+                return;
+            }
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum item em stock.</td></tr>';
+                return;
+            }
+
+            // Agrupar por tipo
+            const grouped = {};
+            data.forEach(item => {
+                if (!grouped[item.tipo]) grouped[item.tipo] = [];
+                grouped[item.tipo].push(item);
+            });
+
+            tbody.innerHTML = '';
+            for (const [tipo, items] of Object.entries(grouped)) {
+                // Linha de cabeçalho do grupo
+                const groupRow = tbody.insertRow();
+                groupRow.classList.add('table-secondary');
+                groupRow.innerHTML = `<td colspan="7"><strong>${tipo}</strong></td>`;
+
+                items.forEach(item => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" name="selecionar_item" value="${item.id}" class="form-check-input selecionar-item">
+                        </td>
+                        <td>${item.tipo}</td>
+                        <td>${item.codigo_farda}</td>
+                        <td>${item.nome}</td>
+                        <td>${item.tamanho || '-'}</td>
+                        <td class="text-center">
+                            <input type="number" name="quantidade_${item.id}" class="form-control form-control-sm quantidade-input"
+                                   min="0" max="${item.stock}" value="0" step="1" style="width: 80px;" disabled>
+                        </td>
+                        <td class="text-center">${item.stock}</td>
+                    `;
+                    const checkbox = row.querySelector('.selecionar-item');
+                    const quantidadeInput = row.querySelector('.quantidade-input');
+                    checkbox.addEventListener('change', function() {
+                        quantidadeInput.disabled = !this.checked;
+                        if (!this.checked) quantidadeInput.value = 0;
+                    });
+                });
+            }
+        })
+        .catch(err => {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Erro ao carregar itens: ${err}</td></tr>`;
+        });
+}
+
+// ---------- Eventos dos modais ----------
+document.getElementById('modalAtribuirMultiplo').addEventListener('show.bs.modal', function () {
+    carregarItensStock();
+    document.getElementById('bombeiroAtribMultiplo').value = '';
+    document.getElementById('formAtribuirMultiplo').reset();
+});
+
+document.getElementById('formAtribuirMultiplo').addEventListener('submit', function(e) {
+    const bombeiroId = document.getElementById('bombeiroAtribMultiplo').value;
     if (!bombeiroId) {
-        document.getElementById('tabelaPedidosPendentes').style.display = 'none';
-        selectPedido.innerHTML = '<option value="">-- Selecione um pedido (obrigatório) --</option>';
+        e.preventDefault();
+        alert('Selecione um bombeiro.');
         return;
     }
-    fetch(`/fardamento/pedidos-analise/${bombeiroId}`)
-        .then(res => res.json())
-        .then(pedidos => {
-            selectPedido.innerHTML = '<option value="">-- Selecione um pedido (obrigatório) --</option>';
-            tabelaBody.innerHTML = '';
-            if (pedidos.length > 0) {
-                document.getElementById('tabelaPedidosPendentes').style.display = 'block';
-                pedidos.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = `#${p.id} - ${p.tipo} - ${p.nome}`;
-                    selectPedido.appendChild(opt);
-                    const row = tabelaBody.insertRow();
-                    if (p.estado === 'Rejeitado') row.classList.add('table-warning');
-                    row.insertCell().textContent = p.data;
-                    row.insertCell().textContent = p.tipo;
-                    row.insertCell().textContent = p.nome;
-                    row.insertCell().textContent = p.tamanho;
-                    const tdCheck = row.insertCell();
-                    const radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'idpedido';
-                    radio.value = p.id;
-                    radio.addEventListener('change', function() {
-                        document.getElementById('pedidoOrigemSelect').value = p.id;
-                        preencherAtribuicaoPedido();
-                    });
-                    tdCheck.appendChild(radio);
-                });
-            } else {
-                document.getElementById('tabelaPedidosPendentes').style.display = 'none';
-            }
-        });
-}
-
-function preencherAtribuicaoPedido() {
-    const select = document.getElementById('pedidoOrigemSelect');
-    const selectedOption = select.options[select.selectedIndex];
-    if (selectedOption.value) {
-        const texto = selectedOption.textContent;
-        const partes = texto.split(' - ');
-        const tipo = partes[1] || '';
-        const nome = partes[2] || '';
-        document.getElementById('atribTipo').value = tipo;
-        document.getElementById('atribNome').value = nome;
-        const radios = document.querySelectorAll('input[name="idpedido"]');
-        radios.forEach(r => {
-            if (r.checked) {
-                const row = r.closest('tr');
-                if (row) {
-                    const tamanho = row.cells[3].textContent;
-                    document.getElementById('atribTamanho').value = tamanho;
-                }
-            }
-        });
-    } else {
-        document.getElementById('atribTipo').value = '';
-        document.getElementById('atribNome').value = '';
-        document.getElementById('atribTamanho').value = '';
+    let temSelecao = false;
+    document.querySelectorAll('.selecionar-item:checked').forEach(cb => {
+        const row = cb.closest('tr');
+        const qtdInput = row.querySelector('.quantidade-input');
+        if (qtdInput && parseInt(qtdInput.value) > 0) temSelecao = true;
+    });
+    if (!temSelecao) {
+        e.preventDefault();
+        alert('Selecione pelo menos um item com quantidade maior que zero.');
     }
-}
-
-document.getElementById('modalAtribuir').addEventListener('show.bs.modal', function () {
-    document.getElementById('atribTipo').value = '';
-    document.getElementById('atribNome').value = '';
-    document.getElementById('atribTamanho').value = '';
-    document.getElementById('pedidoOrigemSelect').innerHTML = '<option value="">-- Selecione um pedido (obrigatório) --</option>';
-    document.getElementById('tabelaPedidosPendentes').style.display = 'none';
 });
 
 document.getElementById('modalEditarAtribuido').addEventListener('show.bs.modal', function (event) {
