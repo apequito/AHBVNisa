@@ -4412,6 +4412,9 @@ def stock_fardamento():
             tamanho = request.form.get('tamanho', '').strip()
             stock = request.form.get('stock', 0, type=int)
 
+            # LOGS PARA DEPURAÇÃO (ver no terminal do Render)
+            print(f"DEBUG nova_variacao: codigo_farda={codigo_farda}, tamanho='{tamanho}', stock={stock}")
+
             if not codigo_farda:
                 flash('Erro: Nenhum produto selecionado.', 'danger')
                 return redirect(url_for('stock_fardamento'))
@@ -4425,7 +4428,7 @@ def stock_fardamento():
                 flash(f'Erro: Produto com código {codigo_farda} não encontrado.', 'danger')
                 return redirect(url_for('stock_fardamento'))
 
-            # Gerar sub_codigo_farda sequencial (ex: FA00102, FA00103...)
+            # Gerar sub_codigo_farda sequencial
             ultimo_sub = StockFardamentoArmazem.query.filter(
                 StockFardamentoArmazem.codigo_farda == codigo_farda
             ).order_by(StockFardamentoArmazem.sub_codigo_farda.desc()).first()
@@ -4449,7 +4452,9 @@ def stock_fardamento():
             )
             db.session.add(novo_item)
             db.session.commit()
-            flash(f'Variação {sub_codigo_farda} adicionada a {produto.nome}.', 'success')
+            print(f"DEBUG: Item criado - ID={novo_item.id}, tamanho={novo_item.tamanho}, stock={novo_item.stock}")
+            flash(f'Variação {sub_codigo_farda} (tamanho {tamanho if tamanho else "não especificado"}) adicionada a {produto.nome}.',
+                'success')
 
         else:
             flash('Opção inválida.', 'danger')
