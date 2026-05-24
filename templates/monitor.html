@@ -36,6 +36,18 @@
         margin-top: 8px;
         width: 100%;
     }
+    .custom-marker {
+        background: none;
+        border: none;
+    }
+    .coordenada-tooltip {
+        font-size: 11px;
+        font-family: monospace;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
 </style>
 
 <!-- Leaflet CSS e JS -->
@@ -266,19 +278,41 @@
             <div class="card-body p-0">
                 <div class="p-2 border-bottom">
                     <div class="row g-2">
-                        <div class="col">
-                            <input type="text" id="pesquisaConcelho" class="form-control form-control-sm" placeholder="Pesquisar por concelho...">
+                        <div class="col-md-5">
+                            <select id="filtroFreguesia" class="form-select form-select-sm">
+                                <option value="">Todas as freguesias</option>
+                                <option value="Nisa">Nisa</option>
+                                <option value="Alpalhão">Alpalhão</option>
+                                <option value="Tolosa">Tolosa</option>
+                                <option value="Montalvão">Montalvão</option>
+                                <option value="Arez">Arez</option>
+                                <option value="Amieira">Amieira</option>
+                                <option value="Santana">Santana</option>
+                                <option value="São Matias">São Matias</option>
+                                <option value="São Simão">São Simão</option>
+                                <option value="Outros">Outros</option>
+                            </select>
                         </div>
-                        <div class="col-auto">
-                            <button id="btnFiltrarConcelho" class="btn btn-sm btn-primary">Filtrar</button>
-                            <button id="btnLimparFiltro" class="btn btn-sm btn-outline-secondary">Limpar</button>
+                        <div class="col-md-5">
+                            <select id="filtroTipo" class="form-select form-select-sm">
+                                <option value="">Todos os tipos</option>
+                                <option value="Hidrante">Hidrante</option>
+                                <option value="Tanque">Tanque</option>
+                                <option value="Rio">Rio</option>
+                                <option value="Barragem">Barragem</option>
+                                <option value="Poço">Poço</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="btnFiltrarPontos" class="btn btn-sm btn-primary w-100">Filtrar</button>
                         </div>
                     </div>
                 </div>
                 <div id="mapaPontosAgua" style="height: 500px; width: 100%;"></div>
             </div>
             <div class="card-footer text-muted small">
-                Clique no mapa para adicionar um ponto de água. Clique num marcador para ver detalhes.
+                Clique no mapa para adicionar um ponto de água. Passe o rato sobre um marcador para ver as coordenadas.
             </div>
         </div>
     </div>
@@ -769,6 +803,21 @@
     // ========== PONTOS DE ÁGUA (LEAFLET / OPENSTREETMAP) ==========
     let mapaAgua = null;
     let pontosMarkers = [];
+    let todosPontos = [];
+
+    // Cores por tipo de ponto
+    const coresPorTipo = {
+        'Hidrante': 'red',
+        'Tanque': 'blue',
+        'Rio': 'lightblue',
+        'Barragem': 'darkblue',
+        'Poço': 'green',
+        'Outro': 'orange'
+    };
+
+    function getIconColor(tipo) {
+        return coresPorTipo[tipo] || 'gray';
+    }
 
     function inicializarMapa() {
         const container = document.getElementById('mapaPontosAgua');
@@ -789,7 +838,7 @@
                 minZoom: 6
             }).addTo(mapaAgua);
 
-            carregarPontosAgua();
+            carregarTodosPontos();
 
             mapaAgua.on('click', function(e) {
                 abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
@@ -803,61 +852,98 @@
         }
     }
 
-    function carregarPontosAgua(filtroConcelho = '') {
-        if (!mapaAgua) {
-            setTimeout(() => carregarPontosAgua(filtroConcelho), 500);
-            return;
-        }
-
-        let url = '/api/pontos-agua';
-        if (filtroConcelho) {
-            url += `?concelho=${encodeURIComponent(filtroConcelho)}`;
-        }
-
-        fetch(url)
+    function carregarTodosPontos() {
+        fetch('/api/pontos-agua')
             .then(response => response.json())
             .then(data => {
-                pontosMarkers.forEach(marker => mapaAgua.removeLayer(marker));
-                pontosMarkers = [];
-
-                if (!data.features || data.features.length === 0) {
-                    return;
-                }
-
-                data.features.forEach(feature => {
-                    const coords = feature.geometry.coordinates;
-                    const props = feature.properties;
-
-                    const markerColor = props.tipo === 'Hidrante' ? 'red' : 'blue';
-                    const markerIcon = L.divIcon({
-                        html: `<i class="bi bi-droplet-fill" style="color: ${markerColor}; font-size: 20px;"></i>`,
-                        iconSize: [20, 20],
-                        className: 'custom-marker'
-                    });
-
-                    const marker = L.marker([coords[1], coords[0]], {
-                        icon: markerIcon,
-                        title: props.nome
-                    }).addTo(mapaAgua);
-
-                    const popupContent = `
-                        <div style="font-size: 12px; min-width: 150px;">
-                            <strong>${escapeHtml(props.nome)}</strong><br>
-                            Tipo: ${escapeHtml(props.tipo)}<br>
-                            ${props.concelho ? `Concelho: ${escapeHtml(props.concelho)}<br>` : ''}
-                            ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
-                            ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
-                            ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
-                            <button class="btn btn-sm btn-danger mt-2 w-100" onclick="eliminarPonto(${props.id})">Eliminar</button>
-                        </div>
-                    `;
-
-                    marker.bindPopup(popupContent);
-                    pontosMarkers.push(marker);
-                });
+                todosPontos = data.features || [];
+                aplicarFiltros();
             })
             .catch(err => console.error("Erro ao carregar pontos:", err));
     }
+
+    function aplicarFiltros() {
+        if (!mapaAgua) return;
+
+        const freguesiaFiltro = document.getElementById('filtroFreguesia').value;
+        const tipoFiltro = document.getElementById('filtroTipo').value;
+
+        let pontosFiltrados = todosPontos;
+
+        if (freguesiaFiltro) {
+            pontosFiltrados = pontosFiltrados.filter(p => p.properties.concelho === freguesiaFiltro || p.properties.freguesia === freguesiaFiltro);
+        }
+
+        if (tipoFiltro) {
+            pontosFiltrados = pontosFiltrados.filter(p => p.properties.tipo === tipoFiltro);
+        }
+
+        // Limpar marcadores existentes
+        pontosMarkers.forEach(marker => mapaAgua.removeLayer(marker));
+        pontosMarkers = [];
+
+        pontosFiltrados.forEach(feature => {
+            const coords = feature.geometry.coordinates;
+            const props = feature.properties;
+
+            const cor = getIconColor(props.tipo);
+
+            // Criar ícone personalizado
+            const markerIcon = L.divIcon({
+                html: `<i class="bi bi-droplet-fill" style="color: ${cor}; font-size: 22px; text-shadow: 0 0 2px white;"></i>`,
+                iconSize: [22, 22],
+                className: 'custom-marker',
+                popupAnchor: [0, -10]
+            });
+
+            const marker = L.marker([coords[1], coords[0]], {
+                icon: markerIcon,
+                title: props.nome
+            }).addTo(mapaAgua);
+
+            // Tooltip com coordenadas (ao passar o rato)
+            const coordenadasText = `${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}`;
+            marker.bindTooltip(coordenadasText, {
+                permanent: false,
+                direction: 'top',
+                className: 'coordenada-tooltip'
+            });
+
+            // Popup com informações
+            const popupContent = `
+                <div style="font-size: 12px; min-width: 180px;">
+                    <strong><i class="bi bi-droplet-fill" style="color: ${cor};"></i> ${escapeHtml(props.nome)}</strong><br>
+                    Tipo: ${escapeHtml(props.tipo)}<br>
+                    ${props.concelho ? `Concelho: ${escapeHtml(props.concelho)}<br>` : ''}
+                    ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
+                    ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
+                    ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
+                    <hr class="my-1">
+                    <small>Coordenadas: ${coordenadasText}</small><br>
+                    <button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="copiarCoordenadas('${coordenadasText}')">
+                        <i class="bi bi-clipboard"></i> Copiar coordenadas
+                    </button>
+                    <button class="btn btn-sm btn-danger mt-1 w-100" onclick="eliminarPonto(${props.id})">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            pontosMarkers.push(marker);
+        });
+
+        // Se houver pontos, ajustar o zoom para mostrar todos
+        if (pontosMarkers.length > 0 && pontosMarkers.length !== todosPontos.length) {
+            const group = L.featureGroup(pontosMarkers);
+            mapaAgua.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+
+    window.copiarCoordenadas = function(coordenadas) {
+        navigator.clipboard.writeText(coordenadas);
+        alert(`Coordenadas copiadas: ${coordenadas}`);
+    };
 
     window.eliminarPonto = function(id) {
         if (!confirm('Tem a certeza que pretende eliminar este ponto de água?')) return;
@@ -866,8 +952,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const filtro = document.getElementById('pesquisaConcelho').value;
-                    carregarPontosAgua(filtro);
+                    carregarTodosPontos();
                     alert('Ponto eliminado!');
                 }
             });
@@ -877,9 +962,8 @@
         const nome = prompt('Nome do ponto de água:', 'Novo Ponto');
         if (!nome) return;
 
-        const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Poço/Outro):', 'Hidrante');
-        const concelho = prompt('Concelho (opcional):', 'Nisa');
-        const freguesia = prompt('Freguesia (opcional):', '');
+        const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Barragem/Poço/Outro):', 'Hidrante');
+        const freguesia = prompt('Freguesia (Nisa/Alpalhão/Tolosa/Montalvão/Arez/Amieira/Santana/São Matias/São Simão/Outros):', 'Nisa');
         const descricao = prompt('Descrição (opcional):', '');
         const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
 
@@ -891,7 +975,7 @@
                 tipo: tipo || 'Hidrante',
                 latitude: lat,
                 longitude: lng,
-                concelho: concelho,
+                concelho: freguesia,
                 freguesia: freguesia,
                 descricao: descricao,
                 capacidade: capacidade
@@ -900,8 +984,7 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const filtro = document.getElementById('pesquisaConcelho').value;
-                carregarPontosAgua(filtro);
+                carregarTodosPontos();
                 alert('Ponto de água adicionado com sucesso!');
             } else {
                 alert('Erro ao adicionar ponto.');
@@ -928,22 +1011,16 @@
         }
     });
 
-    document.getElementById('btnFiltrarConcelho')?.addEventListener('click', () => {
-        const concelho = document.getElementById('pesquisaConcelho').value;
-        carregarPontosAgua(concelho);
+    document.getElementById('btnFiltrarPontos')?.addEventListener('click', () => {
+        aplicarFiltros();
     });
 
-    document.getElementById('btnLimparFiltro')?.addEventListener('click', () => {
-        document.getElementById('pesquisaConcelho').value = '';
-        carregarPontosAgua();
-    });
-
-    document.querySelector('#card-pontos-agua .expand-card')?.addEventListener('click', () => {
-        setTimeout(() => {
-            if (mapaAgua) {
-                mapaAgua.invalidateSize();
-            }
-        }, 100);
+    // Garantir que a checkbox fique marcada ao recarregar a página
+    document.addEventListener('DOMContentLoaded', function() {
+        if (chkPontosAgua.checked && cardPontosAgua.style.display !== 'none') {
+            // Garantir que o mapa é inicializado
+            setTimeout(inicializarMapa, 500);
+        }
     });
 
     // Iniciar mapa
