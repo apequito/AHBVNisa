@@ -522,6 +522,7 @@ class Monitor(db.Model):
     google_maps = db.Column(db.Boolean, default=True)
     bombeiros_pt = db.Column(db.Boolean, default=True)
     ipma = db.Column(db.Boolean, default=True)
+    pontoagua = db.Column(db.Boolean, default=True)  # ← nome correto: pontoagua
 
     bombeiro = db.relationship('Bombeiro', backref='monitor_config', uselist=False)
 

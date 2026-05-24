@@ -128,7 +128,7 @@
             <label class="form-check-label" for="chkIpma">📊 IPMA - Risco Incêndio</label>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="chkPontosAgua" {% if config.pontos_agua %}checked{% endif %}>
+            <input class="form-check-input" type="checkbox" id="chkPontosAgua" {% if config.pontoagua %}checked{% endif %}>if %}>
             <label class="form-check-label" for="chkPontosAgua">💧 Pontos de Água</label>
         </div>
     </div>
@@ -427,7 +427,7 @@
             google_maps: chkGoogleMaps.checked,
             bombeiros_pt: chkBombeiros.checked,
             ipma: chkIpma.checked,
-            pontos_agua: chkPontosAgua.checked
+            pontoagua: chkPontosAgua.checked
         };
 
         fetch('/monitor/config', {
