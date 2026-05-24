@@ -34,7 +34,6 @@
     }
     .leaflet-popup-content button {
         margin-top: 8px;
-        width: 100%;
     }
     .custom-marker {
         background: none;
@@ -47,6 +46,7 @@
         color: white;
         padding: 4px 8px;
         border-radius: 4px;
+        white-space: nowrap;
     }
 </style>
 
@@ -429,12 +429,25 @@
             ipma: chkIpma.checked,
             pontos_agua: chkPontosAgua.checked
         };
+
         fetch('/monitor/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
-        }).then(response => response.json())
-          .then(data => { if (data.success) console.log('Configuração guardada'); });
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Configuração guardada com sucesso');
+                // Atualizar visibilidade
+                cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
+                // Se a checkbox foi marcada e o mapa ainda não foi inicializado, inicializar
+                if (chkPontosAgua.checked && !window.mapaAgua) {
+                    setTimeout(inicializarMapa, 500);
+                }
+            }
+        })
+        .catch(err => console.error('Erro ao guardar configuração:', err));
     }
 
     function updateVisibility() {
@@ -444,6 +457,11 @@
         cardIpma.style.display = chkIpma.checked ? '' : 'none';
         cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
         saveConfig();
+
+        // Se a checkbox foi marcada e o mapa ainda não foi inicializado, inicializar
+        if (chkPontosAgua.checked && !window.mapaAgua) {
+            setTimeout(inicializarMapa, 500);
+        }
     }
 
     chkFogos.addEventListener('change', updateVisibility);
@@ -451,6 +469,14 @@
     chkBombeiros.addEventListener('change', updateVisibility);
     chkIpma.addEventListener('change', updateVisibility);
     chkPontosAgua.addEventListener('change', updateVisibility);
+
+    // Inicializar a visibilidade na carga da página
+    document.addEventListener('DOMContentLoaded', function() {
+        cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
+        if (chkPontosAgua.checked) {
+            setTimeout(inicializarMapa, 500);
+        }
+    });
 
     // ========== COORDENADAS E ROTAS ==========
     const coordsInput = document.getElementById('coordsInput');
@@ -804,19 +830,20 @@
     let mapaAgua = null;
     let pontosMarkers = [];
     let todosPontos = [];
+    let mapaInicializado = false;
 
     // Cores por tipo de ponto
     const coresPorTipo = {
-        'Hidrante': 'red',
-        'Tanque': 'blue',
-        'Rio': 'lightblue',
-        'Barragem': 'darkblue',
-        'Poço': 'green',
-        'Outro': 'orange'
+        'Hidrante': '#dc3545',
+        'Tanque': '#0d6efd',
+        'Rio': '#0dcaf0',
+        'Barragem': '#0d6efd',
+        'Poço': '#198754',
+        'Outro': '#fd7e14'
     };
 
     function getIconColor(tipo) {
-        return coresPorTipo[tipo] || 'gray';
+        return coresPorTipo[tipo] || '#6c757d';
     }
 
     function inicializarMapa() {
@@ -826,7 +853,7 @@
             return;
         }
 
-        if (mapaAgua) return;
+        if (mapaInicializado) return;
 
         try {
             mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 12);
@@ -838,13 +865,18 @@
                 minZoom: 6
             }).addTo(mapaAgua);
 
+            mapaInicializado = true;
+            window.mapaAgua = mapaAgua;
+
+            // Carregar pontos
             carregarTodosPontos();
 
+            // Clique no mapa para adicionar ponto
             mapaAgua.on('click', function(e) {
                 abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
             });
 
-            window.mapaAgua = mapaAgua;
+            console.log("Mapa inicializado com sucesso");
 
         } catch (err) {
             console.error("Erro ao inicializar mapa:", err);
@@ -863,7 +895,7 @@
     }
 
     function aplicarFiltros() {
-        if (!mapaAgua) return;
+        if (!mapaAgua || !mapaInicializado) return;
 
         const freguesiaFiltro = document.getElementById('filtroFreguesia').value;
         const tipoFiltro = document.getElementById('filtroTipo').value;
@@ -871,7 +903,7 @@
         let pontosFiltrados = todosPontos;
 
         if (freguesiaFiltro) {
-            pontosFiltrados = pontosFiltrados.filter(p => p.properties.concelho === freguesiaFiltro || p.properties.freguesia === freguesiaFiltro);
+            pontosFiltrados = pontosFiltrados.filter(p => p.properties.freguesia === freguesiaFiltro);
         }
 
         if (tipoFiltro) {
@@ -914,7 +946,6 @@
                 <div style="font-size: 12px; min-width: 180px;">
                     <strong><i class="bi bi-droplet-fill" style="color: ${cor};"></i> ${escapeHtml(props.nome)}</strong><br>
                     Tipo: ${escapeHtml(props.tipo)}<br>
-                    ${props.concelho ? `Concelho: ${escapeHtml(props.concelho)}<br>` : ''}
                     ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
                     ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
                     ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
@@ -933,8 +964,8 @@
             pontosMarkers.push(marker);
         });
 
-        // Se houver pontos, ajustar o zoom para mostrar todos
-        if (pontosMarkers.length > 0 && pontosMarkers.length !== todosPontos.length) {
+        // Se houver pontos filtrados, ajustar o zoom
+        if (pontosMarkers.length > 0 && pontosFiltrados.length !== todosPontos.length) {
             const group = L.featureGroup(pontosMarkers);
             mapaAgua.fitBounds(group.getBounds().pad(0.1));
         }
@@ -975,7 +1006,6 @@
                 tipo: tipo || 'Hidrante',
                 latitude: lat,
                 longitude: lng,
-                concelho: freguesia,
                 freguesia: freguesia,
                 descricao: descricao,
                 capacidade: capacidade
@@ -1003,7 +1033,7 @@
     }
 
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
-        if (mapaAgua) {
+        if (mapaAgua && mapaInicializado) {
             const center = mapaAgua.getCenter();
             abrirModalAdicionarPonto(center.lat, center.lng);
         } else {
@@ -1015,16 +1045,10 @@
         aplicarFiltros();
     });
 
-    // Garantir que a checkbox fique marcada ao recarregar a página
-    document.addEventListener('DOMContentLoaded', function() {
-        if (chkPontosAgua.checked && cardPontosAgua.style.display !== 'none') {
-            // Garantir que o mapa é inicializado
-            setTimeout(inicializarMapa, 500);
-        }
-    });
-
-    // Iniciar mapa
-    inicializarMapa();
+    // Iniciar mapa se a checkbox estiver marcada
+    if (chkPontosAgua.checked) {
+        inicializarMapa();
+    }
 </script>
 
 {% endblock %}
