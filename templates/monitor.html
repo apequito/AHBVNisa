@@ -22,11 +22,19 @@
     .reopen-card {
         margin-top: 10px;
     }
-    .ponto-item {
-        transition: background-color 0.2s;
+    #mapaPontosAgua {
+        height: 500px;
+        width: 100%;
+        background-color: #e9ecef;
     }
-    .ponto-item:hover {
-        background-color: #f8f9fa;
+    .map-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        flex-direction: column;
     }
 </style>
 
@@ -244,7 +252,7 @@
         </div>
     </div>
 
-    <!-- 5. Pontos de Água (versão lista - mais estável) -->
+    <!-- 5. Pontos de Água (Mapa Interativo) -->
     <div class="col-md-6 monitor-card" id="card-pontos-agua">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
@@ -273,12 +281,15 @@
                         </div>
                     </div>
                 </div>
-                <div id="listaPontos" style="max-height: 500px; overflow-y: auto;">
-                    <div class="text-center p-3 text-muted">Carregando...</div>
+                <div id="mapaPontosAgua" style="height: 500px; width: 100%;">
+                    <div class="map-placeholder">
+                        <i class="bi bi-map fs-1 mb-2"></i>
+                        <p>Carregando mapa...</p>
+                    </div>
                 </div>
             </div>
             <div class="card-footer text-muted small">
-                Clique em <i class="bi bi-plus-circle"></i> para adicionar um ponto de água. Use o filtro para pesquisar por concelho.
+                Clique no mapa para adicionar um ponto de água. Clique num marcador para ver detalhes.
             </div>
         </div>
     </div>
@@ -349,6 +360,89 @@
     </div>
 </div>
 
+<!-- Script da API do Google Maps - Carregamento com verificação -->
+<script>
+    // Variável global para o mapa
+    let mapaAgua = null;
+    let pontosMarkers = [];
+    let mapaInicializado = false;
+
+    // Função que será chamada quando a API carregar
+    window.initMap = function() {
+        console.log("initMap chamado");
+        try {
+            const container = document.getElementById('mapaPontosAgua');
+            if (!container) {
+                console.log("Container mapaPontosAgua não encontrado");
+                return;
+            }
+
+            const quartelPos = { lat: 39.51469904404126, lng: -7.651982289220224 };
+
+            mapaAgua = new google.maps.Map(container, {
+                center: quartelPos,
+                zoom: 12,
+                mapTypeId: 'roadmap',
+                mapTypeControl: true,
+                zoomControl: true,
+                streetViewControl: true
+            });
+
+            mapaInicializado = true;
+            console.log("Mapa inicializado com sucesso");
+
+            // Carregar pontos existentes
+            carregarPontosAgua();
+
+            // Adicionar listener de clique para adicionar pontos
+            mapaAgua.addListener('click', (event) => {
+                abrirModalAdicionarPonto(event.latLng.lat(), event.latLng.lng());
+            });
+
+        } catch (err) {
+            console.error("Erro ao inicializar mapa:", err);
+            mostrarErroMapa();
+        }
+    };
+
+    function mostrarErroMapa() {
+        const container = document.getElementById('mapaPontosAgua');
+        if (container) {
+            container.innerHTML = `
+                <div class="map-placeholder">
+                    <i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i>
+                    <p>Erro ao carregar o mapa. Verifique a chave da API.</p>
+                    <p class="small">Certifique-se que a biblioteca Maps JavaScript API está ativada.</p>
+                </div>
+            `;
+        }
+    }
+
+    // Tentar carregar a API manualmente se o callback não funcionar
+    function carregarGoogleMapsAPI() {
+        if (typeof google !== 'undefined' && google.maps) {
+            console.log("Google Maps já carregado");
+            window.initMap();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=initMap&v=weekly';
+        script.async = true;
+        script.defer = true;
+        script.onerror = function() {
+            console.error("Falha ao carregar Google Maps API");
+            mostrarErroMapa();
+        };
+        document.head.appendChild(script);
+    }
+
+    // Iniciar carregamento quando a página estiver pronta
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(carregarGoogleMapsAPI, 500);
+    });
+</script>
+
 <script>
     // ========== RELÓGIO ==========
     function atualizarRelogio() {
@@ -384,7 +478,6 @@
     const cardGoogleMaps = document.getElementById('card-google-maps');
     const cardBombeiros = document.getElementById('card-bombeiros');
     const cardIpma = document.getElementById('card-ipma');
-    const cardPontosAgua = document.getElementById('card-pontos-agua');
 
     function saveConfig() {
         const data = {
@@ -542,6 +635,10 @@
         if (googleMapsFrame) {
             googleMapsFrame.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=${QUARTEL_LAT},${QUARTEL_LNG}&zoom=15`;
             coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> Mapa centrado no quartel.';
+        }
+        if (mapaAgua) {
+            mapaAgua.setCenter({ lat: QUARTEL_LAT, lng: QUARTEL_LNG });
+            mapaAgua.setZoom(14);
         }
     });
 
@@ -810,8 +907,14 @@
         });
     }
 
-    // ========== PONTOS DE ÁGUA (VERSÃO LISTA) ==========
+    // ========== PONTOS DE ÁGUA ==========
     function carregarPontosAgua(filtroConcelho = '') {
+        if (!mapaAgua) {
+            console.log("Mapa não inicializado, aguardando...");
+            setTimeout(() => carregarPontosAgua(filtroConcelho), 1000);
+            return;
+        }
+
         let url = '/api/pontos-agua';
         if (filtroConcelho) {
             url += `?concelho=${encodeURIComponent(filtroConcelho)}`;
@@ -820,64 +923,50 @@
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                const container = document.getElementById('listaPontos');
-                if (!container) return;
+                // Limpar marcadores existentes
+                pontosMarkers.forEach(marker => marker.setMap(null));
+                pontosMarkers = [];
 
                 if (!data.features || data.features.length === 0) {
-                    container.innerHTML = '<div class="text-center p-3 text-muted">Nenhum ponto de água encontrado.</div>';
                     return;
                 }
 
-                let html = '<div class="list-group list-group-flush">';
                 data.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
                     const props = feature.properties;
-                    html += `
-                        <div class="list-group-item ponto-item">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div>
-                                        <strong><i class="bi bi-droplet me-1"></i> ${escapeHtml(props.nome)}</strong>
-                                        <span class="badge bg-info ms-2">${escapeHtml(props.tipo)}</span>
-                                    </div>
-                                    <div class="small text-muted mt-1">
-                                        ${props.concelho ? `<i class="bi bi-geo-alt"></i> ${escapeHtml(props.concelho)}` : ''}
-                                        ${props.freguesia ? ` - ${escapeHtml(props.freguesia)}` : ''}
-                                    </div>
-                                    <div class="small text-muted">
-                                        <i class="bi bi-pin-map"></i> ${props.latitude.toFixed(6)}, ${props.longitude.toFixed(6)}
-                                    </div>
-                                    ${props.descricao ? `<div class="small mt-1"><i class="bi bi-chat"></i> ${escapeHtml(props.descricao)}</div>` : ''}
-                                    ${props.capacidade ? `<div class="small"><i class="bi bi-water"></i> Capacidade: ${escapeHtml(props.capacidade)}</div>` : ''}
-                                </div>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-danger btn-eliminar-ponto" data-id="${props.id}" title="Eliminar ponto">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
+
+                    let iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                    if (props.tipo === 'Hidrante') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+
+                    const marker = new google.maps.Marker({
+                        position: { lat: coords[1], lng: coords[0] },
+                        map: mapaAgua,
+                        title: props.nome,
+                        icon: iconUrl,
+                        animation: google.maps.Animation.DROP
+                    });
+
+                    const infoContent = `
+                        <div style="font-family: Arial; font-size: 12px; max-width: 250px;">
+                            <strong>${escapeHtml(props.nome)}</strong><br>
+                            Tipo: ${escapeHtml(props.tipo)}<br>
+                            ${props.concelho ? `Concelho: ${escapeHtml(props.concelho)}<br>` : ''}
+                            ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
+                            ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
+                            ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
+                            <button class="btn btn-sm btn-danger mt-1" onclick="eliminarPonto(${props.id})">Eliminar</button>
                         </div>
                     `;
-                });
-                html += '</div>';
-                container.innerHTML = html;
 
-                // Adicionar eventos aos botões de eliminar
-                document.querySelectorAll('.btn-eliminar-ponto').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const id = parseInt(btn.getAttribute('data-id'));
-                        eliminarPonto(id);
-                    });
+                    const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+                    marker.addListener('click', () => infoWindow.open(mapaAgua, marker));
+                    pontosMarkers.push(marker);
                 });
             })
-            .catch(err => {
-                const container = document.getElementById('listaPontos');
-                if (container) {
-                    container.innerHTML = '<div class="alert alert-danger m-3">Erro ao carregar pontos de água.</div>';
-                }
-            });
+            .catch(err => console.error("Erro ao carregar pontos:", err));
     }
 
-    function eliminarPonto(id) {
+    window.eliminarPonto = function(id) {
         if (!confirm('Tem a certeza que pretende eliminar este ponto de água?')) return;
 
         fetch(`/api/pontos-agua/${id}`, { method: 'DELETE' })
@@ -889,32 +978,17 @@
                     alert('Ponto eliminado!');
                 }
             });
-    }
+    };
 
-    function abrirModalAdicionarPonto() {
+    function abrirModalAdicionarPonto(lat, lng) {
         const nome = prompt('Nome do ponto de água:', 'Novo Ponto');
         if (!nome) return;
 
         const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Poço/Outro):', 'Hidrante');
-        const latitude = prompt('Latitude (ex: 39.514699):', QUARTEL_LAT);
-        const longitude = prompt('Longitude (ex: -7.651982):', QUARTEL_LNG);
         const concelho = prompt('Concelho (opcional):', 'Nisa');
         const freguesia = prompt('Freguesia (opcional):', '');
         const descricao = prompt('Descrição (opcional):', '');
         const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
-
-        if (!latitude || !longitude) {
-            alert('Latitude e longitude são obrigatórios.');
-            return;
-        }
-
-        const lat = parseFloat(latitude.replace(',', '.'));
-        const lng = parseFloat(longitude.replace(',', '.'));
-
-        if (isNaN(lat) || isNaN(lng)) {
-            alert('Coordenadas inválidas.');
-            return;
-        }
 
         fetch('/api/pontos-agua', {
             method: 'POST',
@@ -952,7 +1026,14 @@
         });
     }
 
-    document.getElementById('btnAdicionarPonto')?.addEventListener('click', abrirModalAdicionarPonto);
+    document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
+        if (mapaAgua) {
+            const center = mapaAgua.getCenter();
+            abrirModalAdicionarPonto(center.lat(), center.lng());
+        } else {
+            alert('Aguardando carregamento do mapa...');
+        }
+    });
 
     document.getElementById('btnFiltrarConcelho')?.addEventListener('click', () => {
         const concelho = document.getElementById('pesquisaConcelho').value;
@@ -963,9 +1044,6 @@
         document.getElementById('pesquisaConcelho').value = '';
         carregarPontosAgua();
     });
-
-    // Carregar pontos de água ao iniciar
-    carregarPontosAgua();
 
     // Inicializar histórico
     carregarHistorico();
