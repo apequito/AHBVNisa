@@ -60,46 +60,32 @@
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <h5 class="card-title mb-3"><i class="bi bi-pin-map me-2"></i>Coordenadas para Google Maps</h5>
-        <div class="row g-2 align-items-end mb-4">
-            <div class="col-md-5">
+        <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-7">
                 <label class="form-label">Coordenadas</label>
                 <input type="text" id="coordsInput" class="form-control"
                        placeholder="Ex: 39.514699, -7.651982 ou 39359614 7324602">
-                <div class="mt-2">
-                    <label class="form-label small">Histórico recente:</label>
-                    <div id="historicoCoords" class="d-flex flex-wrap gap-1"></div>
-                </div>
             </div>
             <div class="col-md-2">
                 <button id="btnVerMapa" class="btn btn-primary w-100">
                     <i class="bi bi-map"></i> Ver no Mapa
                 </button>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <button id="btnRotaAtual" class="btn btn-success w-100">
                     <i class="bi bi-compass"></i> Rota (GPS)
                 </button>
             </div>
-            <div class="col-md-2">
+        </div>
+        <div class="row g-2">
+            <div class="col-md-4">
                 <button id="btnRotaEscritorio" class="btn btn-secondary w-100">
                     <i class="bi bi-building"></i> Quartel
                 </button>
             </div>
-            <div class="col-md-1">
+            <div class="col-md-4">
                 <button id="btnAbrirSIRESP" class="btn btn-outline-primary w-100" title="Converter coordenadas SIRESP">
-                    <i class="bi bi-pin-map-fill"></i>
-                </button>
-            </div>
-        </div>
-        <div class="row g-2 mt-2">
-            <div class="col-md-3">
-                <button id="btnCopiarCoords" class="btn btn-outline-info w-100" title="Copiar coordenadas">
-                    <i class="bi bi-clipboard"></i> Copiar coordenadas
-                </button>
-            </div>
-            <div class="col-md-3">
-                <button id="btnCentrarQuartel" class="btn btn-outline-secondary w-100" title="Centrar mapa no quartel">
-                    <i class="bi bi-building"></i> Centrar Mapa
+                    <i class="bi bi-pin-map-fill"></i> Converter SIRESP
                 </button>
             </div>
         </div>
@@ -128,6 +114,10 @@
         <div class="form-check form-check-inline">
             <input class="form-check-input" type="checkbox" id="chkIpma" {% if config.ipma %}checked{% endif %}>
             <label class="form-check-label" for="chkIpma">📊 IPMA - Risco Incêndio</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="chkPontosAgua" {% if config.pontos_agua %}checked{% endif %}>
+            <label class="form-check-label" for="chkPontosAgua">💧 Pontos de Água</label>
         </div>
     </div>
 </div>
@@ -257,7 +247,7 @@
     </div>
 
     <!-- 5. Pontos de Água (Mapa com Leaflet/OpenStreetMap) -->
-    <div class="col-md-6 monitor-card" id="card-pontos-agua">
+    <div class="col-md-6 monitor-card" id="card-pontos-agua" style="{% if not config.pontos_agua %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-droplet me-2"></i> Pontos de Água</span>
@@ -390,17 +380,20 @@
     const chkGoogleMaps = document.getElementById('chkGoogleMaps');
     const chkBombeiros = document.getElementById('chkBombeiros');
     const chkIpma = document.getElementById('chkIpma');
+    const chkPontosAgua = document.getElementById('chkPontosAgua');
     const cardFogos = document.getElementById('card-fogos');
     const cardGoogleMaps = document.getElementById('card-google-maps');
     const cardBombeiros = document.getElementById('card-bombeiros');
     const cardIpma = document.getElementById('card-ipma');
+    const cardPontosAgua = document.getElementById('card-pontos-agua');
 
     function saveConfig() {
         const data = {
             fogos: chkFogos.checked,
             google_maps: chkGoogleMaps.checked,
             bombeiros_pt: chkBombeiros.checked,
-            ipma: chkIpma.checked
+            ipma: chkIpma.checked,
+            pontos_agua: chkPontosAgua.checked
         };
         fetch('/monitor/config', {
             method: 'POST',
@@ -415,6 +408,7 @@
         cardGoogleMaps.style.display = chkGoogleMaps.checked ? '' : 'none';
         cardBombeiros.style.display = chkBombeiros.checked ? '' : 'none';
         cardIpma.style.display = chkIpma.checked ? '' : 'none';
+        cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
         saveConfig();
     }
 
@@ -422,32 +416,7 @@
     chkGoogleMaps.addEventListener('change', updateVisibility);
     chkBombeiros.addEventListener('change', updateVisibility);
     chkIpma.addEventListener('change', updateVisibility);
-
-    // ========== HISTÓRICO DE COORDENADAS ==========
-    function carregarHistorico() {
-        const historico = JSON.parse(localStorage.getItem('coords_historico') || '[]');
-        const container = document.getElementById('historicoCoords');
-        if (!container) return;
-        container.innerHTML = '';
-        historico.slice(0, 5).forEach(coord => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-outline-secondary';
-            btn.textContent = coord.length > 30 ? coord.substring(0, 30) + '...' : coord;
-            btn.onclick = () => {
-                coordsInput.value = coord;
-                coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Histórico carregado: ${coord}`;
-                salvarHistorico(coord);
-            };
-            container.appendChild(btn);
-        });
-    }
-
-    function salvarHistorico(coord) {
-        let historico = JSON.parse(localStorage.getItem('coords_historico') || '[]');
-        historico = [coord, ...historico.filter(c => c !== coord)].slice(0, 5);
-        localStorage.setItem('coords_historico', JSON.stringify(historico));
-        carregarHistorico();
-    }
+    chkPontosAgua.addEventListener('change', updateVisibility);
 
     // ========== COORDENADAS E ROTAS ==========
     const coordsInput = document.getElementById('coordsInput');
@@ -456,8 +425,6 @@
     const btnRotaEscritorio = document.getElementById('btnRotaEscritorio');
     const coordStatus = document.getElementById('coordStatus');
     const btnAbrirSIRESP = document.getElementById('btnAbrirSIRESP');
-    const btnCopiarCoords = document.getElementById('btnCopiarCoords');
-    const btnCentrarQuartel = document.getElementById('btnCentrarQuartel');
 
     function parseCoordenadas(texto) {
         if (texto.includes(',')) {
@@ -492,7 +459,6 @@
     btnVerMapa.addEventListener('click', () => {
         const coords = parseCoordenadas(coordsInput.value);
         if (coords) {
-            salvarHistorico(coordsInput.value);
             abrirGoogleMaps(coords.lat, coords.lng, 'place');
             coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> A abrir coordenadas: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
         } else {
@@ -533,27 +499,6 @@
             coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> A calcular rota a partir do quartel.';
         } else {
             coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas para calcular rota.';
-        }
-    });
-
-    btnCopiarCoords.addEventListener('click', () => {
-        if (coordsInput.value) {
-            navigator.clipboard.writeText(coordsInput.value);
-            coordStatus.innerHTML = '<i class="bi bi-check-circle"></i> Coordenadas copiadas para a área de transferência!';
-            setTimeout(() => {
-                if (coordStatus.innerHTML.includes('copiadas')) coordStatus.innerHTML = '';
-            }, 3000);
-        }
-    });
-
-    btnCentrarQuartel.addEventListener('click', () => {
-        const googleMapsFrame = document.getElementById('googleMapsFrame');
-        if (googleMapsFrame) {
-            googleMapsFrame.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=${QUARTEL_LAT},${QUARTEL_LNG}&zoom=15`;
-            coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> Mapa centrado no quartel.';
-        }
-        if (window.mapaAgua && window.mapaAgua.setView) {
-            window.mapaAgua.setView([QUARTEL_LAT, QUARTEL_LNG], 14);
         }
     });
 
@@ -740,7 +685,6 @@
         coordsInput.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         bootstrap.Modal.getInstance(document.getElementById('modalSIRESP')).hide();
         coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Coordenadas preenchidas: ${coordsInput.value}`;
-        salvarHistorico(coordsInput.value);
     });
 
     btnAbrirSIRESP.addEventListener('click', () => {
@@ -829,7 +773,6 @@
     function inicializarMapa() {
         const container = document.getElementById('mapaPontosAgua');
         if (!container) {
-            console.log("Container não encontrado");
             setTimeout(inicializarMapa, 500);
             return;
         }
@@ -846,12 +789,8 @@
                 minZoom: 6
             }).addTo(mapaAgua);
 
-            console.log("Mapa Leaflet inicializado com sucesso!");
-
-            // Carregar pontos
             carregarPontosAgua();
 
-            // Clique no mapa para adicionar ponto
             mapaAgua.on('click', function(e) {
                 abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
             });
@@ -1008,7 +947,6 @@
     });
 
     // Iniciar mapa
-    carregarHistorico();
     inicializarMapa();
 </script>
 
