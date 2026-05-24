@@ -528,16 +528,15 @@ class Monitor(db.Model):
 
 
 class PontoAgua(db.Model):
-    __tablenome__ = 'pontos_agua'
+    __tablename__ = 'pontos_agua'  # atenção: nome da tabela
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
-    tipo = db.Column(db.String(50), default='Hidrante')  # Hidrante, Tanque, Rio, Poço, etc.
+    tipo = db.Column(db.String(50), default='Hidrante')
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
-    concelho = db.Column(db.String(100))
-    freguesia = db.Column(db.String(100))
+    freguesia = db.Column(db.String(100))  # ← campo correto
     descricao = db.Column(db.Text)
-    capacidade = db.Column(db.String(50))  # opcional
+    capacidade = db.Column(db.String(50))
     criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 

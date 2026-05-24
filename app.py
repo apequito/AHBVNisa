@@ -8144,10 +8144,14 @@ geolocator = Nominatim(user_agent="bombeiros_nisa")
 @login_required
 def get_pontos_agua():
     """Retorna todos os pontos de água em GeoJSON"""
-    concelho = request.args.get('concelho', '')
+    freguesia = request.args.get('freguesia', '')
+    tipo = request.args.get('tipo', '')
+
     query = PontoAgua.query
-    if concelho:
-        query = query.filter(PontoAgua.concelho.ilike(f'%{concelho}%'))
+    if freguesia:
+        query = query.filter(PontoAgua.freguesia == freguesia)
+    if tipo:
+        query = query.filter(PontoAgua.tipo == tipo)
 
     pontos = query.all()
 
@@ -8163,7 +8167,6 @@ def get_pontos_agua():
                 'id': p.id,
                 'nome': p.nome,
                 'tipo': p.tipo,
-                'concelho': p.concelho,
                 'freguesia': p.freguesia,
                 'descricao': p.descricao,
                 'capacidade': p.capacidade
@@ -8180,29 +8183,43 @@ def get_pontos_agua():
 @login_required
 def add_ponto_agua():
     """Adiciona um novo ponto de água"""
+    # Verificar permissões
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        return jsonify({'error': 'Acesso restrito'}), 403
+
     data = request.get_json()
 
-    # Opcional: geocoding reverso para obter concelho/freguesia
+    nome = data.get('nome', '').strip()
+    tipo = data.get('tipo', 'Hidrante')
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    freguesia = data.get('freguesia', '').strip()  # ← campo freguesia
+    descricao = data.get('descricao', '')
+    capacidade = data.get('capacidade', '')
+
+    # Validações
+    if not nome:
+        return jsonify({'error': 'Nome é obrigatório'}), 400
+    if latitude is None or longitude is None:
+        return jsonify({'error': 'Coordenadas inválidas'}), 400
+
     try:
-        location = geolocator.reverse(f"{data['latitude']}, {data['longitude']}")
-        address = location.raw.get('address', {})
-        concelho = address.get('county', address.get('town', address.get('city', '')))
-        freguesia = address.get('suburb', address.get('hamlet', address.get('village', '')))
-    except:
-        concelho = data.get('concelho', '')
-        freguesia = data.get('freguesia', '')
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Coordenadas inválidas'}), 400
 
     ponto = PontoAgua(
-        nome=data['nome'],
-        tipo=data.get('tipo', 'Hidrante'),
-        latitude=data['latitude'],
-        longitude=data['longitude'],
-        concelho=concelho,
-        freguesia=freguesia,
-        descricao=data.get('descricao', ''),
-        capacidade=data.get('capacidade', ''),
+        nome=nome,
+        tipo=tipo,
+        latitude=latitude,
+        longitude=longitude,
+        freguesia=freguesia if freguesia else None,
+        descricao=descricao,
+        capacidade=capacidade,
         criado_por=current_user.id
     )
+
     db.session.add(ponto)
     db.session.commit()
 
@@ -8213,9 +8230,14 @@ def add_ponto_agua():
 @login_required
 def delete_ponto_agua(id):
     """Remove um ponto de água"""
+    # Verificar permissões
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Fardamento']:
+        return jsonify({'error': 'Acesso restrito'}), 403
+
     ponto = PontoAgua.query.get_or_404(id)
     db.session.delete(ponto)
     db.session.commit()
+
     return jsonify({'success': True})
 
 
