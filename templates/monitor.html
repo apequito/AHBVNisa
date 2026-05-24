@@ -36,9 +36,6 @@
         color: #6c757d;
         flex-direction: column;
     }
-    .gm-style .gm-style-iw-c {
-        padding: 12px !important;
-    }
 </style>
 
 <!-- ========== TOPO COM RELÓGIO ========== -->
@@ -255,7 +252,7 @@
         </div>
     </div>
 
-    <!-- 5. Pontos de Água (Mapa Interativo - VERSÃO CORRIGIDA) -->
+    <!-- 5. Pontos de Água -->
     <div class="col-md-6 monitor-card" id="card-pontos-agua">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
@@ -357,6 +354,8 @@
         </div>
     </div>
 </div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=inicializarMapa&v=weekly"></script>
 
 <script>
     // ========== RELÓGIO ==========
@@ -551,9 +550,9 @@
             googleMapsFrame.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=${QUARTEL_LAT},${QUARTEL_LNG}&zoom=15`;
             coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> Mapa centrado no quartel.';
         }
-        if (mapaAgua) {
-            mapaAgua.setCenter({ lat: QUARTEL_LAT, lng: QUARTEL_LNG });
-            mapaAgua.setZoom(14);
+        if (window.mapaAgua) {
+            window.mapaAgua.setCenter({ lat: QUARTEL_LAT, lng: QUARTEL_LNG });
+            window.mapaAgua.setZoom(14);
         }
     });
 
@@ -822,27 +821,19 @@
         });
     }
 
-    // ========== PONTOS DE ÁGUA (VERSÃO CORRIGIDA) ==========
-    let mapaAgua = null;
+    // ========== PONTOS DE ÁGUA ==========
+    window.mapaAgua = null;
     let pontosMarkers = [];
-    let mapaInicializado = false;
 
-    function inicializarMapa() {
+    window.inicializarMapa = function() {
         const container = document.getElementById('mapaPontosAgua');
         if (!container) {
             console.log("Container não encontrado");
             return;
         }
 
-        // Verificar se o container está visível
-        if (container.offsetParent === null) {
-            console.log("Container não visível, aguardando...");
-            setTimeout(inicializarMapa, 500);
-            return;
-        }
-
         try {
-            mapaAgua = new google.maps.Map(container, {
+            window.mapaAgua = new google.maps.Map(container, {
                 center: { lat: QUARTEL_LAT, lng: QUARTEL_LNG },
                 zoom: 12,
                 mapTypeId: 'roadmap',
@@ -852,14 +843,11 @@
                 fullscreenControl: true
             });
 
-            mapaInicializado = true;
             console.log("Mapa inicializado com sucesso!");
 
-            // Carregar pontos existentes
             carregarPontosAgua();
 
-            // Adicionar listener de clique
-            mapaAgua.addListener('click', (event) => {
+            window.mapaAgua.addListener('click', (event) => {
                 const lat = event.latLng.lat();
                 const lng = event.latLng.lng();
                 abrirModalAdicionarPonto(lat, lng);
@@ -869,10 +857,10 @@
             console.error("Erro ao inicializar mapa:", err);
             container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa. Verifique a chave da API.</p></div>';
         }
-    }
+    };
 
     function carregarPontosAgua(filtroConcelho = '') {
-        if (!mapaAgua || !mapaInicializado) {
+        if (!window.mapaAgua) {
             setTimeout(() => carregarPontosAgua(filtroConcelho), 500);
             return;
         }
@@ -901,7 +889,7 @@
 
                     const marker = new google.maps.Marker({
                         position: { lat: coords[1], lng: coords[0] },
-                        map: mapaAgua,
+                        map: window.mapaAgua,
                         title: props.nome,
                         icon: iconUrl,
                         animation: google.maps.Animation.DROP
@@ -920,7 +908,7 @@
                     `;
 
                     const infoWindow = new google.maps.InfoWindow({ content: infoContent });
-                    marker.addListener('click', () => infoWindow.open(mapaAgua, marker));
+                    marker.addListener('click', () => infoWindow.open(window.mapaAgua, marker));
                     pontosMarkers.push(marker);
                 });
             })
@@ -987,32 +975,9 @@
         });
     }
 
-    // Carregar a API do Google Maps
-    function carregarGoogleMaps() {
-        if (typeof google !== 'undefined' && google.maps) {
-            console.log("Google Maps já carregado");
-            inicializarMapa();
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=inicializarMapa&v=weekly';
-        script.async = true;
-        script.defer = true;
-        script.onerror = function() {
-            console.error("Falha ao carregar Google Maps API");
-            const container = document.getElementById('mapaPontosAgua');
-            if (container) {
-                container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa. Verifique a chave da API.</p></div>';
-            }
-        };
-        document.head.appendChild(script);
-    }
-
-    // Eventos dos botões
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
-        if (mapaAgua && mapaInicializado) {
-            const center = mapaAgua.getCenter();
+        if (window.mapaAgua) {
+            const center = window.mapaAgua.getCenter();
             abrirModalAdicionarPonto(center.lat(), center.lng());
         } else {
             alert('Aguardando carregamento do mapa...');
@@ -1031,17 +996,13 @@
 
     document.querySelector('#card-pontos-agua .expand-card')?.addEventListener('click', () => {
         setTimeout(() => {
-            if (mapaAgua) {
-                google.maps.event.trigger(mapaAgua, 'resize');
-            } else {
-                inicializarMapa();
+            if (window.mapaAgua) {
+                google.maps.event.trigger(window.mapaAgua, 'resize');
             }
         }, 100);
     });
 
-    // Iniciar carregamento
     carregarHistorico();
-    carregarGoogleMaps();
 </script>
 
 {% endblock %}
