@@ -26,17 +26,21 @@
         height: 500px;
         width: 100%;
         background-color: #e9ecef;
+        border-radius: 0 0 8px 8px;
     }
-    .map-placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        background-color: #e9ecef;
-        color: #6c757d;
-        flex-direction: column;
+    .leaflet-popup-content {
+        font-size: 12px;
+        min-width: 200px;
+    }
+    .leaflet-popup-content button {
+        margin-top: 8px;
+        width: 100%;
     }
 </style>
+
+<!-- Leaflet CSS e JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <!-- ========== TOPO COM RELÓGIO ========== -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -252,7 +256,7 @@
         </div>
     </div>
 
-    <!-- 5. Pontos de Água -->
+    <!-- 5. Pontos de Água (Mapa com Leaflet/OpenStreetMap) -->
     <div class="col-md-6 monitor-card" id="card-pontos-agua">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
@@ -354,8 +358,6 @@
         </div>
     </div>
 </div>
-
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=inicializarMapa&v=weekly"></script>
 
 <script>
     // ========== RELÓGIO ==========
@@ -550,9 +552,8 @@
             googleMapsFrame.src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&q=${QUARTEL_LAT},${QUARTEL_LNG}&zoom=15`;
             coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> Mapa centrado no quartel.';
         }
-        if (window.mapaAgua) {
-            window.mapaAgua.setCenter({ lat: QUARTEL_LAT, lng: QUARTEL_LNG });
-            window.mapaAgua.setZoom(14);
+        if (window.mapaAgua && window.mapaAgua.setView) {
+            window.mapaAgua.setView([QUARTEL_LAT, QUARTEL_LNG], 14);
         }
     });
 
@@ -821,46 +822,50 @@
         });
     }
 
-    // ========== PONTOS DE ÁGUA ==========
-    window.mapaAgua = null;
+    // ========== PONTOS DE ÁGUA (LEAFLET / OPENSTREETMAP) ==========
+    let mapaAgua = null;
     let pontosMarkers = [];
 
-    window.inicializarMapa = function() {
+    function inicializarMapa() {
         const container = document.getElementById('mapaPontosAgua');
         if (!container) {
             console.log("Container não encontrado");
+            setTimeout(inicializarMapa, 500);
             return;
         }
 
+        if (mapaAgua) return;
+
         try {
-            window.mapaAgua = new google.maps.Map(container, {
-                center: { lat: QUARTEL_LAT, lng: QUARTEL_LNG },
-                zoom: 12,
-                mapTypeId: 'roadmap',
-                mapTypeControl: true,
-                zoomControl: true,
-                streetViewControl: true,
-                fullscreenControl: true
-            });
+            mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 12);
 
-            console.log("Mapa inicializado com sucesso!");
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19,
+                minZoom: 6
+            }).addTo(mapaAgua);
 
+            console.log("Mapa Leaflet inicializado com sucesso!");
+
+            // Carregar pontos
             carregarPontosAgua();
 
-            window.mapaAgua.addListener('click', (event) => {
-                const lat = event.latLng.lat();
-                const lng = event.latLng.lng();
-                abrirModalAdicionarPonto(lat, lng);
+            // Clique no mapa para adicionar ponto
+            mapaAgua.on('click', function(e) {
+                abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
             });
+
+            window.mapaAgua = mapaAgua;
 
         } catch (err) {
             console.error("Erro ao inicializar mapa:", err);
-            container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa. Verifique a chave da API.</p></div>';
+            container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa.</p></div>';
         }
-    };
+    }
 
     function carregarPontosAgua(filtroConcelho = '') {
-        if (!window.mapaAgua) {
+        if (!mapaAgua) {
             setTimeout(() => carregarPontosAgua(filtroConcelho), 500);
             return;
         }
@@ -873,7 +878,7 @@
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                pontosMarkers.forEach(marker => marker.setMap(null));
+                pontosMarkers.forEach(marker => mapaAgua.removeLayer(marker));
                 pontosMarkers = [];
 
                 if (!data.features || data.features.length === 0) {
@@ -884,31 +889,31 @@
                     const coords = feature.geometry.coordinates;
                     const props = feature.properties;
 
-                    let iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-                    if (props.tipo === 'Hidrante') iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
-
-                    const marker = new google.maps.Marker({
-                        position: { lat: coords[1], lng: coords[0] },
-                        map: window.mapaAgua,
-                        title: props.nome,
-                        icon: iconUrl,
-                        animation: google.maps.Animation.DROP
+                    const markerColor = props.tipo === 'Hidrante' ? 'red' : 'blue';
+                    const markerIcon = L.divIcon({
+                        html: `<i class="bi bi-droplet-fill" style="color: ${markerColor}; font-size: 20px;"></i>`,
+                        iconSize: [20, 20],
+                        className: 'custom-marker'
                     });
 
-                    const infoContent = `
-                        <div style="font-family: Arial; font-size: 12px; max-width: 250px;">
+                    const marker = L.marker([coords[1], coords[0]], {
+                        icon: markerIcon,
+                        title: props.nome
+                    }).addTo(mapaAgua);
+
+                    const popupContent = `
+                        <div style="font-size: 12px; min-width: 150px;">
                             <strong>${escapeHtml(props.nome)}</strong><br>
                             Tipo: ${escapeHtml(props.tipo)}<br>
                             ${props.concelho ? `Concelho: ${escapeHtml(props.concelho)}<br>` : ''}
                             ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
                             ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
                             ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
-                            <button class="btn btn-sm btn-danger mt-1" onclick="eliminarPonto(${props.id})">Eliminar</button>
+                            <button class="btn btn-sm btn-danger mt-2 w-100" onclick="eliminarPonto(${props.id})">Eliminar</button>
                         </div>
                     `;
 
-                    const infoWindow = new google.maps.InfoWindow({ content: infoContent });
-                    marker.addListener('click', () => infoWindow.open(window.mapaAgua, marker));
+                    marker.bindPopup(popupContent);
                     pontosMarkers.push(marker);
                 });
             })
@@ -976,9 +981,9 @@
     }
 
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
-        if (window.mapaAgua) {
-            const center = window.mapaAgua.getCenter();
-            abrirModalAdicionarPonto(center.lat(), center.lng());
+        if (mapaAgua) {
+            const center = mapaAgua.getCenter();
+            abrirModalAdicionarPonto(center.lat, center.lng);
         } else {
             alert('Aguardando carregamento do mapa...');
         }
@@ -996,13 +1001,15 @@
 
     document.querySelector('#card-pontos-agua .expand-card')?.addEventListener('click', () => {
         setTimeout(() => {
-            if (window.mapaAgua) {
-                google.maps.event.trigger(window.mapaAgua, 'resize');
+            if (mapaAgua) {
+                mapaAgua.invalidateSize();
             }
         }, 100);
     });
 
+    // Iniciar mapa
     carregarHistorico();
+    inicializarMapa();
 </script>
 
 {% endblock %}
