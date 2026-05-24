@@ -904,35 +904,39 @@
     };
 
     function abrirModalAdicionarPonto(lat, lng) {
-        const nome = prompt('Nome do ponto de água:', 'Hidrante');
-        if (!nome) return;
+    const nome = prompt('Nome do ponto de água:', 'Hidrante');
+    if (!nome) return;
 
-        const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Poço/Outro):', 'Hidrante');
-        const descricao = prompt('Descrição (opcional):', '');
-        const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
+    const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Poço/Outro):', 'Hidrante');
+    const concelho = prompt('Concelho (opcional):', '');
+    const freguesia = prompt('Freguesia (opcional):', '');
+    const descricao = prompt('Descrição (opcional):', '');
+    const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
 
-        fetch('/api/pontos-agua', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nome: nome,
-                tipo: tipo || 'Hidrante',
-                latitude: lat,
-                longitude: lng,
-                descricao: descricao,
-                capacidade: capacidade
-            })
+    fetch('/api/pontos-agua', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            nome: nome,
+            tipo: tipo || 'Hidrante',
+            latitude: lat,
+            longitude: lng,
+            concelho: concelho,
+            freguesia: freguesia,
+            descricao: descricao,
+            capacidade: capacidade
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                carregarPontosAgua(document.getElementById('pesquisaConcelho').value);
-                alert('Ponto de água adicionado com sucesso!');
-            } else {
-                alert('Erro ao adicionar ponto.');
-            }
-        });
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            carregarPontosAgua(document.getElementById('pesquisaConcelho').value);
+            alert('Ponto de água adicionado com sucesso!');
+        } else {
+            alert('Erro ao adicionar ponto.');
+        }
+    });
+}
 
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
         if (mapaAgua) {
