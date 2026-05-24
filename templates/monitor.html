@@ -57,18 +57,27 @@
         color: #6c757d;
         flex-direction: column;
     }
-    .btn-guardar-coords {
-        background-color: #28a745;
+    .btn-copiar-coords {
+        background-color: #17a2b8;
         color: white;
         border: none;
-        padding: 2px 8px;
+        padding: 4px 12px;
         border-radius: 4px;
-        font-size: 11px;
+        font-size: 12px;
         cursor: pointer;
-        margin-left: 8px;
+        margin-top: 10px;
     }
-    .btn-guardar-coords:hover {
-        background-color: #218838;
+    .btn-copiar-coords:hover {
+        background-color: #138496;
+    }
+    .coordenada-info {
+        font-size: 11px;
+        font-family: monospace;
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+        text-align: center;
     }
 </style>
 
@@ -158,7 +167,7 @@
 
 <!-- ========== CARTÕES DOS VISUALIZADORES ========== -->
 <div class="row g-4" id="monitor-cards">
-    <!-- 1. Fogos.pt - Incêndios Ativos (com botão para guardar coordenadas) -->
+    <!-- 1. Fogos.pt - Incêndios Ativos (com botão para capturar coordenadas) -->
     <div class="col-md-6 monitor-card" id="card-fogos" style="{% if not config.fogos %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
@@ -188,10 +197,16 @@
                         referrerpolicy="no-referrer">
                 </iframe>
             </div>
-            <div class="card-footer text-muted small d-flex justify-content-between align-items-center">
-                <span>Fonte: <a href="https://www.fogos.pt" target="_blank">fogos.pt</a></span>
-                <button id="btnGuardarCoordenadasFogos" class="btn-guardar-coords">
-                    <i class="bi bi-droplet"></i> Guardar coordenadas do mapa
+            <div class="card-footer text-muted small text-center">
+                <div id="coordenadasIncendio" class="coordenada-info" style="display: none;">
+                    <span id="coordDisplay"></span>
+                    <button id="btnCopiarCoordenadasIncendio" class="btn-copiar-coords">Copiar coordenadas</button>
+                </div>
+                <div class="mt-2">
+                    <small>Para obter as coordenadas de um incêndio, clique no marcador no mapa e depois clique no botão abaixo.</small>
+                </div>
+                <button id="btnObterCoordenadasMapa" class="btn-copiar-coords mt-2" style="background-color: #ffc107; color: #333;">
+                    <i class="bi bi-pin-map"></i> Obter coordenadas do mapa
                 </button>
             </div>
         </div>
@@ -439,6 +454,20 @@
     const QUARTEL_LAT = 39.51469904404126;
     const QUARTEL_LNG = -7.651982289220224;
 
+    // Coordenadas das freguesias para centrar o mapa
+    const coordenadasFreguesias = {
+        'Nisa': { lat: 39.5167, lng: -7.6500, zoom: 13 },
+        'Alpalhão': { lat: 39.4167, lng: -7.6167, zoom: 14 },
+        'Tolosa': { lat: 39.4000, lng: -7.7167, zoom: 14 },
+        'Montalvão': { lat: 39.6000, lng: -7.5333, zoom: 14 },
+        'Arez': { lat: 39.4500, lng: -7.6833, zoom: 14 },
+        'Amieira': { lat: 39.4167, lng: -7.5667, zoom: 14 },
+        'Santana': { lat: 39.4667, lng: -7.7167, zoom: 14 },
+        'São Matias': { lat: 39.5000, lng: -7.6000, zoom: 14 },
+        'São Simão': { lat: 39.5500, lng: -7.5833, zoom: 14 },
+        'Outros': { lat: 39.5167, lng: -7.6500, zoom: 12 }
+    };
+
     // ========== CONFIGURAÇÕES DOS VISUALIZADORES ==========
     const chkFogos = document.getElementById('chkFogos');
     const chkGoogleMaps = document.getElementById('chkGoogleMaps');
@@ -536,6 +565,39 @@
         const coords = parseCoordenadas(coordsInput.value);
         if (coords) abrirGoogleMaps(coords.lat, coords.lng, 'directions', QUARTEL_LAT, QUARTEL_LNG);
         else coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas.';
+    });
+
+    // ========== OBTER COORDENADAS DO MAPA (Fogos.pt) ==========
+    document.getElementById('btnObterCoordenadasMapa')?.addEventListener('click', () => {
+        // Explicar ao utilizador como obter as coordenadas
+        alert('Para obter as coordenadas de um incêndio:\n\n1. No mapa do Fogos.pt, clique num marcador de incêndio\n2. Nas informações do incêndio, procure as coordenadas\n3. Copie as coordenadas manualmente\n\nAlternativamente, pode usar o conversor SIRESP se tiver coordenadas no formato SIRESP.');
+
+        // Mostrar um campo para o utilizador inserir as coordenadas manualmente
+        const coordsManual = prompt('Insira as coordenadas do incêndio (ex: 39.5167, -7.6500):');
+        if (coordsManual) {
+            const parsed = parseCoordenadas(coordsManual);
+            if (parsed) {
+                coordsInput.value = `${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)}`;
+                coordStatus.innerHTML = `<i class="bi bi-info-circle"></i> Coordenadas inseridas: ${coordsInput.value}`;
+                // Opcional: perguntar se quer guardar como ponto de água
+                if (confirm('Deseja guardar estas coordenadas como ponto de água?')) {
+                    const tipo = prompt('Tipo de ponto de água:', 'Hidrante');
+                    if (tipo) {
+                        const nome = prompt('Nome do ponto de água:', 'Ponto de água - Incêndio');
+                        if (nome) {
+                            const freguesia = prompt('Freguesia:', 'Nisa');
+                            fetch('/api/pontos-agua', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ nome, tipo, latitude: parsed.lat, longitude: parsed.lng, freguesia, descricao: '', capacidade: '' })
+                            }).then(r => r.json()).then(data => { if (data.success) { alert('Ponto de água adicionado!'); if (chkPontosAgua.checked) carregarTodosPontos(); } });
+                        }
+                    }
+                }
+            } else {
+                alert('Coordenadas inválidas! Use formato decimal (ex: 39.5167, -7.6500)');
+            }
+        }
     });
 
     // ========== FORMATAÇÃO E CONVERSÃO SIRESP ==========
@@ -675,37 +737,37 @@
     document.querySelector('.filter-portalegre')?.addEventListener('click', () => { if (fogosFrame) fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre'; });
     document.querySelector('.reset-map')?.addEventListener('click', () => { if (fogosFrame) fogosFrame.src = 'https://www.fogos.pt'; });
 
-    // ========== GUARDAR COORDENADAS DO MAPA (Fogos.pt) ==========
-    document.getElementById('btnGuardarCoordenadasFogos')?.addEventListener('click', () => {
-        // Tentar obter a localização central do iframe? Não é possível diretamente.
-        // Alternativa: pedir ao utilizador para inserir as coordenadas do incêndio
-        const latStr = prompt('Digite a latitude do local (ex: 39.514699):', QUARTEL_LAT);
-        const lngStr = prompt('Digite a longitude do local (ex: -7.651982):', QUARTEL_LNG);
-        if (!latStr || !lngStr) return;
-        const lat = parseFloat(latStr.replace(',', '.'));
-        const lng = parseFloat(lngStr.replace(',', '.'));
-        if (isNaN(lat) || isNaN(lng)) { alert('Coordenadas inválidas!'); return; }
-
-        const tipo = prompt('Tipo de ponto de água:', 'Hidrante');
-        if (!tipo) return;
-        const nome = prompt('Nome do ponto de água:', 'Ponto de água - Incêndio');
-        if (!nome) return;
-        const freguesia = prompt('Freguesia:', 'Nisa');
-        const descricao = prompt('Descrição (opcional):', '');
-        const capacidade = prompt('Capacidade (opcional):', '');
-
-        fetch('/api/pontos-agua', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade })
-        }).then(r => r.json()).then(data => { if (data.success) { alert('Ponto de água adicionado com sucesso!'); if (chkPontosAgua.checked) carregarTodosPontos(); } else { alert('Erro ao adicionar ponto.'); } });
-    });
-
     // ========== PONTOS DE ÁGUA (LEAFLET / OPENSTREETMAP - VISTA SATÉLITE) ==========
     let mapaAgua = null, pontosMarkers = [], todosPontos = [], mapaInicializado = false, tentativasInicializacao = 0;
     const MAX_TENTATIVAS = 5;
     const coresPorTipo = { 'Hidrante': '#dc3545', 'Tanque': '#0d6efd', 'Rio': '#0dcaf0', 'Barragem': '#0d6efd', 'Poço': '#198754', 'Outro': '#fd7e14' };
     function getIconColor(tipo) { return coresPorTipo[tipo] || '#6c757d'; }
+
+    // Adicionar nomes das localidades no mapa (camada de labels)
+    function adicionarLabelsLocalidades() {
+        const localidades = [
+            { nome: 'Nisa', lat: 39.5167, lng: -7.6500 },
+            { nome: 'Alpalhão', lat: 39.4167, lng: -7.6167 },
+            { nome: 'Tolosa', lat: 39.4000, lng: -7.7167 },
+            { nome: 'Montalvão', lat: 39.6000, lng: -7.5333 },
+            { nome: 'Arez', lat: 39.4500, lng: -7.6833 },
+            { nome: 'Amieira', lat: 39.4167, lng: -7.5667 },
+            { nome: 'Santana', lat: 39.4667, lng: -7.7167 },
+            { nome: 'São Matias', lat: 39.5000, lng: -7.6000 },
+            { nome: 'São Simão', lat: 39.5500, lng: -7.5833 }
+        ];
+
+        localidades.forEach(local => {
+            const marker = L.marker([local.lat, local.lng], {
+                icon: L.divIcon({
+                    html: `<div style="background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #333; border: 1px solid #ccc; white-space: nowrap;">📍 ${local.nome}</div>`,
+                    iconSize: [null, null],
+                    className: 'label-marker'
+                })
+            }).addTo(mapaAgua);
+            pontosMarkers.push(marker);
+        });
+    }
 
     function inicializarMapa() {
         if (!chkPontosAgua.checked) { console.log("Checkbox não marcada"); return; }
@@ -717,14 +779,19 @@
         }
         try {
             container.innerHTML = '';
-            mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 14);
+            mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 12);
             // Vista Satélite (Esri World Imagery)
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>',
                 maxZoom: 19,
                 minZoom: 6
             }).addTo(mapaAgua);
+
             mapaInicializado = true; window.mapaAgua = mapaAgua; tentativasInicializacao = 0;
+
+            // Adicionar labels das localidades
+            adicionarLabelsLocalidades();
+
             carregarTodosPontos();
             mapaAgua.on('click', function(e) {
                 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
@@ -741,15 +808,32 @@
         fetch('/api/pontos-agua').then(r => r.json()).then(data => { todosPontos = data.features || []; aplicarFiltros(); }).catch(err => console.error("Erro:", err));
     }
 
+    function centrarMapaPorFreguesia(freguesia) {
+        if (!mapaAgua) return;
+        const coords = coordenadasFreguesias[freguesia];
+        if (coords) {
+            mapaAgua.setView([coords.lat, coords.lng], coords.zoom);
+        }
+    }
+
     function aplicarFiltros() {
         if (!mapaAgua || !mapaInicializado) return;
         const freguesiaFiltro = document.getElementById('filtroFreguesia').value;
         const tipoFiltro = document.getElementById('filtroTipo').value;
+
+        // Centrar mapa na freguesia selecionada
+        if (freguesiaFiltro) {
+            centrarMapaPorFreguesia(freguesiaFiltro);
+        }
+
         let pontosFiltrados = todosPontos;
         if (freguesiaFiltro) pontosFiltrados = pontosFiltrados.filter(p => p.properties.freguesia === freguesiaFiltro);
         if (tipoFiltro) pontosFiltrados = pontosFiltrados.filter(p => p.properties.tipo === tipoFiltro);
-        pontosMarkers.forEach(m => { if (mapaAgua) mapaAgua.removeLayer(m); });
-        pontosMarkers = [];
+
+        // Remover apenas os marcadores de pontos de água (não os labels)
+        pontosMarkers.forEach(m => { if (m && m._icon && m._icon.classList && !m._icon.classList.contains('label-marker')) { if (mapaAgua) mapaAgua.removeLayer(m); } });
+        pontosMarkers = pontosMarkers.filter(m => m && m._icon && m._icon.classList && m._icon.classList.contains('label-marker'));
+
         pontosFiltrados.forEach(feature => {
             const coords = feature.geometry.coordinates;
             const props = feature.properties;
@@ -768,7 +852,6 @@
             marker.bindPopup(popupContent);
             pontosMarkers.push(marker);
         });
-        if (pontosMarkers.length > 0 && pontosFiltrados.length !== todosPontos.length) { const group = L.featureGroup(pontosMarkers); mapaAgua.fitBounds(group.getBounds().pad(0.1)); }
     }
 
     window.copiarCoordenadas = function(coordenadas) { navigator.clipboard.writeText(coordenadas); alert(`Coordenadas copiadas: ${coordenadas}`); };
@@ -811,6 +894,15 @@
     }
     chkPontosAgua.addEventListener('change', onCheckboxPontosAguaChange);
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => abrirModalAdicionarPonto());
+
+    // Evento de filtro de freguesia - centrar mapa
+    document.getElementById('filtroFreguesia')?.addEventListener('change', () => {
+        const freguesia = document.getElementById('filtroFreguesia').value;
+        if (freguesia && mapaAgua) {
+            centrarMapaPorFreguesia(freguesia);
+        }
+    });
+
     document.getElementById('btnFiltrarPontos')?.addEventListener('click', () => aplicarFiltros());
     if (chkPontosAgua.checked) setTimeout(inicializarMapa, 500);
 </script>
