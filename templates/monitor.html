@@ -48,6 +48,15 @@
         border-radius: 4px;
         white-space: nowrap;
     }
+    .map-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        flex-direction: column;
+    }
 </style>
 
 <!-- Leaflet CSS e JS -->
@@ -128,7 +137,7 @@
             <label class="form-check-label" for="chkIpma">📊 IPMA - Risco Incêndio</label>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="chkPontosAgua" {% if config.pontoagua %}checked{% endif %}>if %}>
+            <input class="form-check-input" type="checkbox" id="chkPontosAgua" {% if config.pontoagua %}checked{% endif %}>
             <label class="form-check-label" for="chkPontosAgua">💧 Pontos de Água</label>
         </div>
     </div>
@@ -259,7 +268,7 @@
     </div>
 
     <!-- 5. Pontos de Água (Mapa com Leaflet/OpenStreetMap) -->
-    <div class="col-md-6 monitor-card" id="card-pontos-agua" style="{% if not config.pontos_agua %}display: none;{% endif %}">
+    <div class="col-md-6 monitor-card" id="card-pontos-agua" style="{% if not config.pontoagua %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-droplet me-2"></i> Pontos de Água</span>
@@ -439,12 +448,6 @@
         .then(data => {
             if (data.success) {
                 console.log('Configuração guardada com sucesso');
-                // Atualizar visibilidade
-                cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
-                // Se a checkbox foi marcada e o mapa ainda não foi inicializado, inicializar
-                if (chkPontosAgua.checked && !window.mapaAgua) {
-                    setTimeout(inicializarMapa, 500);
-                }
             }
         })
         .catch(err => console.error('Erro ao guardar configuração:', err));
@@ -455,28 +458,13 @@
         cardGoogleMaps.style.display = chkGoogleMaps.checked ? '' : 'none';
         cardBombeiros.style.display = chkBombeiros.checked ? '' : 'none';
         cardIpma.style.display = chkIpma.checked ? '' : 'none';
-        cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
         saveConfig();
-
-        // Se a checkbox foi marcada e o mapa ainda não foi inicializado, inicializar
-        if (chkPontosAgua.checked && !window.mapaAgua) {
-            setTimeout(inicializarMapa, 500);
-        }
     }
 
     chkFogos.addEventListener('change', updateVisibility);
     chkGoogleMaps.addEventListener('change', updateVisibility);
     chkBombeiros.addEventListener('change', updateVisibility);
     chkIpma.addEventListener('change', updateVisibility);
-    chkPontosAgua.addEventListener('change', updateVisibility);
-
-    // Inicializar a visibilidade na carga da página
-    document.addEventListener('DOMContentLoaded', function() {
-        cardPontosAgua.style.display = chkPontosAgua.checked ? '' : 'none';
-        if (chkPontosAgua.checked) {
-            setTimeout(inicializarMapa, 500);
-        }
-    });
 
     // ========== COORDENADAS E ROTAS ==========
     const coordsInput = document.getElementById('coordsInput');
@@ -831,6 +819,8 @@
     let pontosMarkers = [];
     let todosPontos = [];
     let mapaInicializado = false;
+    let tentativasInicializacao = 0;
+    const MAX_TENTATIVAS = 5;
 
     // Cores por tipo de ponto
     const coresPorTipo = {
@@ -847,15 +837,45 @@
     }
 
     function inicializarMapa() {
-        const container = document.getElementById('mapaPontosAgua');
-        if (!container) {
-            setTimeout(inicializarMapa, 500);
+        // Só inicializar se a checkbox estiver marcada
+        if (!chkPontosAgua.checked) {
+            console.log("Checkbox Pontos de Água não marcada, mapa não inicializado");
             return;
         }
 
-        if (mapaInicializado) return;
+        // Se já foi inicializado, não inicializar novamente
+        if (mapaInicializado && mapaAgua) {
+            console.log("Mapa já inicializado");
+            setTimeout(() => {
+                if (mapaAgua) mapaAgua.invalidateSize();
+            }, 100);
+            return;
+        }
+
+        const container = document.getElementById('mapaPontosAgua');
+        if (!container) {
+            console.log("Container mapaPontosAgua não encontrado");
+            if (tentativasInicializacao < MAX_TENTATIVAS) {
+                tentativasInicializacao++;
+                setTimeout(inicializarMapa, 500);
+            }
+            return;
+        }
+
+        // Verificar se o container está visível
+        if (container.offsetParent === null) {
+            console.log("Container não visível, aguardando...");
+            if (tentativasInicializacao < MAX_TENTATIVAS) {
+                tentativasInicializacao++;
+                setTimeout(inicializarMapa, 500);
+            }
+            return;
+        }
 
         try {
+            // Limpar o container antes de criar o mapa
+            container.innerHTML = '';
+
             mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 12);
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -867,6 +887,9 @@
 
             mapaInicializado = true;
             window.mapaAgua = mapaAgua;
+            tentativasInicializacao = 0;
+
+            console.log("Mapa inicializado com sucesso");
 
             // Carregar pontos
             carregarTodosPontos();
@@ -876,15 +899,19 @@
                 abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
             });
 
-            console.log("Mapa inicializado com sucesso");
-
         } catch (err) {
             console.error("Erro ao inicializar mapa:", err);
             container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa.</p></div>';
+            mapaInicializado = false;
         }
     }
 
     function carregarTodosPontos() {
+        if (!mapaAgua || !mapaInicializado) {
+            setTimeout(() => carregarTodosPontos(), 500);
+            return;
+        }
+
         fetch('/api/pontos-agua')
             .then(response => response.json())
             .then(data => {
@@ -911,7 +938,9 @@
         }
 
         // Limpar marcadores existentes
-        pontosMarkers.forEach(marker => mapaAgua.removeLayer(marker));
+        pontosMarkers.forEach(marker => {
+            if (mapaAgua) mapaAgua.removeLayer(marker);
+        });
         pontosMarkers = [];
 
         pontosFiltrados.forEach(feature => {
@@ -1032,6 +1061,31 @@
         });
     }
 
+    // ========== GERIR CHECKBOX PONTOS DE ÁGUA ==========
+    function onCheckboxPontosAguaChange() {
+        if (chkPontosAgua.checked) {
+            // Mostrar o cartão
+            cardPontosAgua.style.display = '';
+            // Inicializar o mapa após um pequeno delay
+            setTimeout(() => {
+                inicializarMapa();
+            }, 200);
+        } else {
+            // Esconder o cartão
+            cardPontosAgua.style.display = 'none';
+            // Destruir o mapa para libertar recursos
+            if (mapaAgua) {
+                mapaAgua.remove();
+                mapaAgua = null;
+                mapaInicializado = false;
+            }
+        }
+        saveConfig();
+    }
+
+    // Adicionar event listener para a checkbox de pontos de água
+    chkPontosAgua.addEventListener('change', onCheckboxPontosAguaChange);
+
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
         if (mapaAgua && mapaInicializado) {
             const center = mapaAgua.getCenter();
@@ -1045,9 +1099,9 @@
         aplicarFiltros();
     });
 
-    // Iniciar mapa se a checkbox estiver marcada
+    // Inicializar mapa apenas se a checkbox estiver marcada na carga da página
     if (chkPontosAgua.checked) {
-        inicializarMapa();
+        setTimeout(inicializarMapa, 500);
     }
 </script>
 
