@@ -57,6 +57,19 @@
         color: #6c757d;
         flex-direction: column;
     }
+    .btn-guardar-coords {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        margin-left: 8px;
+    }
+    .btn-guardar-coords:hover {
+        background-color: #218838;
+    }
 </style>
 
 <!-- Leaflet CSS e JS -->
@@ -145,7 +158,7 @@
 
 <!-- ========== CARTÕES DOS VISUALIZADORES ========== -->
 <div class="row g-4" id="monitor-cards">
-    <!-- 1. Fogos.pt - Incêndios Ativos -->
+    <!-- 1. Fogos.pt - Incêndios Ativos (com botão para guardar coordenadas) -->
     <div class="col-md-6 monitor-card" id="card-fogos" style="{% if not config.fogos %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
@@ -175,8 +188,11 @@
                         referrerpolicy="no-referrer">
                 </iframe>
             </div>
-            <div class="card-footer text-muted small">
-                Fonte: <a href="https://www.fogos.pt" target="_blank">fogos.pt</a>
+            <div class="card-footer text-muted small d-flex justify-content-between align-items-center">
+                <span>Fonte: <a href="https://www.fogos.pt" target="_blank">fogos.pt</a></span>
+                <button id="btnGuardarCoordenadasFogos" class="btn-guardar-coords">
+                    <i class="bi bi-droplet"></i> Guardar coordenadas do mapa
+                </button>
             </div>
         </div>
     </div>
@@ -267,7 +283,7 @@
         </div>
     </div>
 
-    <!-- 5. Pontos de Água (Mapa com Leaflet/OpenStreetMap) -->
+    <!-- 5. Pontos de Água (Mapa com Leaflet - Vista Satélite) -->
     <div class="col-md-6 monitor-card" id="card-pontos-agua" style="{% if not config.pontoagua %}display: none;{% endif %}">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
@@ -443,19 +459,9 @@
             ipma: chkIpma.checked,
             pontoagua: chkPontosAgua.checked
         };
-
-        fetch('/monitor/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Configuração guardada com sucesso');
-            }
-        })
-        .catch(err => console.error('Erro ao guardar configuração:', err));
+        fetch('/monitor/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+            .then(r => r.json()).then(data => { if (data.success) console.log('Configuração guardada'); })
+            .catch(err => console.error('Erro:', err));
     }
 
     function updateVisibility() {
@@ -483,13 +489,9 @@
         if (texto.includes(',')) {
             let limpo = texto.trim().replace(/[^\d.,\-]/g, '');
             let partes = limpo.split(',').map(p => parseFloat(p));
-            if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) {
-                return { lat: partes[0], lng: partes[1] };
-            }
+            if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) return { lat: partes[0], lng: partes[1] };
             partes = limpo.split(/\s+/).map(p => parseFloat(p));
-            if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) {
-                return { lat: partes[0], lng: partes[1] };
-            }
+            if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) return { lat: partes[0], lng: partes[1] };
         }
         const siresp = converterSIRESP(texto);
         if (siresp && !siresp.error) {
@@ -521,38 +523,19 @@
 
     btnRotaAtual.addEventListener('click', () => {
         const coords = parseCoordenadas(coordsInput.value);
-        if (!coords) {
-            coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas para calcular rota.';
-            return;
-        }
+        if (!coords) { coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas.'; return; }
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const origem = { lat: position.coords.latitude, lng: position.coords.longitude };
-                    abrirGoogleMaps(coords.lat, coords.lng, 'directions', origem.lat, origem.lng);
-                    coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> A calcular rota a partir da sua localização atual.';
-                },
-                (error) => {
-                    let msg = 'Não foi possível obter a sua localização. ';
-                    if (error.code === error.PERMISSION_DENIED) msg += 'Permissão negada.';
-                    else if (error.code === error.POSITION_UNAVAILABLE) msg += 'Localização indisponível.';
-                    else msg += 'Erro desconhecido.';
-                    coordStatus.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${msg}`;
-                }
+                (position) => abrirGoogleMaps(coords.lat, coords.lng, 'directions', position.coords.latitude, position.coords.longitude),
+                (error) => { let msg = 'Não foi possível obter a sua localização. ' + (error.code === error.PERMISSION_DENIED ? 'Permissão negada.' : 'Erro desconhecido.'); coordStatus.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${msg}`; }
             );
-        } else {
-            coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> O seu navegador não suporta geolocalização.';
-        }
+        } else { coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> O seu navegador não suporta geolocalização.'; }
     });
 
     btnRotaEscritorio.addEventListener('click', () => {
         const coords = parseCoordenadas(coordsInput.value);
-        if (coords) {
-            abrirGoogleMaps(coords.lat, coords.lng, 'directions', QUARTEL_LAT, QUARTEL_LNG);
-            coordStatus.innerHTML = '<i class="bi bi-info-circle"></i> A calcular rota a partir do quartel.';
-        } else {
-            coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas para calcular rota.';
-        }
+        if (coords) abrirGoogleMaps(coords.lat, coords.lng, 'directions', QUARTEL_LAT, QUARTEL_LNG);
+        else coordStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Coordenadas inválidas.';
     });
 
     // ========== FORMATAÇÃO E CONVERSÃO SIRESP ==========
@@ -565,167 +548,81 @@
 
     function formatarCoordenadaSIRESP(inputText) {
         let numeros = inputText.replace(/[^\d]/g, '');
-        let latNumeros = '';
-        let lngNumeros = '';
-
+        let latNumeros = '', lngNumeros = '';
         if (inputText.includes(' ')) {
             let partes = inputText.split(/\s+/);
-            if (partes.length >= 2) {
-                latNumeros = partes[0].replace(/[^\d]/g, '');
-                lngNumeros = partes[1].replace(/[^\d]/g, '');
-            }
+            if (partes.length >= 2) { latNumeros = partes[0].replace(/[^\d]/g, ''); lngNumeros = partes[1].replace(/[^\d]/g, ''); }
         } else {
-            if (numeros.length >= 15) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8, 15);
-            } else if (numeros.length >= 8) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8);
-            }
+            if (numeros.length >= 15) { latNumeros = numeros.substring(0, 8); lngNumeros = numeros.substring(8, 15); }
+            else if (numeros.length >= 8) { latNumeros = numeros.substring(0, 8); lngNumeros = numeros.substring(8); }
         }
-
         let latFormatada = '';
         if (latNumeros.length >= 5) {
-            let graus = latNumeros.substring(0, 2);
-            let minutosInteiros = latNumeros.substring(2, 4);
-            let minutosDecimais = latNumeros.substring(4, 8);
+            let graus = latNumeros.substring(0, 2), minutosInteiros = latNumeros.substring(2, 4), minutosDecimais = latNumeros.substring(4, 8);
             if (minutosDecimais.length < 4) minutosDecimais = minutosDecimais.padEnd(4, '0');
             let minutos = parseInt(minutosInteiros) + (parseInt(minutosDecimais) / 10000);
             latFormatada = `${graus}º${minutos.toFixed(4)}'N`;
-        } else if (latNumeros.length >= 4) {
-            let graus = latNumeros.substring(0, 2);
-            let minutos = latNumeros.substring(2, 4);
-            latFormatada = `${graus}º${minutos}'N`;
-        } else if (latNumeros.length >= 2) {
-            latFormatada = `${latNumeros.substring(0, 2)}ºN`;
-        }
-
+        } else if (latNumeros.length >= 4) { latFormatada = `${latNumeros.substring(0, 2)}º${latNumeros.substring(2, 4)}'N`; }
+        else if (latNumeros.length >= 2) { latFormatada = `${latNumeros.substring(0, 2)}ºN`; }
         let lngFormatada = '';
         if (lngNumeros.length >= 6) {
             let graus, minutosInteiros, minutosDecimais;
-            if (lngNumeros.length >= 7) {
-                graus = lngNumeros.substring(0, 3);
-                minutosInteiros = lngNumeros.substring(3, 5);
-                minutosDecimais = lngNumeros.substring(5, 9);
-            } else {
-                graus = lngNumeros.substring(0, 2);
-                minutosInteiros = lngNumeros.substring(2, 4);
-                minutosDecimais = lngNumeros.substring(4, 8);
-            }
+            if (lngNumeros.length >= 7) { graus = lngNumeros.substring(0, 3); minutosInteiros = lngNumeros.substring(3, 5); minutosDecimais = lngNumeros.substring(5, 9); }
+            else { graus = lngNumeros.substring(0, 2); minutosInteiros = lngNumeros.substring(2, 4); minutosDecimais = lngNumeros.substring(4, 8); }
             if (minutosDecimais.length < 4) minutosDecimais = minutosDecimais.padEnd(4, '0');
             let minutos = parseInt(minutosInteiros) + (parseInt(minutosDecimais) / 10000);
             lngFormatada = `${graus}º${minutos.toFixed(4)}'O`;
-        } else if (lngNumeros.length >= 4) {
-            let graus = lngNumeros.substring(0, 2);
-            let minutos = lngNumeros.substring(2, 4);
-            lngFormatada = `${graus}º${minutos}'O`;
-        } else if (lngNumeros.length >= 2) {
-            lngFormatada = `${lngNumeros.substring(0, 2)}ºO`;
-        }
-
+        } else if (lngNumeros.length >= 4) { lngFormatada = `${lngNumeros.substring(0, 2)}º${lngNumeros.substring(2, 4)}'O`; }
+        else if (lngNumeros.length >= 2) { lngFormatada = `${lngNumeros.substring(0, 2)}ºO`; }
         if (latFormatada && lngFormatada) return `${latFormatada} ${lngFormatada}`;
         return latFormatada || '';
     }
 
     function atualizarPreview() {
         const rawValue = sirespInput.value;
-        if (!rawValue.trim()) {
-            sirespPreview.innerHTML = '';
-            return;
-        }
+        if (!rawValue.trim()) { sirespPreview.innerHTML = ''; return; }
         const formatado = formatarCoordenadaSIRESP(rawValue);
-        if (formatado) {
-            sirespPreview.innerHTML = `<strong>Pré-visualização:</strong> ${formatado}`;
-        } else {
-            sirespPreview.innerHTML = '<span class="text-muted">Aguardando números...</span>';
-        }
+        if (formatado) sirespPreview.innerHTML = `<strong>Pré-visualização:</strong> ${formatado}`;
+        else sirespPreview.innerHTML = '<span class="text-muted">Aguardando números...</span>';
     }
 
     sirespInput.addEventListener('input', atualizarPreview);
-    sirespInput.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            btnConverterSIRESP.click();
-        }
-    });
+    sirespInput.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); btnConverterSIRESP.click(); } });
 
     function converterSIRESP(sirespString) {
         let texto = sirespString.trim();
         let numeros = texto.replace(/[^\d]/g, '');
-        let latNumeros = '';
-        let lngNumeros = '';
-
+        let latNumeros = '', lngNumeros = '';
         if (texto.includes(' ')) {
             let partes = texto.split(/\s+/);
-            if (partes.length >= 2) {
-                latNumeros = partes[0].replace(/[^\d]/g, '');
-                lngNumeros = partes[1].replace(/[^\d]/g, '');
-            }
+            if (partes.length >= 2) { latNumeros = partes[0].replace(/[^\d]/g, ''); lngNumeros = partes[1].replace(/[^\d]/g, ''); }
         } else {
-            if (numeros.length >= 15) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8, 15);
-            } else if (numeros.length >= 8) {
-                latNumeros = numeros.substring(0, 8);
-                lngNumeros = numeros.substring(8);
-            } else {
-                return { error: 'Número insuficiente de dígitos. Mínimo 8 dígitos para latitude.' };
-            }
+            if (numeros.length >= 15) { latNumeros = numeros.substring(0, 8); lngNumeros = numeros.substring(8, 15); }
+            else if (numeros.length >= 8) { latNumeros = numeros.substring(0, 8); lngNumeros = numeros.substring(8); }
+            else return { error: 'Número insuficiente de dígitos. Mínimo 8 dígitos para latitude.' };
         }
-
-        if (latNumeros.length < 5) {
-            return { error: 'Latitude inválida. Formato: GGMMSSSS (8 dígitos)' };
-        }
-
+        if (latNumeros.length < 5) return { error: 'Latitude inválida. Formato: GGMMSSSS (8 dígitos)' };
         let latGraus = parseInt(latNumeros.substring(0, 2));
         let latMinutosInteiros = parseInt(latNumeros.substring(2, 4));
         let latMinutosDecimais = parseInt(latNumeros.substring(4, 8)) / 10000;
-        let latMinutosTotal = latMinutosInteiros + latMinutosDecimais;
-        let lat = latGraus + (latMinutosTotal / 60);
-
+        let lat = latGraus + ((latMinutosInteiros + latMinutosDecimais) / 60);
         let lngGraus, lngMinutosInteiros, lngMinutosDecimais;
-        if (lngNumeros.length >= 7) {
-            lngGraus = parseInt(lngNumeros.substring(0, 3));
-            lngMinutosInteiros = parseInt(lngNumeros.substring(3, 5));
-            lngMinutosDecimais = parseInt(lngNumeros.substring(5, 9)) / 10000;
-        } else if (lngNumeros.length >= 6) {
-            lngGraus = parseInt(lngNumeros.substring(0, 2));
-            lngMinutosInteiros = parseInt(lngNumeros.substring(2, 4));
-            lngMinutosDecimais = parseInt(lngNumeros.substring(4, 8)) / 10000;
-        } else {
-            return { error: 'Longitude inválida. Mínimo 6 dígitos.' };
-        }
-
-        let lngMinutosTotal = lngMinutosInteiros + lngMinutosDecimais;
-        let lng = lngGraus + (lngMinutosTotal / 60);
+        if (lngNumeros.length >= 7) { lngGraus = parseInt(lngNumeros.substring(0, 3)); lngMinutosInteiros = parseInt(lngNumeros.substring(3, 5)); lngMinutosDecimais = parseInt(lngNumeros.substring(5, 9)) / 10000; }
+        else if (lngNumeros.length >= 6) { lngGraus = parseInt(lngNumeros.substring(0, 2)); lngMinutosInteiros = parseInt(lngNumeros.substring(2, 4)); lngMinutosDecimais = parseInt(lngNumeros.substring(4, 8)) / 10000; }
+        else return { error: 'Longitude inválida. Mínimo 6 dígitos.' };
+        let lng = lngGraus + ((lngMinutosInteiros + lngMinutosDecimais) / 60);
         lng = -lng;
-
         return { lat: lat, lng: lng };
     }
 
     btnConverterSIRESP.addEventListener('click', () => {
         const input = sirespInput.value.trim();
-        if (!input) {
-            sirespStatus.className = 'alert alert-danger';
-            sirespStatus.innerHTML = 'Por favor, insira uma coordenada.';
-            sirespStatus.classList.remove('d-none');
-            return;
-        }
-
+        if (!input) { sirespStatus.className = 'alert alert-danger'; sirespStatus.innerHTML = 'Por favor, insira uma coordenada.'; sirespStatus.classList.remove('d-none'); return; }
         const resultado = converterSIRESP(input);
-        if (resultado.error) {
-            sirespStatus.className = 'alert alert-danger';
-            sirespStatus.innerHTML = resultado.error;
-            sirespStatus.classList.remove('d-none');
-            btnUsarCoordenadas.disabled = true;
-            return;
-        }
-
+        if (resultado.error) { sirespStatus.className = 'alert alert-danger'; sirespStatus.innerHTML = resultado.error; sirespStatus.classList.remove('d-none'); btnUsarCoordenadas.disabled = true; return; }
         const coordsText = `${resultado.lat.toFixed(6)}, ${resultado.lng.toFixed(6)}`;
         coordsConvertidas.value = coordsText;
-        sirespStatus.className = 'alert alert-success';
-        sirespStatus.innerHTML = `Conversão bem-sucedida! Latitude: ${resultado.lat.toFixed(6)}, Longitude: ${resultado.lng.toFixed(6)}`;
-        sirespStatus.classList.remove('d-none');
+        sirespStatus.className = 'alert alert-success'; sirespStatus.innerHTML = `Conversão bem-sucedida! Latitude: ${resultado.lat.toFixed(6)}, Longitude: ${resultado.lng.toFixed(6)}`; sirespStatus.classList.remove('d-none');
         btnUsarCoordenadas.disabled = false;
         btnUsarCoordenadas.setAttribute('data-lat', resultado.lat);
         btnUsarCoordenadas.setAttribute('data-lng', resultado.lng);
@@ -741,11 +638,7 @@
     });
 
     btnAbrirSIRESP.addEventListener('click', () => {
-        sirespInput.value = '';
-        coordsConvertidas.value = '';
-        sirespStatus.classList.add('d-none');
-        sirespPreview.innerHTML = '';
-        btnUsarCoordenadas.disabled = true;
+        sirespInput.value = ''; coordsConvertidas.value = ''; sirespStatus.classList.add('d-none'); sirespPreview.innerHTML = ''; btnUsarCoordenadas.disabled = true;
         new bootstrap.Modal(document.getElementById('modalSIRESP')).show();
     });
 
@@ -762,38 +655,15 @@
             }
         });
     });
-
-    document.getElementById('modalExpand').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('fullscreenIframe').src = '';
-    });
+    document.getElementById('modalExpand').addEventListener('hidden.bs.modal', () => { document.getElementById('fullscreenIframe').src = ''; });
 
     // ========== FECHAR E REABRIR CARTÕES ==========
     const reopenButtonsDiv = document.getElementById('reopen-buttons');
     let closedCards = {};
-
     document.querySelectorAll('.close-card').forEach(button => {
-        button.addEventListener('click', function() {
-            const cardDiv = this.closest('.monitor-card');
-            const cardId = cardDiv.id;
-            if (cardId) {
-                closedCards[cardId] = true;
-                cardDiv.classList.add('card-closed');
-                reopenButtonsDiv.style.display = 'block';
-            }
-        });
+        button.addEventListener('click', () => { const cardDiv = this.closest('.monitor-card'); const cardId = cardDiv.id; if (cardId) { closedCards[cardId] = true; cardDiv.classList.add('card-closed'); reopenButtonsDiv.style.display = 'block'; } });
     });
-
-    function reopenCard(cardId) {
-        const card = document.getElementById(cardId);
-        if (card) {
-            card.classList.remove('card-closed');
-            delete closedCards[cardId];
-            if (Object.keys(closedCards).length === 0) {
-                reopenButtonsDiv.style.display = 'none';
-            }
-        }
-    }
-
+    function reopenCard(cardId) { const card = document.getElementById(cardId); if (card) { card.classList.remove('card-closed'); delete closedCards[cardId]; if (Object.keys(closedCards).length === 0) reopenButtonsDiv.style.display = 'none'; } }
     document.getElementById('reopen-fogos')?.addEventListener('click', () => reopenCard('card-fogos'));
     document.getElementById('reopen-google-maps')?.addEventListener('click', () => reopenCard('card-google-maps'));
     document.getElementById('reopen-bombeiros')?.addEventListener('click', () => reopenCard('card-bombeiros'));
@@ -802,89 +672,60 @@
 
     // ========== FILTRAR FOGOS.PT ==========
     const fogosFrame = document.getElementById('fogosFrame');
-    const filterButton = document.querySelector('.filter-portalegre');
-    const resetButton = document.querySelector('.reset-map');
-    if (filterButton) {
-        filterButton.addEventListener('click', () => {
-            if (fogosFrame) {
-                fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre';
-            }
-        });
-    }
-    if (resetButton) {
-        resetButton.addEventListener('click', () => {
-            if (fogosFrame) {
-                fogosFrame.src = 'https://www.fogos.pt';
-            }
-        });
-    }
+    document.querySelector('.filter-portalegre')?.addEventListener('click', () => { if (fogosFrame) fogosFrame.src = 'https://www.fogos.pt/?s=Portalegre#gsc.tab=0&gsc.q=Portalegre'; });
+    document.querySelector('.reset-map')?.addEventListener('click', () => { if (fogosFrame) fogosFrame.src = 'https://www.fogos.pt'; });
 
-    // ========== PONTOS DE ÁGUA (LEAFLET / OPENSTREETMAP) ==========
-    let mapaAgua = null;
-    let pontosMarkers = [];
-    let todosPontos = [];
-    let mapaInicializado = false;
-    let tentativasInicializacao = 0;
+    // ========== GUARDAR COORDENADAS DO MAPA (Fogos.pt) ==========
+    document.getElementById('btnGuardarCoordenadasFogos')?.addEventListener('click', () => {
+        // Tentar obter a localização central do iframe? Não é possível diretamente.
+        // Alternativa: pedir ao utilizador para inserir as coordenadas do incêndio
+        const latStr = prompt('Digite a latitude do local (ex: 39.514699):', QUARTEL_LAT);
+        const lngStr = prompt('Digite a longitude do local (ex: -7.651982):', QUARTEL_LNG);
+        if (!latStr || !lngStr) return;
+        const lat = parseFloat(latStr.replace(',', '.'));
+        const lng = parseFloat(lngStr.replace(',', '.'));
+        if (isNaN(lat) || isNaN(lng)) { alert('Coordenadas inválidas!'); return; }
+
+        const tipo = prompt('Tipo de ponto de água:', 'Hidrante');
+        if (!tipo) return;
+        const nome = prompt('Nome do ponto de água:', 'Ponto de água - Incêndio');
+        if (!nome) return;
+        const freguesia = prompt('Freguesia:', 'Nisa');
+        const descricao = prompt('Descrição (opcional):', '');
+        const capacidade = prompt('Capacidade (opcional):', '');
+
+        fetch('/api/pontos-agua', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade })
+        }).then(r => r.json()).then(data => { if (data.success) { alert('Ponto de água adicionado com sucesso!'); if (chkPontosAgua.checked) carregarTodosPontos(); } else { alert('Erro ao adicionar ponto.'); } });
+    });
+
+    // ========== PONTOS DE ÁGUA (LEAFLET / OPENSTREETMAP - VISTA SATÉLITE) ==========
+    let mapaAgua = null, pontosMarkers = [], todosPontos = [], mapaInicializado = false, tentativasInicializacao = 0;
     const MAX_TENTATIVAS = 5;
-
-    // Cores por tipo de ponto
-    const coresPorTipo = {
-        'Hidrante': '#dc3545',
-        'Tanque': '#0d6efd',
-        'Rio': '#0dcaf0',
-        'Barragem': '#0d6efd',
-        'Poço': '#198754',
-        'Outro': '#fd7e14'
-    };
-
-    function getIconColor(tipo) {
-        return coresPorTipo[tipo] || '#6c757d';
-    }
+    const coresPorTipo = { 'Hidrante': '#dc3545', 'Tanque': '#0d6efd', 'Rio': '#0dcaf0', 'Barragem': '#0d6efd', 'Poço': '#198754', 'Outro': '#fd7e14' };
+    function getIconColor(tipo) { return coresPorTipo[tipo] || '#6c757d'; }
 
     function inicializarMapa() {
-        if (!chkPontosAgua.checked) {
-            console.log("Checkbox não marcada");
-            return;
-        }
-
-        if (mapaInicializado && mapaAgua) {
-            setTimeout(() => { if (mapaAgua) mapaAgua.invalidateSize(); }, 100);
-            return;
-        }
-
+        if (!chkPontosAgua.checked) { console.log("Checkbox não marcada"); return; }
+        if (mapaInicializado && mapaAgua) { setTimeout(() => { if (mapaAgua) mapaAgua.invalidateSize(); }, 100); return; }
         const container = document.getElementById('mapaPontosAgua');
-        if (!container) {
-            if (tentativasInicializacao < MAX_TENTATIVAS) {
-                tentativasInicializacao++;
-                setTimeout(inicializarMapa, 500);
-            }
+        if (!container || container.offsetParent === null) {
+            if (tentativasInicializacao < MAX_TENTATIVAS) { tentativasInicializacao++; setTimeout(inicializarMapa, 500); }
             return;
         }
-
-        if (container.offsetParent === null) {
-            if (tentativasInicializacao < MAX_TENTATIVAS) {
-                tentativasInicializacao++;
-                setTimeout(inicializarMapa, 500);
-            }
-            return;
-        }
-
         try {
             container.innerHTML = '';
-            mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
+            mapaAgua = L.map('mapaPontosAgua').setView([QUARTEL_LAT, QUARTEL_LNG], 14);
+            // Vista Satélite (Esri World Imagery)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>',
                 maxZoom: 19,
                 minZoom: 6
             }).addTo(mapaAgua);
-
-            mapaInicializado = true;
-            window.mapaAgua = mapaAgua;
-            tentativasInicializacao = 0;
-
+            mapaInicializado = true; window.mapaAgua = mapaAgua; tentativasInicializacao = 0;
             carregarTodosPontos();
-
             mapaAgua.on('click', function(e) {
                 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
                 abrirModalAdicionarPonto(e.latlng.lat, e.latlng.lng);
@@ -892,107 +733,49 @@
                 alert('Apenas Administradores, Comando e Responsáveis de Fardamento podem adicionar pontos.');
                 {% endif %}
             });
-
-        } catch (err) {
-            console.error("Erro:", err);
-            container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa.</p></div>';
-            mapaInicializado = false;
-        }
+        } catch (err) { console.error("Erro:", err); container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa.</p></div>'; mapaInicializado = false; }
     }
 
     function carregarTodosPontos() {
-        if (!mapaAgua || !mapaInicializado) {
-            setTimeout(() => carregarTodosPontos(), 500);
-            return;
-        }
-
-        fetch('/api/pontos-agua')
-            .then(response => response.json())
-            .then(data => {
-                todosPontos = data.features || [];
-                aplicarFiltros();
-            })
-            .catch(err => console.error("Erro:", err));
+        if (!mapaAgua || !mapaInicializado) { setTimeout(() => carregarTodosPontos(), 500); return; }
+        fetch('/api/pontos-agua').then(r => r.json()).then(data => { todosPontos = data.features || []; aplicarFiltros(); }).catch(err => console.error("Erro:", err));
     }
 
     function aplicarFiltros() {
         if (!mapaAgua || !mapaInicializado) return;
-
         const freguesiaFiltro = document.getElementById('filtroFreguesia').value;
         const tipoFiltro = document.getElementById('filtroTipo').value;
-
         let pontosFiltrados = todosPontos;
         if (freguesiaFiltro) pontosFiltrados = pontosFiltrados.filter(p => p.properties.freguesia === freguesiaFiltro);
         if (tipoFiltro) pontosFiltrados = pontosFiltrados.filter(p => p.properties.tipo === tipoFiltro);
-
-        pontosMarkers.forEach(marker => { if (mapaAgua) mapaAgua.removeLayer(marker); });
+        pontosMarkers.forEach(m => { if (mapaAgua) mapaAgua.removeLayer(m); });
         pontosMarkers = [];
-
         pontosFiltrados.forEach(feature => {
             const coords = feature.geometry.coordinates;
             const props = feature.properties;
             const cor = getIconColor(props.tipo);
-
-            const markerIcon = L.divIcon({
-                html: `<i class="bi bi-droplet-fill" style="color: ${cor}; font-size: 22px; text-shadow: 0 0 2px white;"></i>`,
-                iconSize: [22, 22],
-                className: 'custom-marker',
-                popupAnchor: [0, -10]
-            });
-
-            const marker = L.marker([coords[1], coords[0]], { icon: markerIcon, title: props.nome }).addTo(mapaAgua);
-
+            const marker = L.marker([coords[1], coords[0]], {
+                icon: L.divIcon({ html: `<i class="bi bi-droplet-fill" style="color: ${cor}; font-size: 22px; text-shadow: 0 0 2px white;"></i>`, iconSize: [22, 22], className: 'custom-marker', popupAnchor: [0, -10] }),
+                title: props.nome
+            }).addTo(mapaAgua);
             const coordenadasText = `${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}`;
             marker.bindTooltip(coordenadasText, { permanent: false, direction: 'top', className: 'coordenada-tooltip' });
-
-            let popupContent = `
-                <div style="font-size: 12px; min-width: 180px;">
-                    <strong><i class="bi bi-droplet-fill" style="color: ${cor};"></i> ${escapeHtml(props.nome)}</strong><br>
-                    Tipo: ${escapeHtml(props.tipo)}<br>
-                    ${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}
-                    ${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}
-                    ${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}
-                    <hr class="my-1">
-                    <small>Coordenadas: ${coordenadasText}</small><br>
-                    <button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="copiarCoordenadas('${coordenadasText}')">
-                        <i class="bi bi-clipboard"></i> Copiar coordenadas
-                    </button>
-            `;
-
+            let popupContent = `<div style="font-size: 12px; min-width: 180px;"><strong><i class="bi bi-droplet-fill" style="color: ${cor};"></i> ${escapeHtml(props.nome)}</strong><br>Tipo: ${escapeHtml(props.tipo)}<br>${props.freguesia ? `Freguesia: ${escapeHtml(props.freguesia)}<br>` : ''}${props.descricao ? `Descrição: ${escapeHtml(props.descricao)}<br>` : ''}${props.capacidade ? `Capacidade: ${escapeHtml(props.capacidade)}<br>` : ''}<hr class="my-1"><small>Coordenadas: ${coordenadasText}</small><br><button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="copiarCoordenadas('${coordenadasText}')"><i class="bi bi-clipboard"></i> Copiar coordenadas</button>`;
             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
-            popupContent += `
-                    <button class="btn btn-sm btn-danger mt-1 w-100" onclick="eliminarPonto(${props.id})">
-                        <i class="bi bi-trash"></i> Eliminar
-                    </button>
-            `;
+            popupContent += `<button class="btn btn-sm btn-danger mt-1 w-100" onclick="eliminarPonto(${props.id})"><i class="bi bi-trash"></i> Eliminar</button>`;
             {% endif %}
-
             popupContent += `</div>`;
             marker.bindPopup(popupContent);
             pontosMarkers.push(marker);
         });
-
-        if (pontosMarkers.length > 0 && pontosFiltrados.length !== todosPontos.length) {
-            const group = L.featureGroup(pontosMarkers);
-            mapaAgua.fitBounds(group.getBounds().pad(0.1));
-        }
+        if (pontosMarkers.length > 0 && pontosFiltrados.length !== todosPontos.length) { const group = L.featureGroup(pontosMarkers); mapaAgua.fitBounds(group.getBounds().pad(0.1)); }
     }
 
-    window.copiarCoordenadas = function(coordenadas) {
-        navigator.clipboard.writeText(coordenadas);
-        alert(`Coordenadas copiadas: ${coordenadas}`);
-    };
-
-    window.eliminarPonto = function(id) {
-        if (!confirm('Tem a certeza que pretende eliminar este ponto de água?')) return;
-        fetch(`/api/pontos-agua/${id}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto eliminado!'); } });
-    };
+    window.copiarCoordenadas = function(coordenadas) { navigator.clipboard.writeText(coordenadas); alert(`Coordenadas copiadas: ${coordenadas}`); };
+    window.eliminarPonto = function(id) { if (!confirm('Eliminar ponto?')) return; fetch(`/api/pontos-agua/${id}`, { method: 'DELETE' }).then(r => r.json()).then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto eliminado!'); } }); };
 
     function abrirModalAdicionarPonto(lat, lng) {
         if (lat !== undefined && lng !== undefined) {
-            // Clique no mapa
             const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Barragem/Poço/Outro):', 'Hidrante');
             if (!tipo) return;
             const nome = prompt('Nome do ponto de água:', 'Novo Ponto');
@@ -1000,21 +783,14 @@
             const freguesia = prompt('Freguesia:', 'Nisa');
             const descricao = prompt('Descrição (opcional):', '');
             const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
-
-            fetch('/api/pontos-agua', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade })
-            }).then(r => r.json()).then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto adicionado!'); } });
+            fetch('/api/pontos-agua', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade }) }).then(r => r.json()).then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto adicionado!'); } });
         } else {
-            // Botão +
             const latStr = prompt('Latitude:', QUARTEL_LAT);
             const lngStr = prompt('Longitude:', QUARTEL_LNG);
             if (!latStr || !lngStr) return;
             const lat = parseFloat(latStr.replace(',', '.'));
             const lng = parseFloat(lngStr.replace(',', '.'));
             if (isNaN(lat) || isNaN(lng)) { alert('Coordenadas inválidas!'); return; }
-
             const tipo = prompt('Tipo (Hidrante/Tanque/Rio/Barragem/Poço/Outro):', 'Hidrante');
             if (!tipo) return;
             const nome = prompt('Nome do ponto de água:', 'Novo Ponto');
@@ -1022,36 +798,20 @@
             const freguesia = prompt('Freguesia:', 'Nisa');
             const descricao = prompt('Descrição (opcional):', '');
             const capacidade = prompt('Capacidade (opcional, ex: 5000L):', '');
-
-            fetch('/api/pontos-agua', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade })
-            }).then(r => r.json()).then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto adicionado!'); } });
+            fetch('/api/pontos-agua', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, tipo, latitude: lat, longitude: lng, freguesia, descricao, capacidade }) }).then(r => r.json()).then(data => { if (data.success) { carregarTodosPontos(); alert('Ponto adicionado!'); } });
         }
     }
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : (m === '>' ? '&gt;' : m)));
-    }
+    function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : (m === '>' ? '&gt;' : m))); }
 
     function onCheckboxPontosAguaChange() {
-        if (chkPontosAgua.checked) {
-            cardPontosAgua.style.display = '';
-            setTimeout(() => inicializarMapa(), 200);
-        } else {
-            cardPontosAgua.style.display = 'none';
-            if (mapaAgua) { mapaAgua.remove(); mapaAgua = null; mapaInicializado = false; }
-        }
+        if (chkPontosAgua.checked) { cardPontosAgua.style.display = ''; setTimeout(() => inicializarMapa(), 200); }
+        else { cardPontosAgua.style.display = 'none'; if (mapaAgua) { mapaAgua.remove(); mapaAgua = null; mapaInicializado = false; } }
         saveConfig();
     }
-
     chkPontosAgua.addEventListener('change', onCheckboxPontosAguaChange);
-
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => abrirModalAdicionarPonto());
     document.getElementById('btnFiltrarPontos')?.addEventListener('click', () => aplicarFiltros());
-
     if (chkPontosAgua.checked) setTimeout(inicializarMapa, 500);
 </script>
 
