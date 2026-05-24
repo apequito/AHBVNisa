@@ -36,6 +36,9 @@
         color: #6c757d;
         flex-direction: column;
     }
+    .gm-style .gm-style-iw-c {
+        padding: 12px !important;
+    }
 </style>
 
 <!-- ========== TOPO COM RELÓGIO ========== -->
@@ -252,7 +255,7 @@
         </div>
     </div>
 
-    <!-- 5. Pontos de Água (Mapa Interativo) -->
+    <!-- 5. Pontos de Água (Mapa Interativo - VERSÃO CORRIGIDA) -->
     <div class="col-md-6 monitor-card" id="card-pontos-agua">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
@@ -281,12 +284,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="mapaPontosAgua" style="height: 500px; width: 100%;">
-                    <div class="map-placeholder">
-                        <i class="bi bi-map fs-1 mb-2"></i>
-                        <p>Carregando mapa...</p>
-                    </div>
-                </div>
+                <div id="mapaPontosAgua" style="height: 500px; width: 100%;"></div>
             </div>
             <div class="card-footer text-muted small">
                 Clique no mapa para adicionar um ponto de água. Clique num marcador para ver detalhes.
@@ -359,89 +357,6 @@
         </div>
     </div>
 </div>
-
-<!-- Script da API do Google Maps - Carregamento com verificação -->
-<script>
-    // Variável global para o mapa
-    let mapaAgua = null;
-    let pontosMarkers = [];
-    let mapaInicializado = false;
-
-    // Função que será chamada quando a API carregar
-    window.initMap = function() {
-        console.log("initMap chamado");
-        try {
-            const container = document.getElementById('mapaPontosAgua');
-            if (!container) {
-                console.log("Container mapaPontosAgua não encontrado");
-                return;
-            }
-
-            const quartelPos = { lat: 39.51469904404126, lng: -7.651982289220224 };
-
-            mapaAgua = new google.maps.Map(container, {
-                center: quartelPos,
-                zoom: 12,
-                mapTypeId: 'roadmap',
-                mapTypeControl: true,
-                zoomControl: true,
-                streetViewControl: true
-            });
-
-            mapaInicializado = true;
-            console.log("Mapa inicializado com sucesso");
-
-            // Carregar pontos existentes
-            carregarPontosAgua();
-
-            // Adicionar listener de clique para adicionar pontos
-            mapaAgua.addListener('click', (event) => {
-                abrirModalAdicionarPonto(event.latLng.lat(), event.latLng.lng());
-            });
-
-        } catch (err) {
-            console.error("Erro ao inicializar mapa:", err);
-            mostrarErroMapa();
-        }
-    };
-
-    function mostrarErroMapa() {
-        const container = document.getElementById('mapaPontosAgua');
-        if (container) {
-            container.innerHTML = `
-                <div class="map-placeholder">
-                    <i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i>
-                    <p>Erro ao carregar o mapa. Verifique a chave da API.</p>
-                    <p class="small">Certifique-se que a biblioteca Maps JavaScript API está ativada.</p>
-                </div>
-            `;
-        }
-    }
-
-    // Tentar carregar a API manualmente se o callback não funcionar
-    function carregarGoogleMapsAPI() {
-        if (typeof google !== 'undefined' && google.maps) {
-            console.log("Google Maps já carregado");
-            window.initMap();
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=initMap&v=weekly';
-        script.async = true;
-        script.defer = true;
-        script.onerror = function() {
-            console.error("Falha ao carregar Google Maps API");
-            mostrarErroMapa();
-        };
-        document.head.appendChild(script);
-    }
-
-    // Iniciar carregamento quando a página estiver pronta
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(carregarGoogleMapsAPI, 500);
-    });
-</script>
 
 <script>
     // ========== RELÓGIO ==========
@@ -907,11 +822,58 @@
         });
     }
 
-    // ========== PONTOS DE ÁGUA ==========
+    // ========== PONTOS DE ÁGUA (VERSÃO CORRIGIDA) ==========
+    let mapaAgua = null;
+    let pontosMarkers = [];
+    let mapaInicializado = false;
+
+    function inicializarMapa() {
+        const container = document.getElementById('mapaPontosAgua');
+        if (!container) {
+            console.log("Container não encontrado");
+            return;
+        }
+
+        // Verificar se o container está visível
+        if (container.offsetParent === null) {
+            console.log("Container não visível, aguardando...");
+            setTimeout(inicializarMapa, 500);
+            return;
+        }
+
+        try {
+            mapaAgua = new google.maps.Map(container, {
+                center: { lat: QUARTEL_LAT, lng: QUARTEL_LNG },
+                zoom: 12,
+                mapTypeId: 'roadmap',
+                mapTypeControl: true,
+                zoomControl: true,
+                streetViewControl: true,
+                fullscreenControl: true
+            });
+
+            mapaInicializado = true;
+            console.log("Mapa inicializado com sucesso!");
+
+            // Carregar pontos existentes
+            carregarPontosAgua();
+
+            // Adicionar listener de clique
+            mapaAgua.addListener('click', (event) => {
+                const lat = event.latLng.lat();
+                const lng = event.latLng.lng();
+                abrirModalAdicionarPonto(lat, lng);
+            });
+
+        } catch (err) {
+            console.error("Erro ao inicializar mapa:", err);
+            container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa. Verifique a chave da API.</p></div>';
+        }
+    }
+
     function carregarPontosAgua(filtroConcelho = '') {
-        if (!mapaAgua) {
-            console.log("Mapa não inicializado, aguardando...");
-            setTimeout(() => carregarPontosAgua(filtroConcelho), 1000);
+        if (!mapaAgua || !mapaInicializado) {
+            setTimeout(() => carregarPontosAgua(filtroConcelho), 500);
             return;
         }
 
@@ -923,7 +885,6 @@
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                // Limpar marcadores existentes
                 pontosMarkers.forEach(marker => marker.setMap(null));
                 pontosMarkers = [];
 
@@ -1026,8 +987,31 @@
         });
     }
 
+    // Carregar a API do Google Maps
+    function carregarGoogleMaps() {
+        if (typeof google !== 'undefined' && google.maps) {
+            console.log("Google Maps já carregado");
+            inicializarMapa();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCENfXyr_OoWExRi-hz9ErAsXxQP6BeSZk&callback=inicializarMapa&v=weekly';
+        script.async = true;
+        script.defer = true;
+        script.onerror = function() {
+            console.error("Falha ao carregar Google Maps API");
+            const container = document.getElementById('mapaPontosAgua');
+            if (container) {
+                container.innerHTML = '<div class="map-placeholder"><i class="bi bi-exclamation-triangle-fill fs-1 mb-2 text-danger"></i><p>Erro ao carregar o mapa. Verifique a chave da API.</p></div>';
+            }
+        };
+        document.head.appendChild(script);
+    }
+
+    // Eventos dos botões
     document.getElementById('btnAdicionarPonto')?.addEventListener('click', () => {
-        if (mapaAgua) {
+        if (mapaAgua && mapaInicializado) {
             const center = mapaAgua.getCenter();
             abrirModalAdicionarPonto(center.lat(), center.lng());
         } else {
@@ -1045,8 +1029,19 @@
         carregarPontosAgua();
     });
 
-    // Inicializar histórico
+    document.querySelector('#card-pontos-agua .expand-card')?.addEventListener('click', () => {
+        setTimeout(() => {
+            if (mapaAgua) {
+                google.maps.event.trigger(mapaAgua, 'resize');
+            } else {
+                inicializarMapa();
+            }
+        }, 100);
+    });
+
+    // Iniciar carregamento
     carregarHistorico();
+    carregarGoogleMaps();
 </script>
 
 {% endblock %}
