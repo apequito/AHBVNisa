@@ -512,7 +512,6 @@ def listar_viaturas():
 
     viaturas = Viatura.query.order_by(Viatura.tipo, Viatura.matricula).all()
 
-    # Contagens case‑insensitive
     total_operacionais = Viatura.query.filter(func.lower(Viatura.estado) == 'operacional').count()
     total_inoperacionais = Viatura.query.filter(func.lower(Viatura.estado) == 'inoperacional').count()
     total_manutencao = Viatura.query.filter(func.lower(Viatura.estado) == 'manutenção').count()
@@ -551,7 +550,6 @@ def adicionar_viatura():
 
     flash('Viatura adicionada.', 'success')
     return redirect(url_for('listar_viaturas'))
-
 
 @app.route('/viaturas/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -2320,16 +2318,12 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
-    separador = request.args.get('tipo', 'assalariado')  # 'assalariado', 'ecin', 'todas'
+    separador = request.args.get('tipo', 'assalariado')
 
-    # Verificar se é Central (apenas leitura para aprovações)
-    is_central_readonly = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
+    # Verificar se é Central (apenas leitura para aprovações, mas pode criar)
+    is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
-    # Central não pode criar trocas (apenas visualizar)
-    if request.method == 'POST' and is_central_readonly:
-        flash('A Central não pode criar pedidos de troca.', 'danger')
-        return redirect(url_for('trocas'))
-
+    # Central pode criar as suas próprias trocas (sem restrição)
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
@@ -2369,7 +2363,6 @@ def trocas():
     # --- GET: construir a query base ---
     query = TrocaServico.query
 
-    # Aplicar filtro por tipo de troca
     if separador == 'assalariado':
         sub_assalariado = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
@@ -2394,10 +2387,9 @@ def trocas():
 
     # Permissões de visualização
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
-        # Admin e Comando veem todas as trocas
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     elif current_user.resp_departamento == 'Central':
-        # Central pode ver todas as trocas (apenas leitura)
+        # Central pode ver todas as trocas (apenas leitura para aprovações)
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     else:
         # Utilizador normal vê apenas as suas trocas
@@ -2406,7 +2398,6 @@ def trocas():
             (TrocaServico.bombeiro_destino_id == current_user.id)
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
-    # Listas para formulários
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
     bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
         .filter(
@@ -2421,7 +2412,7 @@ def trocas():
                            bombeiros=bombeiros,
                            bombeiros_assalariados=bombeiros_assalariados,
                            separador_atual=separador,
-                           is_central_readonly=is_central_readonly)
+                           is_central=is_central)
 
 
 @app.route('/trocas/imprimir-ecin')
@@ -2564,6 +2555,8 @@ def determinar_tipo_troca(troca):
 @login_required
 def aceitar_troca(id):
     troca = TrocaServico.query.get_or_404(id)
+
+    # O destinatário pode aceitar (incluindo Central)
     if current_user.id != troca.bombeiro_destino_id:
         flash('Acesso negado.', 'danger')
         return redirect(url_for('trocas'))
@@ -2575,7 +2568,6 @@ def aceitar_troca(id):
     else:
         flash('Estado inválido.', 'warning')
 
-    # --- Determinar o tipo da troca para redirecionar para o separador certo ---
     tipo = determinar_tipo_troca(troca)
     return redirect(url_for('trocas', tipo=tipo))
 
@@ -2584,8 +2576,10 @@ def aceitar_troca(id):
 @login_required
 def recusar_troca(id):
     troca = TrocaServico.query.get_or_404(id)
+
+    # O destinatário ou o requerente podem recusar (incluindo Central)
     if current_user.id not in (troca.bombeiro_origem_id, troca.bombeiro_destino_id) \
-       and not (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando'):
+            and not (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando'):
         flash('Acesso negado.', 'danger')
         return redirect(url_for('trocas'))
 
@@ -2619,7 +2613,6 @@ def aprovar_troca(id):
 
     tipo = determinar_tipo_troca(troca)
 
-    # Atualizar as escalas de serviço
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
         func.date(Escala.data_inicio) == troca.data_origem,
@@ -2637,7 +2630,6 @@ def aprovar_troca(id):
     for escala in escalas_destino:
         escala.bombeiro_id = troca.bombeiro_origem_id
 
-    # Se for ECIN, atualizar também os registos na tabela Ecin
     if tipo == 'ecin':
         ecins_origem = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_origem_id,
@@ -2666,12 +2658,10 @@ def aprovar_troca(id):
 @app.route('/dispensas', methods=['GET', 'POST'])
 @login_required
 def dispensas():
-    # Verificar se é Central (apenas leitura para aprovações, mas pode criar a sua própria)
-    is_central_readonly = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
+    is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
+    # Central pode criar a sua própria dispensa, mas não aprovar
     if request.method == 'POST':
-        # Central pode criar a sua própria dispensa
-        # (não há restrição para criar)
         data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
         data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date()
         motivo = request.form.get('motivo', '')
@@ -2702,9 +2692,8 @@ def dispensas():
         flash('Pedido de dispensa enviado.', 'success')
         return redirect(url_for('dispensas'))
 
-    # --- GET: listagem com permissões ---
+    # GET - listagem com permissões
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
-        # Admin e Comando veem todas as dispensas
         dispensas_lista = Dispensa.query.order_by(Dispensa.id.desc()).all()
     elif current_user.resp_departamento == 'Central':
         # Central pode ver todas as dispensas (apenas leitura para aprovações)
@@ -2713,9 +2702,41 @@ def dispensas():
         # Utilizador normal vê apenas as suas dispensas
         dispensas_lista = Dispensa.query.filter_by(bombeiro_id=current_user.id).order_by(Dispensa.id.desc()).all()
 
-    return render_template('dispensas.html',
-                           dispensas=dispensas_lista,
-                           is_central_readonly=is_central_readonly)
+    return render_template('dispensas.html', dispensas=dispensas_lista, is_central=is_central)
+
+
+@app.route('/dispensas/detalhes/<int:id>')
+@login_required
+def detalhes_dispensa(id):
+    dispensa = Dispensa.query.get_or_404(id)
+
+    # Central pode ver detalhes de qualquer dispensa
+    is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
+
+    # Permissão: próprio, Admin, Comando ou Central
+    if current_user.id != dispensa.bombeiro_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' and not is_central:
+        return jsonify({'erro': 'Acesso negado'}), 403
+
+    creditos = []
+    for cred in dispensa.creditos:
+        creditos.append({
+            'data': cred.data.strftime('%d/%m/%Y'),
+            'descricao': cred.descricao,
+            'horas': cred.horas
+        })
+
+    dados = {
+        'bombeiro': dispensa.bombeiro.nome,
+        'mecanografico': dispensa.bombeiro.mecanografico,
+        'data_inicio': dispensa.data_inicio.strftime('%d/%m/%Y'),
+        'data_fim': dispensa.data_fim.strftime('%d/%m/%Y'),
+        'categoria': dispensa.categoria or '-',
+        'turno': dispensa.turno or '-',
+        'motivo': dispensa.motivo or '-',
+        'aprovada': dispensa.aprovada,
+        'creditos': creditos
+    }
+    return jsonify(dados)
 
 
 
@@ -2829,15 +2850,12 @@ def aprovar_dispensa(id):
         flash('Dispensa já aprovada.', 'info')
         return redirect(url_for('dispensas'))
 
-    # Marcar dispensa como aprovada
     dispensa.aprovada = True
 
-    # Atualizar créditos associados
     creditos = CreditoDispensa.query.filter_by(dispensa_id=dispensa.id, observacao='Não Gozado').all()
     for cred in creditos:
         cred.observacao = 'Gozado'
 
-    # Localizar escalas do bombeiro nas datas da dispensa
     from datetime import timedelta
     dia_atual = dispensa.data_inicio
     while dia_atual <= dispensa.data_fim:

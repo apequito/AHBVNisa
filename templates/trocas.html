@@ -4,33 +4,27 @@
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 
-<!-- Se for Central, mostrar aviso de modo apenas leitura -->
 {% if is_central %}
 <div class="alert alert-info mb-3">
-    <i class="bi bi-eye me-2"></i> Modo de visualização apenas. A Central não pode aprovar ou recusar trocas.
+    <i class="bi bi-eye me-2"></i> A Central pode visualizar todas as trocas e criar as suas próprias, mas não pode aprovar pedidos.
 </div>
 {% endif %}
 
-<!-- Abas (se for Central, mostrar apenas a aba de listagem) -->
 <ul class="nav nav-tabs mb-4" id="trocaTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="listar-tab" data-bs-toggle="tab" data-bs-target="#listar" type="button" role="tab">
             <i class="bi bi-list-ul me-1"></i> Listar Trocas
         </button>
     </li>
-    {% if not is_central %}
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="nova-tab" data-bs-toggle="tab" data-bs-target="#nova" type="button" role="tab">
-            <i class="bi bi-plus-circle me-1"></i> Nova Troca
-        </button>
-    </li>
-    {% endif %}
+    <button class="nav-link" id="nova-tab" data-bs-toggle="tab" data-bs-target="#nova" type="button" role="tab">
+        <i class="bi bi-plus-circle me-1"></i> Nova Troca
+    </button>
+</li>
 </ul>
 
 <div class="tab-content">
-    <!-- Listagem de trocas (visível para todos) -->
     <div class="tab-pane fade show active" id="listar" role="tabpanel">
-        <!-- Filtros -->
         <div class="card mb-3">
             <div class="card-header bg-light">Filtros</div>
             <div class="card-body">
@@ -50,7 +44,6 @@
             </div>
         </div>
 
-        <!-- Tabela de trocas -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <table class="table table-hover table-bordered mb-0">
@@ -86,9 +79,9 @@
                                 {% else %}
                                     <span class="badge bg-secondary">{{ t.estado }}</span>
                                 {% endif %}
-                             </td>
+                            </td>
                             {% if not is_central %}
-                            <td>
+                            <td class="text-center">
                                 {% if current_user.id == t.bombeiro_destino_id and t.estado == 'pendente_colega' %}
                                     <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success">Aceitar</a>
                                     <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
@@ -110,7 +103,6 @@
         </div>
     </div>
 
-    <!-- Formulário de nova troca (oculto para Central) -->
     {% if not is_central %}
     <div class="tab-pane fade" id="nova" role="tabpanel">
         <div class="card shadow-sm">
@@ -157,7 +149,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Motivo</label>
-                            <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca"></textarea>
+                            <textarea name="motivo" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
                     <div class="mt-3">
