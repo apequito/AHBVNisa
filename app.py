@@ -8585,7 +8585,11 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (depende do turno atual) ==========
+    # ========== 3. ECIN (depende do turno atual) - CORRIGIDO ==========
+    # Determinar turno ECIN baseado na hora atual
+    hora_atual = datetime.now().hour
+
+    # ECIN: Turno 6 = 07h-19h, Turno 7 = 19h-07h
     if 7 <= hora_atual < 19:
         turno_ecin = '6 - 07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
@@ -8593,7 +8597,7 @@ def quadro_operacional():
         turno_ecin = '7 - 19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
-    # Buscar ECINs para o turno atual
+    # Buscar ECINs para o turno atual - IMPORTANTE: verificar turno na tabela Ecin
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8601,27 +8605,19 @@ def quadro_operacional():
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).order_by(Ecin.funcao).all()
 
+    # Se não encontrar ECINs no turno específico, tentar com o formato alternativo
     if not ecins:
+        # Tentar com o formato "07h/19h" sem o prefixo "6 - "
+        turno_sem_prefixo = turno_ecin.split(' - ')[1] if ' - ' in turno_ecin else turno_ecin
         ecins = Ecin.query.filter(
             Ecin.data == hoje,
             Ecin.categoria == 'ECIN',
+            Ecin.turno == turno_sem_prefixo,
             Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
         ).order_by(Ecin.funcao).all()
+
         if ecins:
-            turno_ecin_desc = "ECIN (Turno não especificado)"
-
-    # Organizar ECIN por função
-    ecin_chefe = None
-    ecin_motorista = None
-    ecin_guarnicao = []
-
-    for ec in ecins:
-        if ec.funcao == 'Chefe':
-            ecin_chefe = ec
-        elif ec.funcao == 'Motorista':
-            ecin_motorista = ec
-        elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
-            ecin_guarnicao.append(ec)
+            turno_ecin_desc = f"ECIN - Turno {turno_sem_prefixo}"
 
     # ========== 4. EIP (5 bombeiros do turno) ==========
     eips = Escala.query.filter(
@@ -8739,6 +8735,9 @@ def salvar_quadro_operacional():
     data = request.get_json()
     hoje = date.today()
 
+    print(f"Dados recebidos para salvar: {data}", file=sys.stderr)  # Debug
+
+    # Verificar se já existe configuração para hoje
     quadro = QuadroOperacional.query.filter_by(data=hoje).first()
     if not quadro:
         quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
@@ -8756,16 +8755,21 @@ def salvar_quadro_operacional():
     quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
     quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
 
-    # Atualizar EIP Reserva
-    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or None
-    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or None
-    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or None
+    # Atualizar EIP Reserva 1
+    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or data.get('reserva_1_id') or None
+    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or data.get('reserva_1_numero') or None
+    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or data.get('reserva_1_mec') or None
 
-    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or None
-    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or None
-    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or None
+    # Atualizar EIP Reserva 2
+    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or data.get('reserva_2_id') or None
+    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or data.get('reserva_2_numero') or None
+    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or data.get('reserva_2_mec') or None
 
     db.session.commit()
+
+    print(f"Configuração salva para {hoje}", file=sys.stderr)
+    print(f"Reserva 1 ID: {quadro.eip_reserva_1_id}", file=sys.stderr)
+    print(f"Reserva 2 ID: {quadro.eip_reserva_2_id}", file=sys.stderr)
 
     return jsonify({'success': True})
 

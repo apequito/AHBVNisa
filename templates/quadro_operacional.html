@@ -461,14 +461,17 @@ function salvarQuadro() {
         motorista_inem_id: document.getElementById('motorista_inem').value,
         motorista_inem_numero: document.getElementById('motorista_inem_numero').innerText,
         motorista_inem_mec: document.getElementById('motorista_inem_mec').innerText,
-        reserva_1_id: document.getElementById('reserva_1').value,
-        reserva_1_numero: document.getElementById('reserva_1_numero').innerText,
-        reserva_1_mec: document.getElementById('reserva_1_mec').innerText,
-        reserva_2_id: document.getElementById('reserva_2').value,
-        reserva_2_numero: document.getElementById('reserva_2_numero').innerText,
-        reserva_2_mec: document.getElementById('reserva_2_mec').innerText,
+        // Usar os nomes corretos para a reserva
+        eip_reserva_1_id: document.getElementById('reserva_1').value,
+        eip_reserva_1_numero: document.getElementById('reserva_1_numero').innerText,
+        eip_reserva_1_mec: document.getElementById('reserva_1_mec').innerText,
+        eip_reserva_2_id: document.getElementById('reserva_2').value,
+        eip_reserva_2_numero: document.getElementById('reserva_2_numero').innerText,
+        eip_reserva_2_mec: document.getElementById('reserva_2_mec').innerText,
         data: '{{ hoje.isoformat() }}'
     };
+
+    console.log('Dados a enviar:', dados);  // Debug
 
     fetch('/api/salvar-quadro-operacional', {
         method: 'POST',
