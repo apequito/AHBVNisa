@@ -181,15 +181,17 @@
                         </ul>
                     </li>
 
-  <!-- ============ DROPDOWN VIATURAS ========== -->
-<!-- Apenas mostrar o menu para quem tem permissão -->
-{% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina', 'Central'] %}
+<!-- ============ DROPDOWN VIATURAS ========== -->
+<!-- Todos os utilizadores veem o menu (inclui Voluntários) -->
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="bi bi-truck me-1"></i> Viaturas
     </a>
     <ul class="dropdown-menu dropdown-menu-end">
+        <!-- Voluntários não podem aceder à listagem de viaturas -->
+        {% if current_user.tipo_bombeiro != 'Voluntário' or current_user.tipo_user == 'Admin' %}
         <li><a class="dropdown-item" href="{{ url_for('listar_viaturas') }}"><i class="bi bi-truck-front"></i> Viaturas</a></li>
+        {% endif %}
         <li><a class="dropdown-item" href="{{ url_for('avarias') }}"><i class="bi bi-exclamation-triangle"></i> Avarias</a></li>
         {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina'] %}
             <li><hr class="dropdown-divider"></li>
@@ -198,7 +200,6 @@
         {% endif %}
     </ul>
 </li>
-{% endif %}
 
                     <!-- ============ DROPDOWN SERVIÇO ============ -->
                     <li class="nav-item dropdown">

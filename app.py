@@ -505,9 +505,20 @@ def importar_bombeiros():
 @app.route('/viaturas')
 @login_required
 def listar_viaturas():
-    # Apenas Admin, Comando, Oficina e Central podem ver viaturas
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Oficina', 'Central']:
-        flash('Acesso restrito. Apenas Administração, Comando, Oficina e Central podem aceder a esta área.', 'danger')
+    # Voluntários NÃO podem aceder à listagem de viaturas
+    if current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin':
+        flash(
+            'Acesso restrito. Apenas bombeiros profissionais, administração, comando, oficina e central podem aceder à listagem de viaturas.',
+            'danger')
+        return redirect(url_for('dashboard'))
+
+    # Profissionais, Admin, Comando, Oficina, Central têm acesso
+    if (current_user.tipo_bombeiro != 'Profissional' and
+            current_user.tipo_user != 'Admin' and
+            current_user.resp_departamento not in ['Comando', 'Oficina', 'Central']):
+        flash(
+            'Acesso restrito. Apenas bombeiros profissionais, administração, comando, oficina e central podem aceder a esta área.',
+            'danger')
         return redirect(url_for('dashboard'))
 
     viaturas = Viatura.query.order_by(Viatura.tipo, Viatura.matricula).all()
@@ -935,7 +946,6 @@ def avarias():
         descricao = request.form['descricao']
         kms = request.form.get('kms', '')
 
-        # Gerar código automático
         ultima_avaria = Avaria.query.order_by(Avaria.id.desc()).first()
         proximo = 1
         if ultima_avaria:
@@ -969,11 +979,12 @@ def avarias():
 
     # --- Aba Registo ---
     query_registo = Avaria.query
-    if current_user.tipo_user == 'User' and current_user.resp_departamento not in ['Oficina', 'Comando']:
+    # Voluntários veem apenas as suas avarias
+    if current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin':
         query_registo = query_registo.filter(Avaria.reportado_por == current_user.id)
     avarias_lista = query_registo.order_by(Avaria.data_reporte.desc()).limit(100).all()
 
-    viaturas = Viatura.query.all()   # para o modal de criação
+    viaturas = Viatura.query.all()
 
     # --- Aba Histórico ---
     historico_avarias = []
@@ -987,7 +998,8 @@ def avarias():
             query_hist = query_hist.filter(db.extract('year', Avaria.data_reporte) == filtro_ano)
         if filtro_estado:
             query_hist = query_hist.filter_by(estado=filtro_estado)
-        if current_user.tipo_user == 'User' and current_user.resp_departamento not in ['Oficina', 'Comando']:
+        # Voluntários veem apenas as suas avarias no histórico
+        if current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin':
             query_hist = query_hist.filter(Avaria.reportado_por == current_user.id)
         historico_avarias = query_hist.order_by(Avaria.data_reporte.desc()).all()
 
@@ -1001,7 +1013,8 @@ def avarias():
                            filtro_ano=filtro_ano,
                            filtro_estado=filtro_estado,
                            tab=tab,
-                           hoje=date.today())   # ← variável hoje adicionada
+                           hoje=date.today())
+
 
 @app.route('/avarias/parecer_resp/<int:id>', methods=['POST'])
 @login_required
