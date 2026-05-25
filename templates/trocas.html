@@ -142,23 +142,52 @@
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <label class="form-label">O meu serviço</label>
-                            <div class="border p-2" id="meuCalendario" style="min-height: 280px;">
+                            <div class="border p-2" id="meuCalendario" style="min-height: 320px;">
                                 <div class="text-center p-3">Selecione o tipo de troca para carregar os seus turnos...</div>
+                            </div>
+                            <div id="meuTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
+                                <strong>Turno selecionado:</strong>
+                                <div id="meuTurnoDetalhes"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Serviço do colega</label>
-                            <div class="border p-2" id="colegaCalendario" style="min-height: 280px;">
+                            <div class="border p-2" id="colegaCalendario" style="min-height: 320px;">
                                 <div class="text-center p-3">Selecione primeiro um colega...</div>
+                            </div>
+                            <div id="colegaTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
+                                <strong>Turno selecionado:</strong>
+                                <div id="colegaTurnoDetalhes"></div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Opções para ECIN/ELAC -->
+                    <div id="opcoesEcin" class="row mt-3" style="display: none;">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <strong>Troca ECIN/ELAC:</strong> Pode optar por trocar um turno com o colega (marcar checkbox "Trocar turno") ou apenas ceder o seu turno sem receber nada em troca.
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="trocarTurnoCheckbox">
+                                <label class="form-check-label" for="trocarTurnoCheckbox">
+                                    Trocar turno com o colega (o colega cede um turno em troca)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row mt-3">
                         <div class="col-md-12">
                             <input type="hidden" name="data_origem" id="data_origem_hidden">
                             <input type="hidden" name="turno_origem" id="turno_origem_hidden">
+                            <input type="hidden" name="categoria_origem" id="categoria_origem_hidden">
+                            <input type="hidden" name="funcao_origem" id="funcao_origem_hidden">
                             <input type="hidden" name="data_destino" id="data_destino_hidden">
                             <input type="hidden" name="turno_destino" id="turno_destino_hidden">
+                            <input type="hidden" name="categoria_destino" id="categoria_destino_hidden">
+                            <input type="hidden" name="funcao_destino" id="funcao_destino_hidden">
+                            <input type="hidden" name="trocar_turno" id="trocar_turno_hidden" value="1">
                             <label class="form-label">Motivo</label>
                             <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca (opcional)"></textarea>
                         </div>
@@ -167,7 +196,7 @@
                         <button type="submit" class="btn btn-primary" id="btnEnviarTroca" disabled>
                             <i class="bi bi-send me-1"></i> Enviar Pedido
                         </button>
-                        <small class="text-muted ms-2">Selecione o seu turno e o turno do colega para ativar o botão.</small>
+                        <small class="text-muted ms-2">Selecione o seu turno para ativar o botão.</small>
                     </div>
                 </form>
             </div>
@@ -258,7 +287,11 @@ function criarCalendario(containerId, dados, isMeu) {
                 const temEscala = dados[dia] && dados[dia].length > 0;
                 let escalasHtml = '';
                 if (temEscala) {
-                    escalasHtml = dados[dia].map(e => `${e.turno}`).join('<br>');
+                    if (tipoAtual === 'assalariado') {
+                        escalasHtml = dados[dia].map(e => `${e.turno}`).join('<br>');
+                    } else {
+                        escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.funcao || 'Equipa'}`).join('<br>');
+                    }
                 }
                 html += `<td class="${temEscala ? 'bg-warning escala-dia' : ''}"
                                style="cursor:pointer;"
@@ -271,7 +304,7 @@ function criarCalendario(containerId, dados, isMeu) {
         html += '</tr>';
         if (dia > totalDias) break;
     }
-    html += '</tbody><table>';
+    html += '</tbody></table>';
     container.innerHTML = html;
 
     // Adicionar eventos de clique nos dias com escala
@@ -298,12 +331,35 @@ function criarCalendario(containerId, dados, isMeu) {
 function selecionarMeuTurno(dia, escalas) {
     if (!escalas || escalas.length === 0) return;
 
-    const turno = escalas[0].turno;
+    const escala = escalas[0];
     const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
     document.getElementById('data_origem_hidden').value = dataStr;
-    document.getElementById('turno_origem_hidden').value = turno;
-    meuTurnoSelecionado = { data: dataStr, turno: turno };
+    document.getElementById('turno_origem_hidden').value = escala.turno;
+    document.getElementById('categoria_origem_hidden').value = escala.categoria || '';
+    document.getElementById('funcao_origem_hidden').value = escala.funcao || '';
+
+    meuTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
+
+    // Mostrar informações do turno selecionado
+    const infoDiv = document.getElementById('meuTurnoInfo');
+    const detalhesDiv = document.getElementById('meuTurnoDetalhes');
+
+    if (tipoAtual === 'assalariado') {
+        detalhesDiv.innerHTML = `
+            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
+            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
+            <strong>Turno:</strong> ${escala.turno}
+        `;
+    } else {
+        detalhesDiv.innerHTML = `
+            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
+            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
+            <strong>Função:</strong> ${escala.funcao || '-'}<br>
+            <strong>Turno:</strong> ${escala.turno}
+        `;
+    }
+    infoDiv.style.display = 'block';
 
     // Destacar visualmente no calendário
     document.getElementById('meuCalendario').querySelectorAll('.escala-dia').forEach(td => {
@@ -313,6 +369,20 @@ function selecionarMeuTurno(dia, escalas) {
         }
     });
 
+    // Se for ECIN/ELAC e não tiver checkbox marcada, não precisa de turno do colega
+    if (tipoAtual === 'ecin') {
+        const checkbox = document.getElementById('trocarTurnoCheckbox');
+        if (!checkbox.checked) {
+            colegaTurnoSelecionado = null;
+            document.getElementById('data_destino_hidden').value = '';
+            document.getElementById('turno_destino_hidden').value = '';
+            document.getElementById('categoria_destino_hidden').value = '';
+            document.getElementById('funcao_destino_hidden').value = '';
+            document.getElementById('colegaTurnoInfo').style.display = 'none';
+            document.getElementById('trocar_turno_hidden').value = '0';
+        }
+    }
+
     verificarHabilitarBotao();
 }
 
@@ -320,12 +390,35 @@ function selecionarMeuTurno(dia, escalas) {
 function selecionarColegaTurno(dia, escalas) {
     if (!escalas || escalas.length === 0) return;
 
-    const turno = escalas[0].turno;
+    const escala = escalas[0];
     const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
     document.getElementById('data_destino_hidden').value = dataStr;
-    document.getElementById('turno_destino_hidden').value = turno;
-    colegaTurnoSelecionado = { data: dataStr, turno: turno };
+    document.getElementById('turno_destino_hidden').value = escala.turno;
+    document.getElementById('categoria_destino_hidden').value = escala.categoria || '';
+    document.getElementById('funcao_destino_hidden').value = escala.funcao || '';
+
+    colegaTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
+
+    // Mostrar informações do turno selecionado
+    const infoDiv = document.getElementById('colegaTurnoInfo');
+    const detalhesDiv = document.getElementById('colegaTurnoDetalhes');
+
+    if (tipoAtual === 'assalariado') {
+        detalhesDiv.innerHTML = `
+            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
+            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
+            <strong>Turno:</strong> ${escala.turno}
+        `;
+    } else {
+        detalhesDiv.innerHTML = `
+            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
+            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
+            <strong>Função:</strong> ${escala.funcao || '-'}<br>
+            <strong>Turno:</strong> ${escala.turno}
+        `;
+    }
+    infoDiv.style.display = 'block';
 
     // Destacar visualmente no calendário
     document.getElementById('colegaCalendario').querySelectorAll('.escala-dia').forEach(td => {
@@ -335,18 +428,73 @@ function selecionarColegaTurno(dia, escalas) {
         }
     });
 
+    if (tipoAtual === 'ecin') {
+        document.getElementById('trocar_turno_hidden').value = '1';
+    }
+
     verificarHabilitarBotao();
 }
 
 // ========== VERIFICAR SE PODE ENVIAR ==========
 function verificarHabilitarBotao() {
     const btn = document.getElementById('btnEnviarTroca');
-    if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
-        btn.disabled = false;
+    const checkbox = document.getElementById('trocarTurnoCheckbox');
+
+    if (tipoAtual === 'assalariado') {
+        // Assalariado: precisa do turno do próprio E do colega
+        if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
     } else {
-        btn.disabled = true;
+        // ECIN/ELAC: precisa do turno do próprio
+        if (meuTurnoSelecionado && colegaIdSelecionado) {
+            if (checkbox.checked) {
+                // Se for trocar turno, precisa também do turno do colega
+                if (colegaTurnoSelecionado) {
+                    btn.disabled = false;
+                } else {
+                    btn.disabled = true;
+                }
+            } else {
+                // Se for apenas ceder, não precisa do turno do colega
+                btn.disabled = false;
+            }
+        } else {
+            btn.disabled = true;
+        }
     }
 }
+
+// ========== CHECKBOX PARA TROCA DE TURNO (ECIN) ==========
+document.getElementById('trocarTurnoCheckbox').addEventListener('change', function() {
+    if (this.checked) {
+        // Se marcar trocar turno, precisa selecionar um turno do colega
+        document.getElementById('colegaCalendario').classList.remove('opacity-50');
+        if (colegaTurnoSelecionado) {
+            document.getElementById('trocar_turno_hidden').value = '1';
+        } else {
+            // Se não tiver turno selecionado, desativa o botão
+            document.getElementById('btnEnviarTroca').disabled = true;
+            alert('Selecione um turno do colega para a troca.');
+        }
+    } else {
+        // Se desmarcar, não precisa de turno do colega
+        document.getElementById('trocar_turno_hidden').value = '0';
+        colegaTurnoSelecionado = null;
+        document.getElementById('data_destino_hidden').value = '';
+        document.getElementById('turno_destino_hidden').value = '';
+        document.getElementById('categoria_destino_hidden').value = '';
+        document.getElementById('funcao_destino_hidden').value = '';
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
+        // Limpar seleção no calendário
+        document.getElementById('colegaCalendario').querySelectorAll('.escala-dia.selected').forEach(td => {
+            td.classList.remove('selected');
+        });
+        verificarHabilitarBotao();
+    }
+});
 
 // ========== ATUALIZAR LISTA DE COLEGAS ==========
 function atualizarListaColegas() {
@@ -376,6 +524,14 @@ function atualizarListaColegas() {
     colegaIdSelecionado = null;
     colegaTurnoSelecionado = null;
     document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    document.getElementById('colegaTurnoInfo').style.display = 'none';
+    document.getElementById('opcoesEcin').style.display = tipo === 'ecin' ? 'block' : 'none';
+
+    if (tipo === 'ecin') {
+        document.getElementById('trocarTurnoCheckbox').checked = false;
+        document.getElementById('trocar_turno_hidden').value = '0';
+    }
+
     verificarHabilitarBotao();
 }
 
@@ -385,10 +541,12 @@ document.getElementById('destino_id_select').addEventListener('change', function
     if (colegaId) {
         colegaIdSelecionado = parseInt(colegaId);
         colegaTurnoSelecionado = null;
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
         carregarColegaCalendario(colegaId);
     } else {
         colegaIdSelecionado = null;
         document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
     }
     verificarHabilitarBotao();
 });
@@ -396,16 +554,24 @@ document.getElementById('destino_id_select').addEventListener('change', function
 // ========== MUDANÇA DE TIPO ==========
 document.getElementById('tipo_pedido_select').addEventListener('change', function() {
     atualizarListaColegas();
-    // Resetar seleções
+    // Resetar seleções do próprio
     meuTurnoSelecionado = null;
     colegaTurnoSelecionado = null;
     colegaIdSelecionado = null;
     document.getElementById('data_origem_hidden').value = '';
     document.getElementById('turno_origem_hidden').value = '';
+    document.getElementById('categoria_origem_hidden').value = '';
+    document.getElementById('funcao_origem_hidden').value = '';
     document.getElementById('data_destino_hidden').value = '';
     document.getElementById('turno_destino_hidden').value = '';
+    document.getElementById('categoria_destino_hidden').value = '';
+    document.getElementById('funcao_destino_hidden').value = '';
     document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    document.getElementById('meuTurnoInfo').style.display = 'none';
+    document.getElementById('colegaTurnoInfo').style.display = 'none';
     document.getElementById('btnEnviarTroca').disabled = true;
+    // Recarregar o calendário do próprio
+    carregarMeuCalendario();
 });
 
 // ========== INICIALIZAÇÃO ==========
@@ -428,6 +594,12 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #28a745 !important;
     color: white;
     font-weight: bold;
+}
+#opcoesEcin {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 10px;
 }
 </style>
 {% endblock %}
