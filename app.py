@@ -8570,7 +8570,7 @@ def quadro_operacional():
         Bombeiro.ativo == True
     ).first()
 
-    # ========== 2. CENTRAL (depende do turno) ==========
+    # ========== 2. CENTRAL (muda às 20h) ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8585,7 +8585,7 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (CORRIGIDO - usar formato correto do banco) ==========
+    # ========== 3. ECIN (muda às 19h) ==========
     # ECIN: Turno diurno: 07h/19h | Turno noturno: 19h/07h
     if 7 <= hora_atual < 19:
         turno_ecin = '07h/19h'
@@ -8647,7 +8647,8 @@ def quadro_operacional():
 
     eips = eips[:5]
 
-    # ========== 5. INEM ==========
+    # ========== 5. INEM (Socorrista - muda às 19h) ==========
+    # INEM: Turno 6: 07h-19h | Turno 7: 19h-07h
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
         turno_inem_desc = "Turno Diurno (07h-19h)"
@@ -8663,6 +8664,7 @@ def quadro_operacional():
     ).first()
 
     # ========== 6. MOTORISTAS PARA INEM ==========
+    # Motoristas podem ser de qualquer turno (seleção manual)
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8697,13 +8699,15 @@ def quadro_operacional():
 
     # Turno atual para exibição
     if 7 <= hora_atual < 19:
-        turno_atual = "Turno Diurno (07h00 - 19h00)"
+        turno_atual = "Turno Diurno"
+        turno_detalhe = "07h00 - 19h00"
     else:
-        turno_atual = "Turno Noturno (19h00 - 07h00)"
+        turno_atual = "Turno Noturno"
+        turno_detalhe = "19h00 - 07h00"
 
     return render_template('quadro_operacional.html',
                            hoje=hoje,
-                           turno_atual=turno_atual,
+                           turno_atual=f"{turno_atual} ({turno_detalhe})",
                            turno_central=turno_central_desc,
                            turno_ecin=turno_ecin_desc,
                            turno_inem=turno_inem_desc,
