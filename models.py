@@ -547,18 +547,38 @@ class PontoAgua(db.Model):
 class QuadroOperacional(db.Model):
     __tablename__ = 'quadro_operacional'
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.Date, nullable=False)
+    data = db.Column(db.Date, nullable=False, unique=True)
     viatura_ecin_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
     viatura_eip_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
     viatura_inem_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
     viatura_reserva_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
     viatura_comando_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+    # NOVOS CAMPOS
+    motorista_inem_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    motorista_inem_numero = db.Column(db.String(20), nullable=True)
+    motorista_inem_mec = db.Column(db.String(20), nullable=True)
+
+    reserva_1_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    reserva_1_numero = db.Column(db.String(20), nullable=True)
+    reserva_1_mec = db.Column(db.String(20), nullable=True)
+
+    reserva_2_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    reserva_2_numero = db.Column(db.String(20), nullable=True)
+    reserva_2_mec = db.Column(db.String(20), nullable=True)
+
     criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relações
     viatura_ecin = db.relationship('Viatura', foreign_keys=[viatura_ecin_id])
     viatura_eip = db.relationship('Viatura', foreign_keys=[viatura_eip_id])
     viatura_inem = db.relationship('Viatura', foreign_keys=[viatura_inem_id])
     viatura_reserva = db.relationship('Viatura', foreign_keys=[viatura_reserva_id])
     viatura_comando = db.relationship('Viatura', foreign_keys=[viatura_comando_id])
-    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
+
+    motorista_inem = db.relationship('Bombeiro', foreign_keys=[motorista_inem_id])
+    reserva_1 = db.relationship('Bombeiro', foreign_keys=[reserva_1_id])
+    reserva_2 = db.relationship('Bombeiro', foreign_keys=[reserva_2_id])
+
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por]).relationship('Bombeiro', foreign_keys=[criado_por])

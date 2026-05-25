@@ -30,25 +30,29 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="30%">Função</th>
-                                    <th width="50%">Nome</th>
-                                    <th width="20%">Mecanográfico</th>
+                                    <th width="40%">Nome</th>
+                                    <th width="15%">Nº Interno</th>
+                                    <th width="15%">Mecanográfico</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr class="table-warning">
                                     <td><strong>Chefe de Equipa</strong></td>
                                     <td>{{ ecin_chefe.bombeiro.nome if ecin_chefe else '____________________' }}</td>
+                                    <td>{{ ecin_chefe.bombeiro.numero_interno if ecin_chefe else '_____' }}</td>
                                     <td>{{ ecin_chefe.bombeiro.mecanografico if ecin_chefe else '_____' }}</td>
                                 </tr>
                                 <tr class="table-info">
                                     <td><strong>Motorista</strong></td>
                                     <td>{{ ecin_motorista.bombeiro.nome if ecin_motorista else '____________________' }}</td>
+                                    <td>{{ ecin_motorista.bombeiro.numero_interno if ecin_motorista else '_____' }}</td>
                                     <td>{{ ecin_motorista.bombeiro.mecanografico if ecin_motorista else '_____' }}</td>
                                 </tr>
                                 {% for i in range(3) %}
                                 <tr>
                                     <td><strong>Guarnição {{ i+1 }}</strong></td>
                                     <td>{{ ecin_guarnicao[i].bombeiro.nome if i < ecin_guarnicao|length else '____________________' }}</td>
+                                    <td>{{ ecin_guarnicao[i].bombeiro.numero_interno if i < ecin_guarnicao|length else '_____' }}</td>
                                     <td>{{ ecin_guarnicao[i].bombeiro.mecanografico if i < ecin_guarnicao|length else '_____' }}</td>
                                 </tr>
                                 {% endfor %}
@@ -84,8 +88,9 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="10%">#</th>
-                                    <th width="60%">Nome</th>
-                                    <th width="30%">Mecanográfico</th>
+                                    <th width="50%">Nome</th>
+                                    <th width="20%">Nº Interno</th>
+                                    <th width="20%">Mecanográfico</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -93,6 +98,7 @@
                                 <tr>
                                     <td class="text-center"><strong>{{ i+1 }}</strong></td>
                                     <td>{{ eips[i].bombeiro.nome if i < eips|length else '____________________' }}</td>
+                                    <td>{{ eips[i].bombeiro.numero_interno if i < eips|length else '_____' }}</td>
                                     <td>{{ eips[i].bombeiro.mecanografico if i < eips|length else '_____' }}</td>
                                 </tr>
                                 {% endfor %}
@@ -133,29 +139,37 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="10%">#</th>
-                                    <th width="60%">Função/Nome</th>
-                                    <th width="30%">Mecanográfico</th>
+                                    <th width="45%">Função/Nome</th>
+                                    <th width="20%">Nº Interno</th>
+                                    <th width="25%">Mecanográfico</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr class="table-info">
                                     <td class="text-center"><strong>1</strong></td>
                                     <td><strong>Socorrista ({{ turno_inem }})</strong><br>{{ inem_um.bombeiro.nome if inem_um else '____________________' }}</td>
+                                    <td>{{ inem_um.bombeiro.numero_interno if inem_um else '_____' }}</td>
                                     <td>{{ inem_um.bombeiro.mecanografico if inem_um else '_____' }}</td>
                                 </tr>
                                 <tr class="table-secondary">
                                     <td class="text-center"><strong>2</strong></td>
                                     <td>
                                         <strong>Motorista</strong>
-                                        <select class="form-select form-select-sm mt-1" id="motorista_inem">
+                                        <select class="form-select form-select-sm mt-1" id="motorista_inem" onchange="atualizarMotoristaInem()">
                                             <option value="">Selecionar Motorista</option>
                                             {% for m in motoristas_turno %}
-                                            <option value="{{ m.bombeiro.id }}" {% if config and config.motorista_inem_id == m.bombeiro.id %}selected{% endif %}>
+                                            <option value="{{ m.bombeiro.id }}"
+                                                    data-nome="{{ m.bombeiro.nome }}"
+                                                    data-numero="{{ m.bombeiro.numero_interno }}"
+                                                    data-mec="{{ m.bombeiro.mecanografico }}"
+                                                    data-turno="{{ m.turno }}"
+                                                    {% if config and config.motorista_inem_id == m.bombeiro.id %}selected{% endif %}>
                                                 {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }}) - {{ m.turno }}
                                             </option>
                                             {% endfor %}
                                         </select>
                                     </td>
+                                    <td id="motorista_inem_numero">{% if config and config.motorista_inem_id %}{{ config.motorista_inem_numero }}{% endif %}</td>
                                     <td id="motorista_inem_mec">{% if config and config.motorista_inem_id %}{{ config.motorista_inem_mec }}{% endif %}</td>
                                 </tr>
                             </tbody>
@@ -193,7 +207,8 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="10%">#</th>
-                                    <th width="70%">Nome</th>
+                                    <th width="50%">Nome</th>
+                                    <th width="20%">Nº Interno</th>
                                     <th width="20%">Mecanográfico</th>
                                 </tr>
                             </thead>
@@ -201,29 +216,39 @@
                                 <tr>
                                     <td class="text-center"><strong>1</strong></td>
                                     <td>
-                                        <select class="form-select form-select-sm" id="reserva_1">
+                                        <select class="form-select form-select-sm" id="reserva_1" onchange="atualizarReserva1()">
                                             <option value="">Selecionar Bombeiro</option>
                                             {% for eip in todos_eip %}
-                                            <option value="{{ eip.bombeiro.id }}" data-mec="{{ eip.bombeiro.mecanografico }}" {% if config and config.reserva_1_id == eip.bombeiro.id %}selected{% endif %}>
+                                            <option value="{{ eip.bombeiro.id }}"
+                                                    data-nome="{{ eip.bombeiro.nome }}"
+                                                    data-numero="{{ eip.bombeiro.numero_interno }}"
+                                                    data-mec="{{ eip.bombeiro.mecanografico }}"
+                                                    {% if config and config.reserva_1_id == eip.bombeiro.id %}selected{% endif %}>
                                                 {{ eip.bombeiro.nome }} ({{ eip.bombeiro.mecanografico }})
                                             </option>
                                             {% endfor %}
                                         </select>
                                     </td>
+                                    <td id="reserva_1_numero">{% if config and config.reserva_1_numero %}{{ config.reserva_1_numero }}{% endif %}</td>
                                     <td id="reserva_1_mec">{% if config and config.reserva_1_mec %}{{ config.reserva_1_mec }}{% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-center"><strong>2</strong></td>
                                     <td>
-                                        <select class="form-select form-select-sm" id="reserva_2">
+                                        <select class="form-select form-select-sm" id="reserva_2" onchange="atualizarReserva2()">
                                             <option value="">Selecionar Bombeiro</option>
                                             {% for eip in todos_eip %}
-                                            <option value="{{ eip.bombeiro.id }}" data-mec="{{ eip.bombeiro.mecanografico }}" {% if config and config.reserva_2_id == eip.bombeiro.id %}selected{% endif %}>
+                                            <option value="{{ eip.bombeiro.id }}"
+                                                    data-nome="{{ eip.bombeiro.nome }}"
+                                                    data-numero="{{ eip.bombeiro.numero_interno }}"
+                                                    data-mec="{{ eip.bombeiro.mecanografico }}"
+                                                    {% if config and config.reserva_2_id == eip.bombeiro.id %}selected{% endif %}>
                                                 {{ eip.bombeiro.nome }} ({{ eip.bombeiro.mecanografico }})
                                             </option>
                                             {% endfor %}
                                         </select>
                                     </td>
+                                    <td id="reserva_2_numero">{% if config and config.reserva_2_numero %}{{ config.reserva_2_numero }}{% endif %}</td>
                                     <td id="reserva_2_mec">{% if config and config.reserva_2_mec %}{{ config.reserva_2_mec }}{% endif %}</td>
                                 </tr>
                             </tbody>
@@ -259,8 +284,9 @@
                             <tbody>
                                 <tr class="table-secondary">
                                     <td width="30%"><strong>Comandante</strong></td>
-                                    <td width="50%">{{ comando.nome if comando else '____________________' }}</td>
-                                    <td width="20%">{{ comando.mecanografico if comando else '_____' }}</td>
+                                    <td width="40%">{{ comando.nome if comando else '____________________' }}</td>
+                                    <td width="15%">{{ comando.numero_interno if comando else '_____' }}</td>
+                                    <td width="15%">{{ comando.mecanografico if comando else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -291,8 +317,9 @@
                             <tbody>
                                 <tr class="table-info">
                                     <td width="30%"><strong>Central ({{ turno_central }})</strong></td>
-                                    <td width="50%">{{ central.bombeiro.nome if central else '____________________' }}</td>
-                                    <td width="20%">{{ central.bombeiro.mecanografico if central else '_____' }}</td>
+                                    <td width="40%">{{ central.bombeiro.nome if central else '____________________' }}</td>
+                                    <td width="15%">{{ central.bombeiro.numero_interno if central else '_____' }}</td>
+                                    <td width="15%">{{ central.bombeiro.mecanografico if central else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -346,24 +373,60 @@
 </div>
 
 <script>
-// Atualizar mec no select do motorista INEM
-document.getElementById('motorista_inem')?.addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    const mec = selectedOption.getAttribute('data-mec') || '';
-    document.getElementById('motorista_inem_mec').innerText = mec;
-});
+// Função para atualizar os dados do motorista INEM
+function atualizarMotoristaInem() {
+    const select = document.getElementById('motorista_inem');
+    const selectedOption = select.options[select.selectedIndex];
 
-// Atualizar mec nos selects da reserva
-document.getElementById('reserva_1')?.addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    const mec = selectedOption.getAttribute('data-mec') || '';
-    document.getElementById('reserva_1_mec').innerText = mec;
-});
+    if (selectedOption.value) {
+        const numero = selectedOption.getAttribute('data-numero') || '';
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('motorista_inem_numero').innerText = numero;
+        document.getElementById('motorista_inem_mec').innerText = mec;
+    } else {
+        document.getElementById('motorista_inem_numero').innerText = '';
+        document.getElementById('motorista_inem_mec').innerText = '';
+    }
+}
 
-document.getElementById('reserva_2')?.addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    const mec = selectedOption.getAttribute('data-mec') || '';
-    document.getElementById('reserva_2_mec').innerText = mec;
+// Função para atualizar os dados da reserva 1
+function atualizarReserva1() {
+    const select = document.getElementById('reserva_1');
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value) {
+        const numero = selectedOption.getAttribute('data-numero') || '';
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('reserva_1_numero').innerText = numero;
+        document.getElementById('reserva_1_mec').innerText = mec;
+    } else {
+        document.getElementById('reserva_1_numero').innerText = '';
+        document.getElementById('reserva_1_mec').innerText = '';
+    }
+}
+
+// Função para atualizar os dados da reserva 2
+function atualizarReserva2() {
+    const select = document.getElementById('reserva_2');
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value) {
+        const numero = selectedOption.getAttribute('data-numero') || '';
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('reserva_2_numero').innerText = numero;
+        document.getElementById('reserva_2_mec').innerText = mec;
+    } else {
+        document.getElementById('reserva_2_numero').innerText = '';
+        document.getElementById('reserva_2_mec').innerText = '';
+    }
+}
+
+// Inicializar os dados quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    // Se houver valores salvos, atualizar as células
+    atualizarMotoristaInem();
+    atualizarReserva1();
+    atualizarReserva2();
 });
 
 // Função para salvar a configuração do quadro
@@ -375,8 +438,14 @@ function salvarQuadro() {
         viatura_reserva: document.getElementById('viatura_reserva').value,
         viatura_comando: document.getElementById('viatura_comando').value,
         motorista_inem_id: document.getElementById('motorista_inem').value,
+        motorista_inem_numero: document.getElementById('motorista_inem_numero').innerText,
+        motorista_inem_mec: document.getElementById('motorista_inem_mec').innerText,
         reserva_1_id: document.getElementById('reserva_1').value,
+        reserva_1_numero: document.getElementById('reserva_1_numero').innerText,
+        reserva_1_mec: document.getElementById('reserva_1_mec').innerText,
         reserva_2_id: document.getElementById('reserva_2').value,
+        reserva_2_numero: document.getElementById('reserva_2_numero').innerText,
+        reserva_2_mec: document.getElementById('reserva_2_mec').innerText,
         data: '{{ hoje.isoformat() }}'
     };
 
@@ -422,10 +491,14 @@ function exportarExcel() {
         turno_atual: '{{ turno_atual }}',
         ecin: {
             chefe: '{{ ecin_chefe.bombeiro.nome if ecin_chefe else "" }}',
+            chefe_numero: '{{ ecin_chefe.bombeiro.numero_interno if ecin_chefe else "" }}',
+            chefe_mec: '{{ ecin_chefe.bombeiro.mecanografico if ecin_chefe else "" }}',
             motorista: '{{ ecin_motorista.bombeiro.nome if ecin_motorista else "" }}',
+            motorista_numero: '{{ ecin_motorista.bombeiro.numero_interno if ecin_motorista else "" }}',
+            motorista_mec: '{{ ecin_motorista.bombeiro.mecanografico if ecin_motorista else "" }}',
             guarnicao: [
                 {% for g in ecin_guarnicao %}
-                '{{ g.bombeiro.nome if g else "" }}',
+                { nome: '{{ g.bombeiro.nome if g else "" }}', numero: '{{ g.bombeiro.numero_interno if g else "" }}', mec: '{{ g.bombeiro.mecanografico if g else "" }}' },
                 {% endfor %}
             ],
             viatura: document.getElementById('viatura_ecin').selectedOptions[0]?.text || ''
@@ -433,30 +506,38 @@ function exportarExcel() {
         eip: {
             elementos: [
                 {% for e in eips %}
-                '{{ e.bombeiro.nome if e else "" }}',
+                { nome: '{{ e.bombeiro.nome if e else "" }}', numero: '{{ e.bombeiro.numero_interno if e else "" }}', mec: '{{ e.bombeiro.mecanografico if e else "" }}' },
                 {% endfor %}
             ],
             viatura: document.getElementById('viatura_eip').selectedOptions[0]?.text || ''
         },
         inem: {
             socorrista: '{{ inem_um.bombeiro.nome if inem_um else "" }}',
-            motorista: document.getElementById('motorista_inem').selectedOptions[0]?.text.split(' - ')[0] || '',
+            socorrista_numero: '{{ inem_um.bombeiro.numero_interno if inem_um else "" }}',
+            socorrista_mec: '{{ inem_um.bombeiro.mecanografico if inem_um else "" }}',
+            motorista: document.getElementById('motorista_inem').selectedOptions[0]?.getAttribute('data-nome') || '',
+            motorista_numero: document.getElementById('motorista_inem_numero').innerText,
+            motorista_mec: document.getElementById('motorista_inem_mec').innerText,
             turno: '{{ turno_inem }}',
             viatura: document.getElementById('viatura_inem').selectedOptions[0]?.text || ''
         },
         reserva: {
             elementos: [
-                document.getElementById('reserva_1').selectedOptions[0]?.text.split(' (')[0] || '',
-                document.getElementById('reserva_2').selectedOptions[0]?.text.split(' (')[0] || ''
+                { nome: document.getElementById('reserva_1').selectedOptions[0]?.getAttribute('data-nome') || '', numero: document.getElementById('reserva_1_numero').innerText, mec: document.getElementById('reserva_1_mec').innerText },
+                { nome: document.getElementById('reserva_2').selectedOptions[0]?.getAttribute('data-nome') || '', numero: document.getElementById('reserva_2_numero').innerText, mec: document.getElementById('reserva_2_mec').innerText }
             ],
             viatura: document.getElementById('viatura_reserva').selectedOptions[0]?.text || ''
         },
         comando: {
             nome: '{{ comando.nome if comando else "" }}',
+            numero: '{{ comando.numero_interno if comando else "" }}',
+            mec: '{{ comando.mecanografico if comando else "" }}',
             viatura: document.getElementById('viatura_comando').selectedOptions[0]?.text || ''
         },
         central: {
             nome: '{{ central.bombeiro.nome if central else "" }}',
+            numero: '{{ central.bombeiro.numero_interno if central else "" }}',
+            mec: '{{ central.bombeiro.mecanografico if central else "" }}',
             turno: '{{ turno_central }}'
         }
     };
