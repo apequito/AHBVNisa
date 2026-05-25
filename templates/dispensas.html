@@ -30,7 +30,7 @@
             <tbody>
                 {% for d in dispensas %}
                 <tr>
-                    <td>{{ d.bombeiro.nome if d.bombeiro else '-' }}</td>
+                    <td>{{ d.bombeiro.nome if d.bombeiro else '-' }} ({{ d.bombeiro.mecanografico if d.bombeiro else '-' }})</td>
                     <td>{{ d.data_inicio.strftime('%d/%m/%Y') if d.data_inicio else '' }}</td>
                     <td>{{ d.data_fim.strftime('%d/%m/%Y') if d.data_fim else '' }}</td>
                     <td>{{ d.motivo or '-' }}</td>
@@ -69,7 +69,7 @@
     </div>
 </div>
 
-<!-- MODAL DE DETALHES (mantido igual) -->
+<!-- MODAL DE DETALHES -->
 <div class="modal fade" id="modalDetalhesDispensa" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -129,10 +129,10 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>As minhas escalas</strong></p>
-                            <div id="calendarioDispensa" class="border p-2" style="min-height:250px;"></div>
+                            <div id="calendarioDispensa" class="border p-2" style="min-height:300px; background:#fff;"></div>
                         </div>
                         <div class="col-md-6">
-                            <label>Data</label>
+                            <label>Data da Dispensa</label>
                             <input type="date" name="data_inicio" id="data_inicio_disp" class="form-control mb-2" readonly required>
                             <input type="hidden" name="data_fim" id="data_fim_disp">
                             <input type="hidden" name="categoria_disp" id="categoria_disp_hidden">
@@ -145,15 +145,22 @@
                             <input type="text" id="funcao_disp" class="form-control mb-2" readonly>
                             <label>Justificação</label>
                             <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
+                            <small class="text-muted">A dispensa será registada para o dia selecionado. Mínimo de 8 horas de créditos (12h para Socorrista/Centralista).</small>
                         </div>
                     </div>
 
                     <div class="mt-3">
-                        <label>Selecione os créditos (dias não gozados) para abater (mínimo 8h):</label>
-                        <table class="table table-sm table-bordered" id="tabelaCreditos">
-                            <thead><tr><th>Sel.</th><th>Data</th><th>Descrição</th><th>Horas</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <label>Selecione os créditos (dias não gozados) para abater:</label>
+                        <div class="table-responsive" style="max-height: 200px;">
+                            <table class="table table-sm table-bordered" id="tabelaCreditos">
+                                <thead class="table-light">
+                                    <tr><th style="width: 10%">Sel.</th><th>Data</th><th>Descrição</th><th>Horas</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="4" class="text-muted text-center">Carregando créditos...{% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                         <div class="mt-2">
                             <strong>Total de horas selecionadas: <span id="totalHoras">0</span>h</strong>
                             <span id="msgErroHoras" class="text-danger ms-3" style="display:none;"></span>
@@ -162,6 +169,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-danger" id="btnEnviar">Enviar Pedido</button>
                 </div>
             </div>
@@ -175,15 +183,24 @@ let anoAtualDisp = new Date().getFullYear();
 const userId = {{ current_user.id }};
 let categoriaSelecionada = '';
 
+// ========== CALENDÁRIO ==========
 function carregarCalendarioDispensa() {
-    fetch(`/api/escala_usuario/${userId}?ano=${anoAtualDisp}&mes=${mesAtualDisp}`)
+    const url = `/api/escala_usuario/${userId}?ano=${anoAtualDisp}&mes=${mesAtualDisp}`;
+    console.log("Carregando calendário:", url);
+
+    fetch(url)
         .then(r => r.json())
         .then(dados => {
+            console.log("Dados recebidos:", dados);
             const diasTrabalho = {};
             for (const [dia, escalas] of Object.entries(dados)) {
                 diasTrabalho[dia] = escalas;
             }
             criarCalendarioDisp(diasTrabalho);
+        })
+        .catch(err => {
+            console.error("Erro ao carregar calendário:", err);
+            document.getElementById('calendarioDispensa').innerHTML = '<div class="alert alert-danger">Erro ao carregar calendário. Recarregue a página.</div>';
         });
 }
 
@@ -201,7 +218,9 @@ function criarCalendarioDisp(diasEscala) {
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMesDisp(1)">&gt;</button>
         </div>
         <table class="table table-bordered table-sm text-center">
-            <thead><tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
+            <thead class="table-light">
+                <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
+            </thead>
             <tbody>`;
 
     let dia = 1;
@@ -212,16 +231,18 @@ function criarCalendarioDisp(diasEscala) {
                 html += '<td>&nbsp;</td>';
             } else {
                 const temEscala = diasEscala[dia] ? true : false;
-                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}">${dia}</td>`;
+                const tooltip = temEscala ? 'title="Tem escala neste dia"' : '';
+                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}" ${tooltip}>${dia}</td>`;
                 dia++;
             }
         }
-        html += '</table>';
+        html += '</tr>';
         if (dia > totalDias) break;
     }
-    html += '</tbody></tr>';
+    html += '</tbody></table>';
     container.innerHTML = html;
 
+    // Adicionar eventos de clique
     Array.from(container.querySelectorAll('td[data-dia]')).forEach(td => {
         td.addEventListener('click', function() {
             const diaNum = parseInt(this.getAttribute('data-dia'));
@@ -229,6 +250,7 @@ function criarCalendarioDisp(diasEscala) {
             const dataStr = `${anoAtualDisp}-${String(mesAtualDisp).padStart(2,'0')}-${String(diaNum).padStart(2,'0')}`;
             document.getElementById('data_inicio_disp').value = dataStr;
             document.getElementById('data_fim_disp').value = dataStr;
+
             if (escalasDoDia && escalasDoDia.length > 0) {
                 const e = escalasDoDia[0];
                 document.getElementById('categoria_disp').value = e.categoria || '';
@@ -246,6 +268,10 @@ function criarCalendarioDisp(diasEscala) {
                 document.getElementById('turno_disp_hidden').value = '';
             }
             atualizarMinimoHoras();
+
+            // Adicionar classe visual no dia selecionado
+            document.querySelectorAll('#calendarioDispensa td[data-dia]').forEach(t => t.classList.remove('table-primary'));
+            this.classList.add('table-primary');
         });
     });
 }
@@ -257,25 +283,32 @@ function mudarMesDisp(delta) {
     carregarCalendarioDispensa();
 }
 
+// ========== CRÉDITOS ==========
 function carregarCreditos() {
     fetch(`/api/creditos_nao_gozados/${userId}`)
         .then(r => r.json())
         .then(creditos => {
             const tbody = document.querySelector('#tabelaCreditos tbody');
             tbody.innerHTML = '';
+            if (!creditos || creditos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Nenhum crédito disponível.{% endfor %}';
+                return;
+            }
             creditos.forEach(c => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td><input type="checkbox" class="check-credito" value="${c.id}" data-horas="${c.horas}"></td>
                     <td>${c.data}</td>
-                    <td>${c.descricao}</td>
-                    <td>${c.horas}h</td>`;
+                    <td>${c.descricao || '-'}</td>
+                    <td>${c.horas}h</td>
+                `;
             });
             document.querySelectorAll('.check-credito').forEach(cb => {
                 cb.addEventListener('change', atualizarTotalHoras);
             });
             atualizarTotalHoras();
-        });
+        })
+        .catch(err => console.error("Erro ao carregar créditos:", err));
 }
 
 function atualizarTotalHoras() {
@@ -293,12 +326,13 @@ function atualizarMinimoHoras() {
     const msgErro = document.getElementById('msgErroHoras');
     if (total < minHoras) {
         msgErro.style.display = 'inline';
-        msgErro.textContent = `Selecione pelo menos ${minHoras} horas.`;
+        msgErro.textContent = `Selecione pelo menos ${minHoras} horas (mínimo para ${categoriaSelecionada || 'Bombeiro'}).`;
     } else {
         msgErro.style.display = 'none';
     }
 }
 
+// Validação do formulário
 document.getElementById('formDispensa')?.addEventListener('submit', function(e) {
     const total = parseInt(document.getElementById('totalHoras').textContent);
     const minHoras = (categoriaSelecionada === 'Socorrista' || categoriaSelecionada === 'Centralista') ? 12 : 8;
@@ -311,6 +345,7 @@ document.getElementById('formDispensa')?.addEventListener('submit', function(e) 
     document.getElementById('creditosSelecionados').value = ids;
 });
 
+// ========== DETALHES ==========
 function verDetalhes(id) {
     fetch(`/dispensas/detalhes/${id}`)
         .then(response => response.json())
@@ -325,10 +360,11 @@ function verDetalhes(id) {
             document.getElementById('det_turno').innerText = data.turno;
             document.getElementById('det_motivo').innerText = data.motivo;
             document.getElementById('det_estado').innerHTML = data.aprovada ? '<span class="badge bg-success">Aprovada</span>' : '<span class="badge bg-warning text-dark">Pendente</span>';
+
             const tbody = document.getElementById('det_creditos_tbody');
             tbody.innerHTML = '';
             if (data.creditos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum crédito associado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.{% endfor %}';
             } else {
                 data.creditos.forEach(c => {
                     const row = tbody.insertRow();
@@ -340,6 +376,7 @@ function verDetalhes(id) {
         .catch(err => console.error(err));
 }
 
+// ========== INICIALIZAÇÃO ==========
 const modalDispensa = document.getElementById('modalNovaDispensa');
 if (modalDispensa) {
     modalDispensa.addEventListener('show.bs.modal', function () {
@@ -347,6 +384,14 @@ if (modalDispensa) {
         anoAtualDisp = new Date().getFullYear();
         carregarCalendarioDispensa();
         carregarCreditos();
+        // Limpar campos
+        document.getElementById('data_inicio_disp').value = '';
+        document.getElementById('categoria_disp').value = '';
+        document.getElementById('turno_disp').value = '';
+        document.getElementById('funcao_disp').value = '';
+        document.getElementById('totalHoras').textContent = '0';
+        document.getElementById('msgErroHoras').style.display = 'none';
+        categoriaSelecionada = '';
     });
 }
 </script>
