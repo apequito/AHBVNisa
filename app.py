@@ -8489,14 +8489,12 @@ def quadro_operacional():
         return redirect(url_for('dashboard'))
 
     # ========== 1. COMANDO ==========
-    # Comando é sempre o bombeiro com resp_departamento = 'Comando' que está ativo
     comando = Bombeiro.query.filter(
         Bombeiro.resp_departamento == 'Comando',
         Bombeiro.ativo == True
     ).first()
 
     # ========== 2. CENTRAL (depende do turno) ==========
-    # Turno 8 - 08h/20h ou Turno 9 - 20h/08h
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
     else:
@@ -8509,12 +8507,36 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (buscar da tabela Ecin) ==========
+    # ========== 3. ECIN (depende do turno atual) ==========
+    # Definir turno para ECIN
+    # Turno diurno: 07h-19h (turno 6) ou 08h-20h (turno 8)
+    # Turno noturno: 19h-07h (turno 7) ou 20h-08h (turno 9)
+    if 7 <= hora_atual < 19:
+        # Turno diurno - pode ser turno 6 (07h-19h) ou turno 8 (08h-20h)
+        turno_ecin = '6 - 07h/19h' if 7 <= hora_atual < 19 else '8 - 08h/20h'
+        turno_ecin_desc = "Turno Diurno (07h-19h)"
+    else:
+        # Turno noturno
+        turno_ecin = '7 - 19h/07h' if hora_atual >= 19 else '9 - 20h/08h'
+        turno_ecin_desc = "Turno Noturno (19h-07h)"
+
+    # Buscar ECINs para o turno atual
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
+        Ecin.turno == turno_ecin,
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).order_by(Ecin.funcao).all()
+
+    # Se não encontrar ECINs no turno específico, buscar qualquer ECIN do dia
+    if not ecins:
+        ecins = Ecin.query.filter(
+            Ecin.data == hoje,
+            Ecin.categoria == 'ECIN',
+            Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
+        ).order_by(Ecin.funcao).all()
+        if ecins:
+            turno_ecin_desc = "ECIN (Turno não especificado)"
 
     # Organizar ECIN por função
     ecin_chefe = None
@@ -8530,20 +8552,33 @@ def quadro_operacional():
             ecin_guarnicao.append(ec)
 
     # ========== 4. EIP (5 bombeiros) ==========
+    # EIP também deve respeitar o turno
+    if 7 <= hora_atual < 19:
+        turno_eip = '6 - 07h/19h' if 7 <= hora_atual < 19 else '8 - 08h/20h'
+    else:
+        turno_eip = '7 - 19h/07h' if hora_atual >= 19 else '9 - 20h/08h'
+
     eips = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP'
+        Escala.categoria == 'EIP',
+        Escala.turno == turno_eip
     ).order_by(Escala.bombeiro_id).limit(5).all()
 
+    # Se não encontrar EIP no turno específico, buscar qualquer EIP do dia
+    if not eips:
+        eips = Escala.query.filter(
+            func.date(Escala.data_inicio) <= hoje,
+            func.date(Escala.data_fim) >= hoje,
+            Escala.categoria == 'EIP'
+        ).order_by(Escala.bombeiro_id).limit(5).all()
+
     # ========== 5. INEM ==========
-    # Definir turno para socorrista (INEM)
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
     else:
         turno_inem = '7 - 19h/07h'
 
-    # Nº1 - Socorrista do turno correspondente
     inem_um = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8551,25 +8586,41 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # ========== 6. MOTORISTAS DO TURNO PARA INEM (Combobox) ==========
-    # Buscar todos os motoristas escalados no dia (qualquer turno)
-    # CORRIGIDO: usar join com Bombeiro para ordenar por nome
+    # ========== 6. MOTORISTAS DO TURNO PARA INEM ==========
+    # Buscar motoristas do mesmo turno
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Motorista'
-    ).order_by(Escala.turno, Bombeiro.nome).all()
+        Escala.categoria == 'Motorista',
+        Escala.turno == turno_inem  # Mesmo turno do INEM
+    ).order_by(Bombeiro.nome).all()
+
+    # Se não encontrar motoristas no turno, buscar todos os motoristas do dia
+    if not motoristas_turno:
+        motoristas_turno = Escala.query.join(Bombeiro).filter(
+            func.date(Escala.data_inicio) <= hoje,
+            func.date(Escala.data_fim) >= hoje,
+            Escala.categoria == 'Motorista'
+        ).order_by(Escala.turno, Bombeiro.nome).all()
 
     # ========== 7. TODOS OS EIP PARA AS COMBOBOX DA RESERVA ==========
-    # CORRIGIDO: usar join com Bombeiro para ordenar por nome
+    # Reserva deve ser do mesmo turno
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP'
+        Escala.categoria == 'EIP',
+        Escala.turno == turno_eip
     ).order_by(Bombeiro.nome).all()
 
+    # Se não encontrar EIP no turno, buscar todos
+    if not todos_eip:
+        todos_eip = Escala.query.join(Bombeiro).filter(
+            func.date(Escala.data_inicio) <= hoje,
+            func.date(Escala.data_fim) >= hoje,
+            Escala.categoria == 'EIP'
+        ).order_by(Bombeiro.nome).all()
+
     # ========== 8. RESERVA (buscar da configuração salva) ==========
-    # Buscar configuração salva para hoje
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
     # ========== 9. BUSCAR VIATURAS ==========
@@ -8589,17 +8640,19 @@ def quadro_operacional():
     ).order_by(Viatura.matricula).all()
 
     # Determinar turno atual para exibição
-    turno_atual = ""
-    if 8 <= hora_atual < 20:
-        turno_atual = "08h00 - 20h00"
+    if 7 <= hora_atual < 19:
+        turno_atual = "Turno Diurno (07h00 - 19h00)"
+        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
     else:
-        turno_atual = "20h00 - 08h00"
+        turno_atual = "Turno Noturno (19h00 - 07h00)"
+        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
     return render_template('quadro_operacional.html',
                            hoje=hoje,
                            hora_atual=hora_atual,
                            turno_atual=turno_atual,
                            turno_central=turno_central,
+                           turno_ecin=turno_ecin_desc,
                            turno_inem=turno_inem,
                            comando=comando,
                            central=central,
@@ -8616,6 +8669,7 @@ def quadro_operacional():
                            config=config)
 
 
+
 @app.route('/api/salvar-quadro-operacional', methods=['POST'])
 @login_required
 def salvar_quadro_operacional():
@@ -8625,7 +8679,6 @@ def salvar_quadro_operacional():
     data = request.get_json()
     hoje = date.today()
 
-    # Verificar se já existe configuração para hoje
     quadro = QuadroOperacional.query.filter_by(data=hoje).first()
     if not quadro:
         quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
@@ -8638,14 +8691,13 @@ def salvar_quadro_operacional():
     quadro.viatura_reserva_id = data.get('viatura_reserva') or None
     quadro.viatura_comando_id = data.get('viatura_comando') or None
 
-    # Atualizar motorista INEM e reservas
+    # Atualizar motorista INEM
     quadro.motorista_inem_id = data.get('motorista_inem_id') or None
+    quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
+    quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
+
+    # Atualizar reservas
     quadro.reserva_1_id = data.get('reserva_1_id') or None
-    quadro.reserva_2_id = data.get('reserva_2_id') or None
-
-    db.session.commit()
-
-    return jsonify({'success': True})
 
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])
