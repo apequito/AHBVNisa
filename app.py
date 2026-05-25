@@ -39,6 +39,44 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Adicionar após db.init_app(app) e antes das rotas
+with app.app_context():
+    from sqlalchemy import inspect, text
+
+    # Verificar se a tabela quadro_operacional existe
+    inspector = inspect(db.engine)
+    if 'quadro_operacional' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('quadro_operacional')]
+
+        # Adicionar colunas em falta
+        novas_colunas = [
+            ('motorista_inem_id', 'INTEGER', 'bombeiros'),
+            ('motorista_inem_numero', 'VARCHAR(20)', None),
+            ('motorista_inem_mec', 'VARCHAR(20)', None),
+            ('reserva_1_id', 'INTEGER', 'bombeiros'),
+            ('reserva_1_numero', 'VARCHAR(20)', None),
+            ('reserva_1_mec', 'VARCHAR(20)', None),
+            ('reserva_2_id', 'INTEGER', 'bombeiros'),
+            ('reserva_2_numero', 'VARCHAR(20)', None),
+            ('reserva_2_mec', 'VARCHAR(20)', None)
+        ]
+
+        for col_name, col_type, ref_table in novas_colunas:
+            if col_name not in columns:
+                try:
+                    sql = f'ALTER TABLE quadro_operacional ADD COLUMN {col_name} {col_type}'
+                    if ref_table:
+                        sql += f' REFERENCES {ref_table}(id)'
+                    db.session.execute(text(sql))
+                    print(f"Coluna {col_name} adicionada à tabela quadro_operacional", file=sys.stderr)
+                except Exception as e:
+                    print(f"Erro ao adicionar {col_name}: {e}", file=sys.stderr)
+
+        db.session.commit()
+        print("Migração da tabela quadro_operacional concluída!", file=sys.stderr)
+    else:
+        db.create_all()
+        print("Tabela quadro_operacional criada", file=sys.stderr)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -8470,6 +8508,8 @@ def apagar_correio_massa():
     return redirect(url_for('correio'))
 
 
+# ==================== QUADRO OPERACIONAL ====================
+
 @app.route('/quadro-operacional')
 @login_required
 def quadro_operacional():
@@ -8497,8 +8537,10 @@ def quadro_operacional():
     # ========== 2. CENTRAL (depende do turno) ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
+        turno_central_desc = "Turno Diurno (08h-20h)"
     else:
         turno_central = '9 - 20h/08h'
+        turno_central_desc = "Turno Noturno (20h-08h)"
 
     central = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
@@ -8508,17 +8550,12 @@ def quadro_operacional():
     ).first()
 
     # ========== 3. ECIN (depende do turno atual) ==========
-    # Definir turno para ECIN
-    # Turno diurno: 07h-19h (turno 6) ou 08h-20h (turno 8)
-    # Turno noturno: 19h-07h (turno 7) ou 20h-08h (turno 9)
     if 7 <= hora_atual < 19:
-        # Turno diurno - pode ser turno 6 (07h-19h) ou turno 8 (08h-20h)
-        turno_ecin = '6 - 07h/19h' if 7 <= hora_atual < 19 else '8 - 08h/20h'
-        turno_ecin_desc = "Turno Diurno (07h-19h)"
+        turno_ecin = '6 - 07h/19h'
+        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
     else:
-        # Turno noturno
-        turno_ecin = '7 - 19h/07h' if hora_atual >= 19 else '9 - 20h/08h'
-        turno_ecin_desc = "Turno Noturno (19h-07h)"
+        turno_ecin = '7 - 19h/07h'
+        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
     # Buscar ECINs para o turno atual
     ecins = Ecin.query.filter(
@@ -8551,21 +8588,14 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== 4. EIP (5 bombeiros) ==========
-    # EIP também deve respeitar o turno
-    if 7 <= hora_atual < 19:
-        turno_eip = '6 - 07h/19h' if 7 <= hora_atual < 19 else '8 - 08h/20h'
-    else:
-        turno_eip = '7 - 19h/07h' if hora_atual >= 19 else '9 - 20h/08h'
-
+    # ========== 4. EIP (5 bombeiros do turno) ==========
     eips = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP',
-        Escala.turno == turno_eip
+        Escala.turno == turno_ecin
     ).order_by(Escala.bombeiro_id).limit(5).all()
 
-    # Se não encontrar EIP no turno específico, buscar qualquer EIP do dia
     if not eips:
         eips = Escala.query.filter(
             func.date(Escala.data_inicio) <= hoje,
@@ -8576,8 +8606,10 @@ def quadro_operacional():
     # ========== 5. INEM ==========
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
+        turno_inem_desc = "Turno Diurno (07h-19h)"
     else:
         turno_inem = '7 - 19h/07h'
+        turno_inem_desc = "Turno Noturno (19h-07h)"
 
     inem_um = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
@@ -8587,15 +8619,13 @@ def quadro_operacional():
     ).first()
 
     # ========== 6. MOTORISTAS DO TURNO PARA INEM ==========
-    # Buscar motoristas do mesmo turno
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'Motorista',
-        Escala.turno == turno_inem  # Mesmo turno do INEM
+        Escala.turno == turno_inem
     ).order_by(Bombeiro.nome).all()
 
-    # Se não encontrar motoristas no turno, buscar todos os motoristas do dia
     if not motoristas_turno:
         motoristas_turno = Escala.query.join(Bombeiro).filter(
             func.date(Escala.data_inicio) <= hoje,
@@ -8604,15 +8634,13 @@ def quadro_operacional():
         ).order_by(Escala.turno, Bombeiro.nome).all()
 
     # ========== 7. TODOS OS EIP PARA AS COMBOBOX DA RESERVA ==========
-    # Reserva deve ser do mesmo turno
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP',
-        Escala.turno == turno_eip
+        Escala.turno == turno_ecin
     ).order_by(Bombeiro.nome).all()
 
-    # Se não encontrar EIP no turno, buscar todos
     if not todos_eip:
         todos_eip = Escala.query.join(Bombeiro).filter(
             func.date(Escala.data_inicio) <= hoje,
@@ -8620,7 +8648,7 @@ def quadro_operacional():
             Escala.categoria == 'EIP'
         ).order_by(Bombeiro.nome).all()
 
-    # ========== 8. RESERVA (buscar da configuração salva) ==========
+    # ========== 8. BUSCAR CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
     # ========== 9. BUSCAR VIATURAS ==========
@@ -8642,18 +8670,16 @@ def quadro_operacional():
     # Determinar turno atual para exibição
     if 7 <= hora_atual < 19:
         turno_atual = "Turno Diurno (07h00 - 19h00)"
-        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
     else:
         turno_atual = "Turno Noturno (19h00 - 07h00)"
-        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
     return render_template('quadro_operacional.html',
                            hoje=hoje,
                            hora_atual=hora_atual,
                            turno_atual=turno_atual,
-                           turno_central=turno_central,
+                           turno_central=turno_central_desc,
                            turno_ecin=turno_ecin_desc,
-                           turno_inem=turno_inem,
+                           turno_inem=turno_inem_desc,
                            comando=comando,
                            central=central,
                            ecin_chefe=ecin_chefe,
@@ -8667,6 +8693,295 @@ def quadro_operacional():
                            viaturas_absc=viaturas_absc,
                            viaturas_vcot=viaturas_vcot,
                            config=config)
+
+
+@app.route('/api/salvar-quadro-operacional', methods=['POST'])
+@login_required
+def salvar_quadro_operacional():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'error': 'Acesso restrito'}), 403
+
+    data = request.get_json()
+    hoje = date.today()
+
+    # Verificar se já existe configuração para hoje
+    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
+    if not quadro:
+        quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
+        db.session.add(quadro)
+
+    # Atualizar viaturas
+    quadro.viatura_ecin_id = data.get('viatura_ecin') or None
+    quadro.viatura_eip_id = data.get('viatura_eip') or None
+    quadro.viatura_inem_id = data.get('viatura_inem') or None
+    quadro.viatura_reserva_id = data.get('viatura_reserva') or None
+    quadro.viatura_comando_id = data.get('viatura_comando') or None
+
+    # Atualizar motorista INEM
+    quadro.motorista_inem_id = data.get('motorista_inem_id') or None
+    quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
+    quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
+
+    # Atualizar reservas
+    quadro.reserva_1_id = data.get('reserva_1_id') or None
+    quadro.reserva_1_numero = data.get('reserva_1_numero') or None
+    quadro.reserva_1_mec = data.get('reserva_1_mec') or None
+
+    quadro.reserva_2_id = data.get('reserva_2_id') or None
+    quadro.reserva_2_numero = data.get('reserva_2_numero') or None
+    quadro.reserva_2_mec = data.get('reserva_2_mec') or None
+
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/exportar-quadro-operacional', methods=['POST'])
+@login_required
+def exportar_quadro_operacional():
+    data = request.get_json()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Quadro Operacional"
+
+    # Estilos
+    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
+    header_font = Font(bold=True, size=12)
+    title_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    title_font = Font(bold=True, size=14, color='FFFFFF')
+
+    # Título
+    ws.merge_cells('A1:E1')
+    cell = ws['A1']
+    cell.value = f"QUADRO OPERACIONAL - {data['data']}"
+    cell.fill = title_fill
+    cell.font = title_font
+    cell.alignment = openpyxl.styles.Alignment(horizontal='center')
+
+    # Subtítulo
+    ws.merge_cells('A2:E2')
+    ws['A2'].value = f"Turno Atual: {data.get('turno_atual', '')}"
+    ws['A2'].alignment = openpyxl.styles.Alignment(horizontal='center')
+
+    row = 4
+
+    # ECIN
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = "ECIN - Equipa de Combate a Incêndios"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='DC3545', end_color='DC3545', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Função"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Chefe"
+    ws.cell(row=row, column=2).value = data['ecin']['chefe']
+    ws.cell(row=row, column=3).value = data['ecin']['chefe_numero']
+    ws.cell(row=row, column=4).value = data['ecin']['chefe_mec']
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Motorista"
+    ws.cell(row=row, column=2).value = data['ecin']['motorista']
+    ws.cell(row=row, column=3).value = data['ecin']['motorista_numero']
+    ws.cell(row=row, column=4).value = data['ecin']['motorista_mec']
+    row += 1
+
+    for i, g in enumerate(data['ecin']['guarnicao'], 1):
+        if g and g.get('nome'):
+            ws.cell(row=row, column=1).value = f"Guarnição {i}"
+            ws.cell(row=row, column=2).value = g.get('nome', '')
+            ws.cell(row=row, column=3).value = g.get('numero', '')
+            ws.cell(row=row, column=4).value = g.get('mec', '')
+            row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura ECIN"
+    ws.cell(row=row, column=2).value = data['ecin']['viatura']
+    row += 2
+
+    # EIP
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = "EIP - Equipa de Intervenção Permanente"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='FFC107', end_color='FFC107', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    for i, e in enumerate(data['eip']['elementos'], 1):
+        if e and e.get('nome'):
+            ws.cell(row=row, column=1).value = i
+            ws.cell(row=row, column=2).value = e.get('nome', '')
+            ws.cell(row=row, column=3).value = e.get('numero', '')
+            ws.cell(row=row, column=4).value = e.get('mec', '')
+            row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura EIP"
+    ws.cell(row=row, column=2).value = data['eip']['viatura']
+    row += 2
+
+    # INEM
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = f"INEM - Equipa de Suporte (Turno: {data['inem']['turno']})"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='198754', end_color='198754', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Função/Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "1"
+    ws.cell(row=row, column=2).value = f"Socorrista\n{data['inem']['socorrista']}"
+    ws.cell(row=row, column=3).value = data['inem']['socorrista_numero']
+    ws.cell(row=row, column=4).value = data['inem']['socorrista_mec']
+    row += 1
+
+    ws.cell(row=row, column=1).value = "2"
+    ws.cell(row=row, column=2).value = f"Motorista\n{data['inem']['motorista']}"
+    ws.cell(row=row, column=3).value = data['inem']['motorista_numero']
+    ws.cell(row=row, column=4).value = data['inem']['motorista_mec']
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura INEM"
+    ws.cell(row=row, column=2).value = data['inem']['viatura']
+    row += 2
+
+    # RESERVA
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = "RESERVA (EIP)"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='0DCAF0', end_color='0DCAF0', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    for i, r in enumerate(data['reserva']['elementos'], 1):
+        if r and r.get('nome'):
+            ws.cell(row=row, column=1).value = i
+            ws.cell(row=row, column=2).value = r.get('nome', '')
+            ws.cell(row=row, column=3).value = r.get('numero', '')
+            ws.cell(row=row, column=4).value = r.get('mec', '')
+            row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura Reserva"
+    ws.cell(row=row, column=2).value = data['reserva']['viatura']
+    row += 2
+
+    # COMANDO
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = "COMANDO"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='212529', end_color='212529', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Função"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Comandante"
+    ws.cell(row=row, column=2).value = data['comando']['nome']
+    ws.cell(row=row, column=3).value = data['comando']['numero']
+    ws.cell(row=row, column=4).value = data['comando']['mec']
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura Comando"
+    ws.cell(row=row, column=2).value = data['comando']['viatura']
+    row += 2
+
+    # CENTRAL
+    ws.merge_cells(f'A{row}:E{row}')
+    ws.cell(row=row, column=1).value = f"CENTRAL (Turno: {data['central']['turno']})"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='6C757D', end_color='6C757D', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Função"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Nº Interno"
+    ws.cell(row=row, column=4).value = "Mecanográfico"
+    for col in range(1, 5):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Central"
+    ws.cell(row=row, column=2).value = data['central']['nome']
+    ws.cell(row=row, column=3).value = data['central']['numero']
+    ws.cell(row=row, column=4).value = data['central']['mec']
+
+    # Ajustar larguras
+    for col in ['A', 'B', 'C', 'D', 'E']:
+        ws.column_dimensions[col].width = 30
+
+    # Ajustar altura das linhas
+    for r in range(1, row + 5):
+        ws.row_dimensions[r].height = 20
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True,
+                     download_name=f'quadro_operacional_{data["data"]}.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@app.route('/api/quadro-operacional-config', methods=['GET'])
+@login_required
+def get_quadro_operacional_config():
+    hoje = date.today()
+    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
+
+    if quadro:
+        return jsonify({
+            'viatura_ecin': quadro.viatura_ecin_id,
+            'viatura_eip': quadro.viatura_eip_id,
+            'viatura_inem': quadro.viatura_inem_id,
+            'viatura_reserva': quadro.viatura_reserva_id,
+            'viatura_comando': quadro.viatura_comando_id,
+            'motorista_inem_id': quadro.motorista_inem_id,
+            'motorista_inem_numero': quadro.motorista_inem_numero,
+            'motorista_inem_mec': quadro.motorista_inem_mec,
+            'reserva_1_id': quadro.reserva_1_id,
+            'reserva_1_numero': quadro.reserva_1_numero,
+            'reserva_1_mec': quadro.reserva_1_mec,
+            'reserva_2_id': quadro.reserva_2_id,
+            'reserva_2_numero': quadro.reserva_2_numero,
+            'reserva_2_mec': quadro.reserva_2_mec
+        })
+    return jsonify({})
 
 
 @app.route('/api/salvar-quadro-operacional', methods=['POST'])
