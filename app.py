@@ -44,6 +44,55 @@ def load_user(user_id):
     return db.session.get(Bombeiro, int(user_id))
 
 
+# Adicionar após db.init_app(app) e antes das rotas
+with app.app_context():
+    from sqlalchemy import inspect, text
+    import sys
+
+    try:
+        inspector = inspect(db.engine)
+
+        if 'quadro_operacional' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('quadro_operacional')]
+            print(f"Colunas existentes na tabela quadro_operacional: {columns}", file=sys.stderr)
+
+            # Dicionário com as colunas que devem existir e seus tipos
+            colunas_necessarias = {
+                'motorista_inem_id': 'INTEGER REFERENCES bombeiros(id)',
+                'motorista_inem_numero': 'VARCHAR(20)',
+                'motorista_inem_mec': 'VARCHAR(20)',
+                'eip_reserva_1_id': 'INTEGER REFERENCES bombeiros(id)',
+                'eip_reserva_1_numero': 'VARCHAR(20)',
+                'eip_reserva_1_mec': 'VARCHAR(20)',
+                'eip_reserva_2_id': 'INTEGER REFERENCES bombeiros(id)',
+                'eip_reserva_2_numero': 'VARCHAR(20)',
+                'eip_reserva_2_mec': 'VARCHAR(20)',
+                'criado_por': 'INTEGER REFERENCES bombeiros(id)',
+                'data_criacao': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+            }
+
+            # Verificar e adicionar colunas em falta
+            for col_name, col_type in colunas_necessarias.items():
+                if col_name not in columns:
+                    try:
+                        db.session.execute(
+                            text(f'ALTER TABLE quadro_operacional ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
+                        print(f"Coluna {col_name} adicionada à tabela quadro_operacional", file=sys.stderr)
+                    except Exception as e:
+                        print(f"Erro ao adicionar coluna {col_name}: {e}", file=sys.stderr)
+
+            db.session.commit()
+            print("Migração da tabela quadro_operacional concluída!", file=sys.stderr)
+        else:
+            # Criar tabela do zero
+            db.create_all()
+            print("Tabela quadro_operacional criada com sucesso!", file=sys.stderr)
+
+    except Exception as e:
+        print(f"Erro durante a migração: {e}", file=sys.stderr)
+        db.session.rollback()
+
+
 # ---------- Criação da BD e admin inicial ----------
 @app.before_request
 def create_tables():
@@ -8954,6 +9003,7 @@ def salvar_quadro_operacional():
     data = request.get_json()
     hoje = date.today()
 
+    # Verificar se já existe configuração para hoje
     quadro = QuadroOperacional.query.filter_by(data=hoje).first()
     if not quadro:
         quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
@@ -8971,8 +9021,45 @@ def salvar_quadro_operacional():
     quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
     quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
 
-    # Atualizar reservas
-    quadro.reserva_1_id = data.get('reserva_1_id') or None
+    # Atualizar EIP Reserva 1
+    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or None
+    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or None
+    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or None
+
+    # Atualizar EIP Reserva 2
+    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or None
+    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or None
+    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or None
+
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/quadro-operacional-config', methods=['GET'])
+@login_required
+def get_quadro_operacional_config():
+    hoje = date.today()
+    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
+
+    if quadro:
+        return jsonify({
+            'viatura_ecin': quadro.viatura_ecin_id,
+            'viatura_eip': quadro.viatura_eip_id,
+            'viatura_inem': quadro.viatura_inem_id,
+            'viatura_reserva': quadro.viatura_reserva_id,
+            'viatura_comando': quadro.viatura_comando_id,
+            'motorista_inem_id': quadro.motorista_inem_id,
+            'motorista_inem_numero': quadro.motorista_inem_numero,
+            'motorista_inem_mec': quadro.motorista_inem_mec,
+            'eip_reserva_1_id': quadro.eip_reserva_1_id,
+            'eip_reserva_1_numero': quadro.eip_reserva_1_numero,
+            'eip_reserva_1_mec': quadro.eip_reserva_1_mec,
+            'eip_reserva_2_id': quadro.eip_reserva_2_id,
+            'eip_reserva_2_numero': quadro.eip_reserva_2_numero,
+            'eip_reserva_2_mec': quadro.eip_reserva_2_mec
+        })
+    return jsonify({})
 
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])

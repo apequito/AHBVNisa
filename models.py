@@ -560,15 +560,14 @@ class QuadroOperacional(db.Model):
     motorista_inem_numero = db.Column(db.String(20), nullable=True)
     motorista_inem_mec = db.Column(db.String(20), nullable=True)
 
-    # Reserva 1
-    reserva_1_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
-    reserva_1_numero = db.Column(db.String(20), nullable=True)
-    reserva_1_mec = db.Column(db.String(20), nullable=True)
+    # EIP Reserva (2 bombeiros)
+    eip_reserva_1_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    eip_reserva_1_numero = db.Column(db.String(20), nullable=True)
+    eip_reserva_1_mec = db.Column(db.String(20), nullable=True)
 
-    # Reserva 2
-    reserva_2_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
-    reserva_2_numero = db.Column(db.String(20), nullable=True)
-    reserva_2_mec = db.Column(db.String(20), nullable=True)
+    eip_reserva_2_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    eip_reserva_2_numero = db.Column(db.String(20), nullable=True)
+    eip_reserva_2_mec = db.Column(db.String(20), nullable=True)
 
     # Metadados
     criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
@@ -581,7 +580,7 @@ class QuadroOperacional(db.Model):
     viatura_reserva = db.relationship('Viatura', foreign_keys=[viatura_reserva_id])
     viatura_comando = db.relationship('Viatura', foreign_keys=[viatura_comando_id])
 
-    motorista_inem = db.relationship('Bombeiro', foreign_keys=[motorista_inem_id], backref='quadro_motorista')
-    reserva_1 = db.relationship('Bombeiro', foreign_keys=[reserva_1_id], backref='quadro_reserva1')
-    reserva_2 = db.relationship('Bombeiro', foreign_keys=[reserva_2_id], backref='quadro_reserva2')
-    criador = db.relationship('Bombeiro', foreign_keys=[criado_por], backref='quadro_criados')
+    motorista_inem = db.relationship('Bombeiro', foreign_keys=[motorista_inem_id])
+    eip_reserva_1 = db.relationship('Bombeiro', foreign_keys=[eip_reserva_1_id])
+    eip_reserva_2 = db.relationship('Bombeiro', foreign_keys=[eip_reserva_2_id])
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
