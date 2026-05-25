@@ -4,7 +4,6 @@
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 
-<!-- Aviso para Central (apenas leitura para aprovações) -->
 {% if is_central %}
 <div class="alert alert-info mb-3">
     <i class="bi bi-eye me-2"></i> A Central pode visualizar todas as trocas e criar as suas próprias, mas não pode aprovar pedidos.
@@ -18,7 +17,6 @@
             <i class="bi bi-list-ul me-1"></i> Listar Trocas
         </button>
     </li>
-    <!-- Central também pode criar trocas -->
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="nova-tab" data-bs-toggle="tab" data-bs-target="#nova" type="button" role="tab">
             <i class="bi bi-plus-circle me-1"></i> Nova Troca
@@ -92,20 +90,19 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <!-- Ações disponíveis -->
                                 {% if current_user.id == t.bombeiro_destino_id and t.estado == 'pendente_colega' %}
                                     <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">
-                                        <i class="bi bi-check-lg"></i> Aceitar
+                                        <i class="bi bi-check-lg"></i>
                                     </a>
                                     <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
-                                        <i class="bi bi-x-lg"></i> Recusar
+                                        <i class="bi bi-x-lg"></i>
                                     </a>
                                 {% elif (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and t.estado == 'aceite_colega' %}
                                     <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">
-                                        <i class="bi bi-check2-circle"></i> Aprovar
+                                        <i class="bi bi-check2-circle"></i>
                                     </a>
                                     <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
-                                        <i class="bi bi-x-lg"></i> Recusar
+                                        <i class="bi bi-x-lg"></i>
                                     </a>
                                 {% endif %}
                                 <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
@@ -121,78 +118,56 @@
         </div>
     </div>
 
-    <!-- ========== ABA NOVA TROCA (visível para todos) ========== -->
+    <!-- ========== ABA NOVA TROCA ========== -->
     <div class="tab-pane fade" id="nova" role="tabpanel">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title mb-3">Pedir Troca de Serviço</h5>
-                <form method="POST">
-                   <div class="row">
-    <div class="col-md-6">
-        <label class="form-label">Tipo de Troca</label>
-        <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required onchange="atualizarListaColegas()">
-            <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
-            <option value="ecin">ECIN / ELAC</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Colega com quem pretende trocar</label>
-        <select name="destino_id" id="destino_id_select" class="form-select" required>
-            <option value="">-- Selecione --</option>
-            {% for b in bombeiros_assalariados %}
-            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }}) - {{ b.tipo_bombeiro }}</option>
-            {% endfor %}
-        </select>
-    </div>
-</div>
-                    <div class="row mt-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Data do seu serviço</label>
-                            <input type="date" name="data_origem" class="form-control" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Turno</label>
-                            <select name="turno_origem" class="form-select" required>
-                                <option value="">-- Selecione --</option>
-                                <option value="1 - 00h/08h">1 - 00h/08h</option>
-                                <option value="2 - 08h/16h">2 - 08h/16h</option>
-                                <option value="3 - 16h/24h">3 - 16h/24h</option>
-                                <option value="4 - 11h/19h">4 - 11h/19h</option>
-                                <option value="5 - 10h/18h">5 - 10h/18h</option>
-                                <option value="6 - 07h/19h">6 - 07h/19h</option>
-                                <option value="7 - 19h/07h">7 - 19h/07h</option>
-                                <option value="8 - 08h/20h">8 - 08h/20h</option>
-                                <option value="9 - 20h/08h">9 - 20h/08h</option>
+                <form method="POST" id="formTroca">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de Troca</label>
+                            <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required>
+                                <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
+                                <option value="ecin">ECIN / ELAC</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Data do serviço do colega</label>
-                            <input type="date" name="data_destino" class="form-control" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Turno</label>
-                            <select name="turno_destino" class="form-select" required>
-                                <option value="">-- Selecione --</option>
-                                <option value="1 - 00h/08h">1 - 00h/08h</option>
-                                <option value="2 - 08h/16h">2 - 08h/16h</option>
-                                <option value="3 - 16h/24h">3 - 16h/24h</option>
-                                <option value="4 - 11h/19h">4 - 11h/19h</option>
-                                <option value="5 - 10h/18h">5 - 10h/18h</option>
-                                <option value="6 - 07h/19h">6 - 07h/19h</option>
-                                <option value="7 - 19h/07h">7 - 19h/07h</option>
-                                <option value="8 - 08h/20h">8 - 08h/20h</option>
-                                <option value="9 - 20h/08h">9 - 20h/08h</option>
+                        <div class="col-md-6">
+                            <label class="form-label">Colega com quem pretende trocar</label>
+                            <select name="destino_id" id="destino_id_select" class="form-select" required>
+                                <option value="">-- Selecione primeiro o tipo de troca --</option>
                             </select>
                         </div>
                     </div>
                     <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label">O meu serviço</label>
+                            <div class="border p-2" id="meuCalendario" style="min-height: 280px;">
+                                <div class="text-center p-3">Selecione o tipo de troca para carregar os seus turnos...</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Serviço do colega</label>
+                            <div class="border p-2" id="colegaCalendario" style="min-height: 280px;">
+                                <div class="text-center p-3">Selecione primeiro um colega...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
                         <div class="col-md-12">
+                            <input type="hidden" name="data_origem" id="data_origem_hidden">
+                            <input type="hidden" name="turno_origem" id="turno_origem_hidden">
+                            <input type="hidden" name="data_destino" id="data_destino_hidden">
+                            <input type="hidden" name="turno_destino" id="turno_destino_hidden">
                             <label class="form-label">Motivo</label>
                             <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca (opcional)"></textarea>
                         </div>
                     </div>
                     <div class="mt-4">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> Enviar Pedido</button>
+                        <button type="submit" class="btn btn-primary" id="btnEnviarTroca" disabled>
+                            <i class="bi bi-send me-1"></i> Enviar Pedido
+                        </button>
+                        <small class="text-muted ms-2">Selecione o seu turno e o turno do colega para ativar o botão.</small>
                     </div>
                 </form>
             </div>
@@ -200,20 +175,259 @@
     </div>
 </div>
 
+<script>
+let tipoAtual = 'assalariado';
+let meuCalendarioDados = {};
+let colegaCalendarioDados = {};
+let meuTurnoSelecionado = null;
+let colegaTurnoSelecionado = null;
+let colegaIdSelecionado = null;
+const userId = {{ current_user.id }};
+
+// ========== CARREGAR CALENDÁRIO DO UTILIZADOR ==========
+function carregarMeuCalendario() {
+    const container = document.getElementById('meuCalendario');
+    container.innerHTML = '<div class="text-center p-3">Carregando seus turnos...</div>';
+
+    const ano = new Date().getFullYear();
+    const mes = new Date().getMonth() + 1;
+
+    fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}`)
+        .then(r => r.json())
+        .then(dados => {
+            meuCalendarioDados = dados;
+            criarCalendario('meuCalendario', dados, true);
+        })
+        .catch(err => {
+            console.error(err);
+            container.innerHTML = '<div class="alert alert-danger">Erro ao carregar turnos.</div>';
+        });
+}
+
+// ========== CARREGAR CALENDÁRIO DO COLEGA ==========
+function carregarColegaCalendario(colegaId) {
+    const container = document.getElementById('colegaCalendario');
+    container.innerHTML = '<div class="text-center p-3">Carregando turnos do colega...</div>';
+
+    const ano = new Date().getFullYear();
+    const mes = new Date().getMonth() + 1;
+
+    fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}`)
+        .then(r => r.json())
+        .then(dados => {
+            colegaCalendarioDados = dados;
+            criarCalendario('colegaCalendario', dados, false);
+        })
+        .catch(err => {
+            console.error(err);
+            container.innerHTML = '<div class="alert alert-danger">Erro ao carregar turnos do colega.</div>';
+        });
+}
+
+// ========== CRIAR CALENDÁRIO ==========
+function criarCalendario(containerId, dados, isMeu) {
+    const container = document.getElementById(containerId);
+    const ano = new Date().getFullYear();
+    const mes = new Date().getMonth() + 1;
+
+    const primeiroDia = new Date(ano, mes - 1, 1);
+    const ultimoDia = new Date(ano, mes, 0);
+    const totalDias = ultimoDia.getDate();
+    const diaSemanaInicio = primeiroDia.getDay();
+
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>${meses[mes - 1]} ${ano}</strong>
+        </div>
+        <table class="table table-bordered table-sm text-center">
+            <thead class="table-light">
+                <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
+            </thead>
+            <tbody>`;
+
+    let dia = 1;
+    for (let semana = 0; semana < 6; semana++) {
+        html += '<tr>';
+        for (let d = 0; d < 7; d++) {
+            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
+                html += '<td class="text-muted">&nbsp;</td>';
+            } else {
+                const temEscala = dados[dia] && dados[dia].length > 0;
+                let escalasHtml = '';
+                if (temEscala) {
+                    escalasHtml = dados[dia].map(e => `${e.turno}`).join('<br>');
+                }
+                html += `<td class="${temEscala ? 'bg-warning escala-dia' : ''}"
+                               style="cursor:pointer;"
+                               data-dia="${dia}"
+                               data-is-meu="${isMeu}"
+                               title="${escalasHtml}">${dia}</td>`;
+                dia++;
+            }
+        }
+        html += '</tr>';
+        if (dia > totalDias) break;
+    }
+    html += '</tbody><table>';
+    container.innerHTML = html;
+
+    // Adicionar eventos de clique nos dias com escala
+    container.querySelectorAll('.escala-dia').forEach(td => {
+        td.addEventListener('click', function() {
+            const dia = parseInt(this.getAttribute('data-dia'));
+            const isMeuCalendario = this.getAttribute('data-is-meu') === 'true';
+            const escalas = isMeuCalendario ? dados[dia] : dados[dia];
+
+            if (isMeuCalendario) {
+                selecionarMeuTurno(dia, escalas);
+            } else {
+                selecionarColegaTurno(dia, escalas);
+            }
+
+            // Remover seleção anterior
+            container.querySelectorAll('.escala-dia.selected').forEach(t => t.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+}
+
+// ========== SELECIONAR MEU TURNO ==========
+function selecionarMeuTurno(dia, escalas) {
+    if (!escalas || escalas.length === 0) return;
+
+    const turno = escalas[0].turno;
+    const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+    document.getElementById('data_origem_hidden').value = dataStr;
+    document.getElementById('turno_origem_hidden').value = turno;
+    meuTurnoSelecionado = { data: dataStr, turno: turno };
+
+    // Destacar visualmente no calendário
+    document.getElementById('meuCalendario').querySelectorAll('.escala-dia').forEach(td => {
+        td.classList.remove('selected');
+        if (parseInt(td.getAttribute('data-dia')) === dia) {
+            td.classList.add('selected');
+        }
+    });
+
+    verificarHabilitarBotao();
+}
+
+// ========== SELECIONAR TURNO DO COLEGA ==========
+function selecionarColegaTurno(dia, escalas) {
+    if (!escalas || escalas.length === 0) return;
+
+    const turno = escalas[0].turno;
+    const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+    document.getElementById('data_destino_hidden').value = dataStr;
+    document.getElementById('turno_destino_hidden').value = turno;
+    colegaTurnoSelecionado = { data: dataStr, turno: turno };
+
+    // Destacar visualmente no calendário
+    document.getElementById('colegaCalendario').querySelectorAll('.escala-dia').forEach(td => {
+        td.classList.remove('selected');
+        if (parseInt(td.getAttribute('data-dia')) === dia) {
+            td.classList.add('selected');
+        }
+    });
+
+    verificarHabilitarBotao();
+}
+
+// ========== VERIFICAR SE PODE ENVIAR ==========
+function verificarHabilitarBotao() {
+    const btn = document.getElementById('btnEnviarTroca');
+    if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
+        btn.disabled = false;
+    } else {
+        btn.disabled = true;
+    }
+}
+
+// ========== ATUALIZAR LISTA DE COLEGAS ==========
 function atualizarListaColegas() {
     const tipo = document.getElementById('tipo_pedido_select').value;
+    tipoAtual = tipo;
     const selectDestino = document.getElementById('destino_id_select');
+
+    selectDestino.innerHTML = '<option value="">Carregando...</option>';
 
     fetch(`/api/colegas_para_troca?tipo=${tipo}`)
         .then(response => response.json())
         .then(data => {
-            selectDestino.innerHTML = '<option value="">-- Selecione --</option>';
+            selectDestino.innerHTML = '<option value="">-- Selecione um colega --</option>';
             data.forEach(b => {
                 const option = document.createElement('option');
                 option.value = b.id;
                 option.textContent = `${b.nome} (${b.mecanografico}) - ${b.tipo_bombeiro}`;
                 selectDestino.appendChild(option);
             });
+        })
+        .catch(err => {
+            console.error(err);
+            selectDestino.innerHTML = '<option value="">Erro ao carregar colegas</option>';
         });
+
+    // Resetar seleções
+    colegaIdSelecionado = null;
+    colegaTurnoSelecionado = null;
+    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    verificarHabilitarBotao();
 }
+
+// ========== COLEGA SELECIONADO ==========
+document.getElementById('destino_id_select').addEventListener('change', function() {
+    const colegaId = this.value;
+    if (colegaId) {
+        colegaIdSelecionado = parseInt(colegaId);
+        colegaTurnoSelecionado = null;
+        carregarColegaCalendario(colegaId);
+    } else {
+        colegaIdSelecionado = null;
+        document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    }
+    verificarHabilitarBotao();
+});
+
+// ========== MUDANÇA DE TIPO ==========
+document.getElementById('tipo_pedido_select').addEventListener('change', function() {
+    atualizarListaColegas();
+    // Resetar seleções
+    meuTurnoSelecionado = null;
+    colegaTurnoSelecionado = null;
+    colegaIdSelecionado = null;
+    document.getElementById('data_origem_hidden').value = '';
+    document.getElementById('turno_origem_hidden').value = '';
+    document.getElementById('data_destino_hidden').value = '';
+    document.getElementById('turno_destino_hidden').value = '';
+    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    document.getElementById('btnEnviarTroca').disabled = true;
+});
+
+// ========== INICIALIZAÇÃO ==========
+document.addEventListener('DOMContentLoaded', function() {
+    carregarMeuCalendario();
+    atualizarListaColegas();
+});
+</script>
+
+<style>
+.escala-dia {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.escala-dia:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+.escala-dia.selected {
+    background-color: #28a745 !important;
+    color: white;
+    font-weight: bold;
+}
+</style>
 {% endblock %}
