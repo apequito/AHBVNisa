@@ -127,24 +127,24 @@
             <div class="card-body">
                 <h5 class="card-title mb-3">Pedir Troca de Serviço</h5>
                 <form method="POST">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo de Troca</label>
-                            <select name="tipo_pedido" class="form-select mb-3" required>
-                                <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
-                                <option value="ecin">ECIN / ELAC</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Colega com quem pretende trocar</label>
-                            <select name="destino_id" class="form-select" required>
-                                <option value="">-- Selecione --</option>
-                                {% for b in bombeiros %}
-                                <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }}) - {{ b.tipo_bombeiro }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+                   <div class="row">
+    <div class="col-md-6">
+        <label class="form-label">Tipo de Troca</label>
+        <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required onchange="atualizarListaColegas()">
+            <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
+            <option value="ecin">ECIN / ELAC</option>
+        </select>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Colega com quem pretende trocar</label>
+        <select name="destino_id" id="destino_id_select" class="form-select" required>
+            <option value="">-- Selecione --</option>
+            {% for b in bombeiros_assalariados %}
+            <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }}) - {{ b.tipo_bombeiro }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
                     <div class="row mt-3">
                         <div class="col-md-3">
                             <label class="form-label">Data do seu serviço</label>
@@ -199,4 +199,21 @@
         </div>
     </div>
 </div>
+
+function atualizarListaColegas() {
+    const tipo = document.getElementById('tipo_pedido_select').value;
+    const selectDestino = document.getElementById('destino_id_select');
+
+    fetch(`/api/colegas_para_troca?tipo=${tipo}`)
+        .then(response => response.json())
+        .then(data => {
+            selectDestino.innerHTML = '<option value="">-- Selecione --</option>';
+            data.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b.id;
+                option.textContent = `${b.nome} (${b.mecanografico}) - ${b.tipo_bombeiro}`;
+                selectDestino.appendChild(option);
+            });
+        });
+}
 {% endblock %}

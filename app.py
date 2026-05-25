@@ -2320,11 +2320,14 @@ def exportar_escala():
 def trocas():
     separador = request.args.get('tipo', 'assalariado')
 
-    # Verificar se é Central (apenas leitura para aprovações, mas pode criar)
     is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
-    # Central pode criar as suas próprias trocas (sem restrição)
+    if request.method == 'POST' and is_central:
+        flash('A Central não pode criar pedidos de troca.', 'danger')
+        return redirect(url_for('trocas'))
+
     if request.method == 'POST':
+        # ... código existente de criação de troca ...
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
         data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
@@ -2333,7 +2336,6 @@ def trocas():
         motivo = request.form.get('motivo', '')
         tipo_pedido = request.form.get('tipo_pedido', 'assalariado')
 
-        # Validação extra para ECINs
         if tipo_pedido == 'ecin':
             escalado = Escala.query.filter(
                 Escala.bombeiro_id == current_user.id,
@@ -2389,23 +2391,34 @@ def trocas():
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     elif current_user.resp_departamento == 'Central':
-        # Central pode ver todas as trocas (apenas leitura para aprovações)
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     else:
-        # Utilizador normal vê apenas as suas trocas
         pedidos = query.filter(
             (TrocaServico.bombeiro_origem_id == current_user.id) |
             (TrocaServico.bombeiro_destino_id == current_user.id)
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
-    bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
-    bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
-        .filter(
+    # Listas de bombeiros - ordenadas por nome
+    bombeiros = Bombeiro.query.filter(
         Bombeiro.id != current_user.id,
-        Bombeiro.ativo == True,
-        Bombeiro.tipo_bombeiro == 'Profissional',
-        Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-    ).distinct().all()
+        Bombeiro.ativo == True
+    ).order_by(Bombeiro.nome.asc()).all()
+
+    # Bombeiros elegíveis para troca assalariada - ordenados por nome
+    if separador == 'assalariado':
+        bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
+            .filter(
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True,
+            Bombeiro.tipo_bombeiro == 'Profissional',
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        ).distinct().order_by(Bombeiro.nome.asc()).all()
+    else:
+        # Para ECIN/ELAC, mostrar todos os bombeiros ativos (não apenas profissionais)
+        bombeiros_assalariados = Bombeiro.query.filter(
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True
+        ).order_by(Bombeiro.nome.asc()).all()
 
     return render_template('trocas.html',
                            pedidos=pedidos,
@@ -2413,6 +2426,35 @@ def trocas():
                            bombeiros_assalariados=bombeiros_assalariados,
                            separador_atual=separador,
                            is_central=is_central)
+
+
+@app.route('/api/colegas_para_troca')
+@login_required
+def api_colegas_para_troca():
+    tipo = request.args.get('tipo', 'assalariado')
+
+    if tipo == 'assalariado':
+        # Apenas profissionais que tenham escalas nas categorias certas
+        colegas = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
+            .filter(
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True,
+            Bombeiro.tipo_bombeiro == 'Profissional',
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        ).distinct().order_by(Bombeiro.nome.asc()).all()
+    else:
+        # ECIN/ELAC: todos os bombeiros ativos
+        colegas = Bombeiro.query.filter(
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True
+        ).order_by(Bombeiro.nome.asc()).all()
+
+    return jsonify([{
+        'id': b.id,
+        'nome': b.nome,
+        'mecanografico': b.mecanografico,
+        'tipo_bombeiro': b.tipo_bombeiro
+    } for b in colegas])
 
 
 @app.route('/trocas/imprimir-ecin')
@@ -2441,37 +2483,40 @@ def imprimir_troca(id):
         return render_template('imprimir_troca.html', troca=troca)
 
 
-
 @app.route('/api/escala_usuario/<int:user_id>')
 @login_required
 def api_escala_usuario(user_id):
     ano = request.args.get('ano', type=int)
     mes = request.args.get('mes', type=int)
     if not ano or not mes:
-        return {'erro': 'Parâmetros ano e mes obrigatórios'}, 400
+        return jsonify({'erro': 'Parâmetros ano e mes obrigatórios'}), 400
 
-    # Excluir escalas com observacao = 'dispensado' (e também 'troca de turno' se desejar que não apareçam,
-    # mas vou manter 'troca de turno' visível, apenas ocultar 'dispensado')
+    # Buscar escalas do utilizador no mês/ano
     escalas = Escala.query.filter(
         Escala.bombeiro_id == user_id,
         db.extract('year', Escala.data_inicio) == ano,
-        db.extract('month', Escala.data_inicio) == mes,
-        (Escala.observacao != 'dispensado') | (Escala.observacao == None)
+        db.extract('month', Escala.data_inicio) == mes
     ).order_by(Escala.data_inicio.asc()).all()
 
     result = {}
     for e in escalas:
         dia = e.data_inicio.day
-        info = {
+        if dia not in result:
+            result[dia] = []
+        result[dia].append({
             'turno': e.turno,
             'categoria': e.categoria,
             'funcao': e.funcao or ''
-        }
+        })
+
+    # Garantir que todos os dias do mês estão representados (mesmo sem escala)
+    import calendar
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    for dia in range(1, ultimo_dia + 1):
         if dia not in result:
             result[dia] = []
-        result[dia].append(info)
 
-    return result
+    return jsonify(result)
 
 @app.route('/escala/imprimir')
 @login_required
@@ -2739,22 +2784,26 @@ def detalhes_dispensa(id):
     return jsonify(dados)
 
 
-
-
 @app.route('/api/creditos_nao_gozados/<int:user_id>')
 @login_required
 def api_creditos_nao_gozados(user_id):
-    creditos = CreditoDispensa.query.filter_by(
-        bombeiro_id=user_id,
-        observacao='Não Gozado'
+    # Apenas o próprio, Admin ou Comando podem ver
+    if current_user.id != user_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'erro': 'Acesso negado'}), 403
+
+    creditos = CreditoDispensa.query.filter(
+        CreditoDispensa.bombeiro_id == user_id,
+        CreditoDispensa.observacao == 'Não Gozado'
     ).order_by(CreditoDispensa.data).all()
+
     resultado = [{
         'id': c.id,
         'data': c.data.strftime('%d/%m/%Y'),
         'descricao': c.descricao or '',
         'horas': c.horas
     } for c in creditos]
-    return resultado
+
+    return jsonify(resultado)
 
 
 @app.route('/deslocacoes/imprimir-minhas')

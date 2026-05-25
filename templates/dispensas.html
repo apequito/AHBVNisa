@@ -110,7 +110,7 @@
                         <tr><th>Data</th><th>Descrição</th><th>Horas</th></tr>
                     </thead>
                     <tbody id="det_creditos_tbody">
-                        <tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>
+                        <td><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -134,7 +134,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>As minhas escalas</strong></p>
-                            <div id="calendarioDispensa" class="border p-2" style="min-height:300px; background:#fff;"></div>
+                            <div id="calendarioDispensa" class="border p-2" style="min-height:320px; background:#fff;"></div>
                         </div>
                         <div class="col-md-6">
                             <label>Data da Dispensa</label>
@@ -192,36 +192,41 @@ let categoriaSelecionada = '';
 
 // ========== CALENDÁRIO ==========
 function carregarCalendarioDispensa() {
+    const container = document.getElementById('calendarioDispensa');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-center p-3">Carregando calendário...</div>';
+
     const url = `/api/escala_usuario/${userId}?ano=${anoAtualDisp}&mes=${mesAtualDisp}`;
-    console.log("Carregando calendário:", url);
 
     fetch(url)
         .then(r => r.json())
         .then(dados => {
-            console.log("Dados recebidos:", dados);
-            const diasTrabalho = {};
-            for (const [dia, escalas] of Object.entries(dados)) {
-                diasTrabalho[dia] = escalas;
-            }
-            criarCalendarioDisp(diasTrabalho);
+            criarCalendarioDisp(dados);
         })
         .catch(err => {
             console.error("Erro ao carregar calendário:", err);
-            document.getElementById('calendarioDispensa').innerHTML = '<div class="alert alert-danger">Erro ao carregar calendário. Recarregue a página.</div>';
+            container.innerHTML = '<div class="alert alert-danger">Erro ao carregar calendário.</div>';
         });
 }
 
-function criarCalendarioDisp(diasEscala) {
+function criarCalendarioDisp(dados) {
     const container = document.getElementById('calendarioDispensa');
-    const primeiroDia = new Date(anoAtualDisp, mesAtualDisp-1, 1);
-    const ultimoDia = new Date(anoAtualDisp, mesAtualDisp, 0);
+    const ano = anoAtualDisp;
+    const mes = mesAtualDisp;
+
+    const primeiroDia = new Date(ano, mes - 1, 1);
+    const ultimoDia = new Date(ano, mes, 0);
     const totalDias = ultimoDia.getDate();
     const diaSemanaInicio = primeiroDia.getDay();
+
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
     let html = `
         <div class="d-flex justify-content-between align-items-center mb-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMesDisp(-1)">&lt;</button>
-            <strong>${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mesAtualDisp-1]} ${anoAtualDisp}</strong>
+            <strong>${meses[mes - 1]} ${ano}</strong>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMesDisp(1)">&gt;</button>
         </div>
         <table class="table table-bordered table-sm text-center">
@@ -235,29 +240,30 @@ function criarCalendarioDisp(diasEscala) {
         html += '<tr>';
         for (let d = 0; d < 7; d++) {
             if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
-                html += '<td>&nbsp;</td>';
+                html += '<td class="text-muted">&nbsp;</td>';
             } else {
-                const temEscala = diasEscala[dia] ? true : false;
-                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}">${dia}</td>`;
+                const temEscala = dados[dia] && dados[dia].length > 0;
+                const tooltip = temEscala ? `title="${dados[dia].map(e => `${e.categoria} - ${e.turno}`).join('\\n')}"` : '';
+                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}" ${tooltip}>${dia}</td>`;
                 dia++;
             }
         }
-        html += '</table>';
+        html += '</tr>';
         if (dia > totalDias) break;
     }
     html += '</tbody></table>';
     container.innerHTML = html;
 
     // Adicionar eventos de clique
-    Array.from(container.querySelectorAll('td[data-dia]')).forEach(td => {
+    container.querySelectorAll('td[data-dia]').forEach(td => {
         td.addEventListener('click', function() {
             const diaNum = parseInt(this.getAttribute('data-dia'));
-            const escalasDoDia = diasEscala[diaNum];
-            const dataStr = `${anoAtualDisp}-${String(mesAtualDisp).padStart(2,'0')}-${String(diaNum).padStart(2,'0')}`;
+            const escalasDoDia = dados[diaNum] || [];
+            const dataStr = `${ano}-${String(mes).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
             document.getElementById('data_inicio_disp').value = dataStr;
             document.getElementById('data_fim_disp').value = dataStr;
 
-            if (escalasDoDia && escalasDoDia.length > 0) {
+            if (escalasDoDia.length > 0) {
                 const e = escalasDoDia[0];
                 document.getElementById('categoria_disp').value = e.categoria || '';
                 document.getElementById('turno_disp').value = e.turno || '';
@@ -275,7 +281,7 @@ function criarCalendarioDisp(diasEscala) {
             }
             atualizarMinimoHoras();
 
-            document.querySelectorAll('#calendarioDispensa td[data-dia]').forEach(t => t.classList.remove('table-primary'));
+            container.querySelectorAll('td[data-dia]').forEach(t => t.classList.remove('table-primary'));
             this.classList.add('table-primary');
         });
     });
@@ -283,8 +289,14 @@ function criarCalendarioDisp(diasEscala) {
 
 function mudarMesDisp(delta) {
     mesAtualDisp += delta;
-    if (mesAtualDisp < 1) { mesAtualDisp = 12; anoAtualDisp--; }
-    if (mesAtualDisp > 12) { mesAtualDisp = 1; anoAtualDisp++; }
+    if (mesAtualDisp < 1) {
+        mesAtualDisp = 12;
+        anoAtualDisp--;
+    }
+    if (mesAtualDisp > 12) {
+        mesAtualDisp = 1;
+        anoAtualDisp++;
+    }
     carregarCalendarioDispensa();
 }
 
