@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-grid-3x3-gap-fill me-2"></i>Quadro Operacional
+                <small class="text-muted">{{ hoje.strftime('%d de %B de %Y') }}</small>
+            </h2>
+            <p class="text-muted">Gestão diária das equipas operacionais</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- ECIN - Equipa de Combate a Incêndios -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-danger h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-fire"></i> ECIN - Equipa de Combate a Incêndios</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Função</th>
+                                    <th width="50%">Nome</th>
+                                    <th width="20%">Mecanográfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-warning">
+                                    <td><strong>Chefe de Equipa</strong></td>
+                                    <td>{{ ecin_chefe.bombeiro.nome if ecin_chefe else '____________________' }}</td>
+                                    <td>{{ ecin_chefe.bombeiro.mecanografico if ecin_chefe else '_____' }}</td>
+                                </tr>
+                                <tr class="table-info">
+                                    <td><strong>Motorista</strong></td>
+                                    <td>{{ ecin_motorista.bombeiro.nome if ecin_motorista else '____________________' }}</td>
+                                    <td>{{ ecin_motorista.bombeiro.mecanografico if ecin_motorista else '_____' }}</td>
+                                </tr>
+                                {% for i in range(3) %}
+                                <tr>
+                                    <td><strong>Guarnição {{ i+1 }}</strong></td>
+                                    <td>{{ ecin_guarnicao[i].bombeiro.nome if i < ecin_guarnicao|length else '____________________' }}</td>
+                                    <td>{{ ecin_guarnicao[i].bombeiro.mecanografico if i < ecin_guarnicao|length else '_____' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura ECIN (VFCI)</label>
+                        <select class="form-select" id="viatura_ecin">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_vfci %}
+                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecione a viatura VFCI afeta à equipa ECIN</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EIP - Equipa de Intervenção Permanente -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-warning h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-shield-shaded"></i> EIP - Equipa de Intervenção Permanente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="10%">#</th>
+                                    <th width="60%">Nome</th>
+                                    <th width="30%">Mecanográfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(5) %}
+                                <tr>
+                                    <td class="text-center"><strong>{{ i+1 }}</strong></td>
+                                    <td>{{ eips[i].bombeiro.nome if i < eips|length else '____________________' }}</td>
+                                    <td>{{ eips[i].bombeiro.mecanografico if i < eips|length else '_____' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura EIP (VFCI)</label>
+                        <select class="form-select" id="viatura_eip">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_vfci %}
+                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecione a viatura VFCI afeta à equipa EIP</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- INEM -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-heart-pulse"></i> INEM - Equipa de Suporte</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="10%">#</th>
+                                    <th width="60%">Nome</th>
+                                    <th width="30%">Mecanográfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(2) %}
+                                <tr>
+                                    <td class="text-center"><strong>{{ i+1 }}</strong></td>
+                                    <td>{{ inem[i].bombeiro.nome if i < inem|length else '____________________' }}</td>
+                                    <td>{{ inem[i].bombeiro.mecanografico if i < inem|length else '_____' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura INEM (ABSC)</label>
+                        <select class="form-select" id="viatura_inem">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_absc %}
+                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecione a viatura ABSC afeta à equipa INEM</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESERVA -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-info h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> RESERVA</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="10%">#</th>
+                                    <th width="60%">Nome</th>
+                                    <th width="30%">Mecanográfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(2) %}
+                                <tr>
+                                    <td class="text-center"><strong>{{ i+1 }}</strong></td>
+                                    <td>{{ reserva[i].bombeiro.nome if i < reserva|length else '____________________' }}</td>
+                                    <td>{{ reserva[i].bombeiro.mecanografico if i < reserva|length else '_____' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura Reserva (ABSC)</label>
+                        <select class="form-select" id="viatura_reserva">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_absc %}
+                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecione a viatura ABSC afeta à equipa Reserva</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMANDO e CENTRAL -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-dark h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-megaphone"></i> COMANDO e CENTRAL</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Função</th>
+                                    <th width="50%">Nome</th>
+                                    <th width="20%">Mecanográfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-secondary">
+                                    <td><strong>Comando</strong></td>
+                                    <td>{{ comando.bombeiro.nome if comando else '____________________' }}</td>
+                                    <td>{{ comando.bombeiro.mecanografico if comando else '_____' }}</td>
+                                </tr>
+                                <tr class="table-secondary">
+                                    <td><strong>Central</strong></td>
+                                    <td>{{ central.bombeiro.nome if central else '____________________' }}</td>
+                                    <td>{{ central.bombeiro.mecanografico if central else '_____' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura Comando (VCOT)</label>
+                        <select class="form-select" id="viatura_comando">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_vcot %}
+                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Selecione a viatura VCOT afeta ao Comando</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="row mt-3">
+        <div class="col text-center">
+            <button type="button" class="btn btn-success btn-lg" onclick="salvarQuadro()">
+                <i class="bi bi-save"></i> Salvar Configuração
+            </button>
+            <button type="button" class="btn btn-primary btn-lg" onclick="imprimirQuadro()">
+                <i class="bi bi-printer"></i> Imprimir Quadro
+            </button>
+            <button type="button" class="btn btn-secondary btn-lg" onclick="exportarExcel()">
+                <i class="bi bi-file-excel"></i> Exportar Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para salvar a configuração do quadro
+function salvarQuadro() {
+    const dados = {
+        viatura_ecin: document.getElementById('viatura_ecin').value,
+        viatura_eip: document.getElementById('viatura_eip').value,
+        viatura_inem: document.getElementById('viatura_inem').value,
+        viatura_reserva: document.getElementById('viatura_reserva').value,
+        viatura_comando: document.getElementById('viatura_comando').value,
+        data: '{{ hoje.isoformat() }}'
+    };
+    
+    fetch('/api/salvar-quadro-operacional', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: 'Configuração do quadro salva com sucesso!',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro!',
+                text: data.error || 'Erro ao salvar configuração.'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro!',
+            text: 'Erro de comunicação com o servidor.'
+        });
+    });
+}
+
+// Função para imprimir o quadro
+function imprimirQuadro() {
+    window.print();
+}
+
+// Função para exportar para Excel
+function exportarExcel() {
+    // Coletar dados atuais
+    const dados = {
+        data: '{{ hoje.isoformat() }}',
+        ecin: {
+            chefe: '{{ ecin_chefe.bombeiro.nome if ecin_chefe else "" }}',
+            motorista: '{{ ecin_motorista.bombeiro.nome if ecin_motorista else "" }}',
+            guarnicao: [
+                {% for g in ecin_guarnicao %}
+                '{{ g.bombeiro.nome if g else "" }}',
+                {% endfor %}
+            ],
+            viatura: document.getElementById('viatura_ecin').selectedOptions[0]?.text || ''
+        },
+        eip: {
+            elementos: [
+                {% for e in eips %}
+                '{{ e.bombeiro.nome if e else "" }}',
+                {% endfor %}
+            ],
+            viatura: document.getElementById('viatura_eip').selectedOptions[0]?.text || ''
+        },
+        inem: {
+            elementos: [
+                {% for i in inem %}
+                '{{ i.bombeiro.nome if i else "" }}',
+                {% endfor %}
+            ],
+            viatura: document.getElementById('viatura_inem').selectedOptions[0]?.text || ''
+        },
+        reserva: {
+            elementos: [
+                {% for r in reserva %}
+                '{{ r.bombeiro.nome if r else "" }}',
+                {% endfor %}
+            ],
+            viatura: document.getElementById('viatura_reserva').selectedOptions[0]?.text || ''
+        },
+        comando: {
+            nome: '{{ comando.bombeiro.nome if comando else "" }}',
+            viatura: document.getElementById('viatura_comando').selectedOptions[0]?.text || ''
+        },
+        central: '{{ central.bombeiro.nome if central else "" }}'
+    };
+    
+    // Enviar para exportação
+    fetch('/api/exportar-quadro-operacional', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `quadro_operacional_{{ hoje.strftime('%Y%m%d') }}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+// Adicionar estilos de impressão
+const style = document.createElement('style');
+style.textContent = `
+    @media print {
+        .btn, .navbar, .sidebar, footer {
+            display: none !important;
+        }
+        .card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        body {
+            background: white;
+        }
+        .container-fluid {
+            padding: 0;
+            margin: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+<style>
+    /* Estilos personalizados */
+    .card {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .table td, .table th {
+        vertical-align: middle;
+    }
+    
+    select.form-select {
+        background-color: #f8f9fa;
+        border: 2px solid #dee2e6;
+    }
+    
+    select.form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+    }
+    
+    .btn-lg {
+        margin: 0 10px;
+        padding: 12px 30px;
+    }
+    
+    @media (max-width: 768px) {
+        .btn-lg {
+            margin: 5px;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+    }
+</style>
+
+{% endblock %}

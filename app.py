@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
 
-from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem, PontoAgua
+from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem, PontoAgua, QuadroOperacional
 
 app = Flask(__name__)
 
@@ -8470,6 +8470,264 @@ def apagar_correio_massa():
     return redirect(url_for('correio'))
 
 
+@app.route('/quadro-operacional')
+@login_required
+def quadro_operacional():
+    # Verificar permissões: Admin, Comando ou bombeiros escalados para hoje
+    hoje = date.today()
+
+    # Verificar se o utilizador está escalado para hoje
+    is_escalado_hoje = Escala.query.filter(
+        Escala.bombeiro_id == current_user.id,
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje
+    ).first() is not None
+
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' and not is_escalado_hoje:
+        flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Buscar ECINs escalados para hoje
+    ecins = Ecin.query.filter(
+        Ecin.data == hoje,
+        Ecin.categoria == 'ECIN',
+        Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
+    ).order_by(Ecin.funcao).all()
+
+    # Organizar ECIN por função
+    ecin_chefe = None
+    ecin_motorista = None
+    ecin_guarnicao = []
+
+    for ec in ecins:
+        if ec.funcao == 'Chefe':
+            ecin_chefe = ec
+        elif ec.funcao == 'Motorista':
+            ecin_motorista = ec
+        elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
+            ecin_guarnicao.append(ec)
+
+    # Buscar EIPs (Equipa de Intervenção Permanente)
+    eips = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'EIP'
+    ).order_by(Escala.bombeiro_id).limit(5).all()
+
+    # Buscar INEM (2 bombeiros)
+    inem = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Socorrista'
+    ).limit(2).all()
+
+    # Buscar Reserva (2 bombeiros)
+    reserva = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Bombeiro'
+    ).limit(2).all()
+
+    # Buscar Comando
+    comando = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Centralista'
+    ).first()
+
+    # Central
+    central = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Centralista',
+        Escala.funcao == 'Central'
+    ).first()
+
+    # Buscar viaturas por tipo
+    viaturas_vfci = Viatura.query.filter(
+        Viatura.tipo.ilike('%VFCI%'),
+        Viatura.estado == 'operacional'
+    ).order_by(Viatura.matricula).all()
+
+    viaturas_absc = Viatura.query.filter(
+        Viatura.tipo.ilike('%ABSC%'),
+        Viatura.estado == 'operacional'
+    ).order_by(Viatura.matricula).all()
+
+    viaturas_vcot = Viatura.query.filter(
+        Viatura.tipo.ilike('%VCOT%'),
+        Viatura.estado == 'operacional'
+    ).order_by(Viatura.matricula).all()
+
+    return render_template('quadro_operacional.html',
+                           hoje=hoje,
+                           ecin_chefe=ecin_chefe,
+                           ecin_motorista=ecin_motorista,
+                           ecin_guarnicao=ecin_guarnicao,
+                           eips=eips,
+                           inem=inem,
+                           reserva=reserva,
+                           comando=comando,
+                           central=central,
+                           viaturas_vfci=viaturas_vfci,
+                           viaturas_absc=viaturas_absc,
+                           viaturas_vcot=viaturas_vcot)
+
+
+@app.route('/api/salvar-quadro-operacional', methods=['POST'])
+@login_required
+def salvar_quadro_operacional():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'error': 'Acesso restrito'}), 403
+
+    data = request.get_json()
+    hoje = date.today()
+
+    # Verificar se já existe configuração para hoje
+    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
+    if not quadro:
+        quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
+        db.session.add(quadro)
+
+    # Atualizar viaturas
+    quadro.viatura_ecin_id = data.get('viatura_ecin') or None
+    quadro.viatura_eip_id = data.get('viatura_eip') or None
+    quadro.viatura_inem_id = data.get('viatura_inem') or None
+    quadro.viatura_reserva_id = data.get('viatura_reserva') or None
+    quadro.viatura_comando_id = data.get('viatura_comando') or None
+
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/exportar-quadro-operacional', methods=['POST'])
+@login_required
+def exportar_quadro_operacional():
+    data = request.get_json()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Quadro Operacional {data['data']}"
+
+    # Estilos
+    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
+    header_font = Font(bold=True, size=12)
+    title_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    title_font = Font(bold=True, size=14, color='FFFFFF')
+
+    # Título
+    ws.merge_cells('A1:D1')
+    cell = ws['A1']
+    cell.value = f"QUADRO OPERACIONAL - {data['data']}"
+    cell.fill = title_fill
+    cell.font = title_font
+    cell.alignment = openpyxl.styles.Alignment(horizontal='center')
+
+    row = 3
+
+    # ECIN
+    ws.cell(row=row, column=1).value = "ECIN"
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Função"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Mecanográfico"
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Chefe"
+    ws.cell(row=row, column=2).value = data['ecin']['chefe']
+    row += 1
+    ws.cell(row=row, column=1).value = "Motorista"
+    ws.cell(row=row, column=2).value = data['ecin']['motorista']
+    row += 1
+    for i, g in enumerate(data['ecin']['guarnicao'], 1):
+        ws.cell(row=row, column=1).value = f"Guarnição {i}"
+        ws.cell(row=row, column=2).value = g
+        row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura ECIN"
+    ws.cell(row=row, column=2).value = data['ecin']['viatura']
+    row += 2
+
+    # EIP
+    ws.cell(row=row, column=1).value = "EIP"
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Mecanográfico"
+    row += 1
+
+    for i, e in enumerate(data['eip']['elementos'], 1):
+        ws.cell(row=row, column=1).value = i
+        ws.cell(row=row, column=2).value = e
+        row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura EIP"
+    ws.cell(row=row, column=2).value = data['eip']['viatura']
+    row += 2
+
+    # INEM
+    ws.cell(row=row, column=1).value = "INEM"
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).font = header_font
+    row += 1
+
+    for i, i_n in enumerate(data['inem']['elementos'], 1):
+        ws.cell(row=row, column=1).value = i
+        ws.cell(row=row, column=2).value = i_n
+        row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura INEM"
+    ws.cell(row=row, column=2).value = data['inem']['viatura']
+    row += 2
+
+    # Reserva
+    ws.cell(row=row, column=1).value = "RESERVA"
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).font = header_font
+    row += 1
+
+    for i, r in enumerate(data['reserva']['elementos'], 1):
+        ws.cell(row=row, column=1).value = i
+        ws.cell(row=row, column=2).value = r
+        row += 1
+
+    ws.cell(row=row, column=1).value = "Viatura Reserva"
+    ws.cell(row=row, column=2).value = data['reserva']['viatura']
+    row += 2
+
+    # Comando e Central
+    ws.cell(row=row, column=1).value = "COMANDO e CENTRAL"
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Comando"
+    ws.cell(row=row, column=2).value = data['comando']['nome']
+    row += 1
+    ws.cell(row=row, column=1).value = "Central"
+    ws.cell(row=row, column=2).value = data['central']
+    row += 1
+    ws.cell(row=row, column=1).value = "Viatura Comando"
+    ws.cell(row=row, column=2).value = data['comando']['viatura']
+
+    # Ajustar larguras
+    for col in ['A', 'B', 'C', 'D']:
+        ws.column_dimensions[col].width = 25
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True,
+                     download_name=f'quadro_operacional_{data["data"]}.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 #if __name__ == '__main__':

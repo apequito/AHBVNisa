@@ -324,49 +324,55 @@
     </div>
 
     <!-- ========== SECÇÃO GESTÃO (Laranja) ========== -->
-    <div class="col-lg-6 col-xl-4">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14; box-shadow: 0 4px 12px rgba(253,126,20,0.2) !important;">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-gear fs-2 text-warning"></i>
-                    </div>
-                    <div>
-                        <h5 class="card-title mb-0">Gestão</h5>
-                        <small class="text-muted">Painéis de administração</small>
-                    </div>
+    <!-- ========== SECÇÃO GESTÃO (Laranja) ========== -->
+<div class="col-lg-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #fd7e14; box-shadow: 0 4px 12px rgba(253,126,20,0.2) !important;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                    <i class="bi bi-gear fs-2 text-warning"></i>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                        <a href="{{ url_for('painel_comando') }}" class="btn btn-warning btn-sm rounded-pill">
-                            <i class="bi bi-speedometer2 me-1"></i>Painel Comando
-                        </a>
-                    {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Central'] %}
-                        <a href="{{ url_for('central') }}" class="btn btn-warning btn-sm rounded-pill">
-                            <i class="bi bi-broadcast me-1"></i>Central
-                        </a>
-                    {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Secretaria' %}
-                        <a href="{{ url_for('administrativo') }}" class="btn btn-warning btn-sm rounded-pill">
-                            <i class="bi bi-building me-1"></i>Administrativo
-                        </a>
-                    {% endif %}
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                        <a href="{{ url_for('backup_exportar') }}" class="btn btn-warning btn-sm rounded-pill">
-                            <i class="bi bi-download me-1"></i> Backup
-                        </a>
-                        <button class="btn btn-warning btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
-                            <i class="bi bi-upload me-1"></i> Restaurar
-                        </button>
-                    {% endif %}
-                    <a href="{{ url_for('monitor') }}" class="btn btn-warning btn-sm rounded-pill">
-                        <i class="bi bi-tv me-1"></i>Monitor
+                <div>
+                    <h5 class="card-title mb-0">Gestão</h5>
+                    <small class="text-muted">Painéis de administração</small>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <!-- QUADRO OPERACIONAL - NOVO BOTÃO -->
+                <a href="{{ url_for('quadro_operacional') }}" class="btn btn-warning btn-sm rounded-pill">
+                    <i class="bi bi-grid-3x3-gap-fill me-1"></i>Quadro Operacional
+                </a>
+
+                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                    <a href="{{ url_for('painel_comando') }}" class="btn btn-warning btn-sm rounded-pill">
+                        <i class="bi bi-speedometer2 me-1"></i>Painel Comando
                     </a>
-                </div>
+                {% endif %}
+                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Central'] %}
+                    <a href="{{ url_for('central') }}" class="btn btn-warning btn-sm rounded-pill">
+                        <i class="bi bi-broadcast me-1"></i>Central
+                    </a>
+                {% endif %}
+                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Secretaria' %}
+                    <a href="{{ url_for('administrativo') }}" class="btn btn-warning btn-sm rounded-pill">
+                        <i class="bi bi-building me-1"></i>Administrativo
+                    </a>
+                {% endif %}
+                {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                    <a href="{{ url_for('backup_exportar') }}" class="btn btn-warning btn-sm rounded-pill">
+                        <i class="bi bi-download me-1"></i> Backup
+                    </a>
+                    <button class="btn btn-warning btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImportarBackup">
+                        <i class="bi bi-upload me-1"></i> Restaurar
+                    </button>
+                {% endif %}
+                <a href="{{ url_for('monitor') }}" class="btn btn-warning btn-sm rounded-pill">
+                    <i class="bi bi-tv me-1"></i>Monitor
+                </a>
             </div>
         </div>
     </div>
+</div>
 
 </div>
 

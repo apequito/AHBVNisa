@@ -541,3 +541,24 @@ class PontoAgua(db.Model):
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
     criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
+
+
+# Modelo para guardar configurações do quadro operacional
+class QuadroOperacional(db.Model):
+    __tablename__ = 'quadro_operacional'
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False)
+    viatura_ecin_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    viatura_eip_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    viatura_inem_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    viatura_reserva_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    viatura_comando_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+
+    viatura_ecin = db.relationship('Viatura', foreign_keys=[viatura_ecin_id])
+    viatura_eip = db.relationship('Viatura', foreign_keys=[viatura_eip_id])
+    viatura_inem = db.relationship('Viatura', foreign_keys=[viatura_inem_id])
+    viatura_reserva = db.relationship('Viatura', foreign_keys=[viatura_reserva_id])
+    viatura_comando = db.relationship('Viatura', foreign_keys=[viatura_comando_id])
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
