@@ -202,22 +202,32 @@
 </li>
 
                     <!-- ============ DROPDOWN SERVIÇO ============ -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-calendar3 me-1"></i> Serviço
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('escala') }}"><i class="bi bi-calendar-week"></i> Escala</a></li>
-                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-                                <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS</a></li>
-                            {% endif %}
-                            <li><a class="dropdown-item" href="{{ url_for('trocas') }}"><i class="bi bi-arrow-left-right"></i> Trocas</a></li>
-
-                            {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
-                            <li><a class="dropdown-item" href="{{ url_for('dispensas') }}"><i class="bi bi-calendar-x"></i> Dispensas</a></li>
-                            {% endif %}
-                        </ul>
-                    </li>
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-calendar3 me-1"></i> Serviço
+        {% if current_user.resp_departamento == 'Central' and pendencias.total_pendentes is defined and pendencias.total_pendentes > 0 %}
+        <span class="badge bg-danger rounded-pill ms-1">{{ pendencias.total_pendentes }}</span>
+        {% endif %}
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('escala') }}"><i class="bi bi-calendar-week"></i> Escala</a></li>
+        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+            <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS</a></li>
+        {% endif %}
+        <li><a class="dropdown-item" href="{{ url_for('trocas') }}">
+            <i class="bi bi-arrow-left-right"></i> Trocas
+            {% if current_user.resp_departamento == 'Central' and pendencias.trocas_pendentes is defined and pendencias.trocas_pendentes > 0 %}
+            <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.trocas_pendentes }}</span>
+            {% endif %}
+        </a></li>
+        <li><a class="dropdown-item" href="{{ url_for('dispensas') }}">
+            <i class="bi bi-calendar-x"></i> Dispensas
+            {% if current_user.resp_departamento == 'Central' and pendencias.dispensas_pendentes is defined and pendencias.dispensas_pendentes > 0 %}
+            <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.dispensas_pendentes }}</span>
+            {% endif %}
+        </a></li>
+    </ul>
+</li>
 
                     <!-- ============ DROPDOWN OPERAÇÕES ============ -->
                     <li class="nav-item dropdown">

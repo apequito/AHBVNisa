@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<h2><i class="bi bi-calendar-x me-2"></i>Dispensas de Serviço</h2>
+<h2>
+    <i class="bi bi-calendar-x me-2"></i>Dispensas de Serviço
+    {% if current_user.resp_departamento == 'Central' and pendencias.dispensas_pendentes is defined and pendencias.dispensas_pendentes > 0 %}
+    <span class="badge bg-danger ms-2">{{ pendencias.dispensas_pendentes }} pendente(s)</span>
+    {% endif %}
+</h2>
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 

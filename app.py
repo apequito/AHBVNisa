@@ -7285,6 +7285,7 @@ def apagar_tudo():
 
 from datetime import date, timedelta
 
+
 @app.context_processor
 def inject_pendencias():
     pendencias = {}
@@ -7292,59 +7293,51 @@ def inject_pendencias():
         user = current_user
         total = 0
 
-        # --- Valores comuns a Admin/Comando ---
+        # ========== ADMIN / COMANDO ==========
         if user.tipo_user == 'Admin' or user.resp_departamento == 'Comando':
-            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Oficina', 'Analisar'])).count()
+            # Avarias pendentes
+            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
+            total += pendencias['avarias']
+
+            # Trocas pendentes de aprovação
             pendencias['trocas'] = TrocaServico.query.filter_by(estado='aceite_colega').count()
+            total += pendencias['trocas']
+
+            # Dispensas pendentes
             pendencias['dispensas'] = Dispensa.query.filter_by(aprovada=False).count()
+            total += pendencias['dispensas']
+
+            # Créditos em análise
             pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
+            total += pendencias['creditos']
+
+            # Fardamento pendente
             pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
+            total += pendencias['fardamento']
+
+            # ECIN pendentes
             pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
+            total += pendencias['ecins']
 
             # Stock Farmácia abaixo do mínimo
             pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
                 StockFarmacia.infstock > 0,
                 StockFarmacia.stock <= StockFarmacia.infstock
             ).count()
+            total += pendencias['stock_farmacia_minimo']
 
-            # Stock Farmácia Central abaixo do mínimo (NOVO)
+            # Stock Farmácia Central abaixo do mínimo
             pendencias['central_stock_minimo'] = FarmaciaCentral.query.filter(
                 FarmaciaCentral.stock_minimo > 0,
                 FarmaciaCentral.stock <= FarmaciaCentral.stock_minimo
             ).count()
+            total += pendencias['central_stock_minimo']
 
             # Reposições de ambulância pendentes
             pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+            total += pendencias['stock_ambulancia']
 
-            total = sum(pendencias.values())
-
-        # --- Departamentos específicos (para utilizadores que não são Admin nem Comando) ---
-        else:
-            if user.resp_departamento == 'Oficina':
-                pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
-            if user.resp_departamento == 'Fardamento':
-                pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
-            if user.resp_departamento == 'Secretaria':
-                pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
-            if user.resp_departamento == 'Farmacia':
-                pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
-                    StockFarmacia.infstock > 0,
-                    StockFarmacia.stock <= StockFarmacia.infstock
-                ).count()
-                # Para o departamento Farmácia, também mostramos os alertas da Central
-                pendencias['central_stock_minimo'] = FarmaciaCentral.query.filter(
-                    FarmaciaCentral.stock_minimo > 0,
-                    FarmaciaCentral.stock <= FarmaciaCentral.stock_minimo
-                ).count()
-                pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
-            if user.resp_departamento == 'Socorrista':
-                pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
-
-            total = sum(pendencias.values())
-
-        # --- Inspecções periódicas próximas (apenas Admin, Comando, Oficina) ---
-        pendencias['inspecoes_proximas'] = 0
-        if user.tipo_user == 'Admin' or user.resp_departamento in ('Comando', 'Oficina'):
+            # Inspeções periódicas próximas
             hoje = date.today()
             limite = hoje + timedelta(days=30)
             pendencias['inspecoes_proximas'] = GestaoFrota.query.join(Viatura).filter(
@@ -7354,8 +7347,61 @@ def inject_pendencias():
             ).count()
             total += pendencias['inspecoes_proximas']
 
-        pendencias['total'] = total
+        # ========== CENTRAL ==========
+        elif user.resp_departamento == 'Central' and user.tipo_user != 'Admin':
+            # Trocas pendentes de aprovação (para avisar o Comando)
+            pendencias['trocas_pendentes'] = TrocaServico.query.filter_by(estado='aceite_colega').count()
+            total += pendencias['trocas_pendentes']
 
+            # Dispensas pendentes de aprovação
+            pendencias['dispensas_pendentes'] = Dispensa.query.filter_by(aprovada=False).count()
+            total += pendencias['dispensas_pendentes']
+
+            # Contagem total no badge do menu
+            pendencias['total_pendentes'] = pendencias['trocas_pendentes'] + pendencias['dispensas_pendentes']
+
+        # ========== SECRETARIA ==========
+        elif user.resp_departamento == 'Secretaria' and user.tipo_user != 'Admin':
+            # ECIN pendentes
+            pendencias['ecins'] = Ecin.query.filter_by(estado='Pendente').count()
+            total += pendencias['ecins']
+
+            # Créditos em análise
+            pendencias['creditos'] = CreditoDispensa.query.filter_by(observacao='Em Análise').count()
+            total += pendencias['creditos']
+
+        # ========== OFICINA ==========
+        elif user.resp_departamento == 'Oficina' and user.tipo_user != 'Admin':
+            # Avarias pendentes
+            pendencias['avarias'] = Avaria.query.filter(Avaria.estado.in_(['Pendente', 'Analisar'])).count()
+            total += pendencias['avarias']
+
+        # ========== FARMÁCIA ==========
+        elif user.resp_departamento == 'Farmacia' and user.tipo_user != 'Admin':
+            # Stock abaixo do mínimo
+            pendencias['stock_farmacia_minimo'] = StockFarmacia.query.filter(
+                StockFarmacia.infstock > 0,
+                StockFarmacia.stock <= StockFarmacia.infstock
+            ).count()
+            total += pendencias['stock_farmacia_minimo']
+
+            pendencias['central_stock_minimo'] = FarmaciaCentral.query.filter(
+                FarmaciaCentral.stock_minimo > 0,
+                FarmaciaCentral.stock <= FarmaciaCentral.stock_minimo
+            ).count()
+            total += pendencias['central_stock_minimo']
+
+            # Reposições de ambulância pendentes
+            pendencias['stock_ambulancia'] = StockAmbulancia.query.filter_by(confirmado=False).count()
+            total += pendencias['stock_ambulancia']
+
+        # ========== FARDAMENTO ==========
+        elif user.resp_departamento == 'Fardamento' and user.tipo_user != 'Admin':
+            # Pedidos pendentes
+            pendencias['fardamento'] = Fardamento.query.filter_by(estado='Pedido').count()
+            total += pendencias['fardamento']
+
+        pendencias['total'] = total
     return dict(pendencias=pendencias)
 
 

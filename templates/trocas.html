@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h2><i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço</h2>
+<i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço
+    {% if current_user.resp_departamento == 'Central' and pendencias.trocas_pendentes is defined and pendencias.trocas_pendentes > 0 %}
+    <span class="badge bg-danger ms-2">{{ pendencias.trocas_pendentes }} pendente(s)</span>
+    {% endif %}
+</h2>
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 {% set is_voluntario = (current_user.tipo_bombeiro == 'Voluntário') and current_user.tipo_user != 'Admin' %}
