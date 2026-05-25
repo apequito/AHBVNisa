@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime, timedelta, date
 from io import BytesIO
 import calendar
@@ -8,10 +9,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import openpyxl
 from openpyxl.styles import Font, PatternFill
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 
+# Importar modelos
 from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem, PontoAgua, QuadroOperacional
-
 app = Flask(__name__)
 
 # Chave secreta (obrigatória para sessões e formulários)
@@ -43,12 +44,11 @@ login_manager.login_view = 'login'
 with app.app_context():
     from sqlalchemy import inspect, text
 
-    # Verificar se a tabela quadro_operacional existe
     inspector = inspect(db.engine)
     if 'quadro_operacional' in inspector.get_table_names():
         columns = [col['name'] for col in inspector.get_columns('quadro_operacional')]
+        print("Colunas existentes:", columns)
 
-        # Adicionar colunas em falta
         novas_colunas = [
             ('motorista_inem_id', 'INTEGER', 'bombeiros'),
             ('motorista_inem_numero', 'VARCHAR(20)', None),
@@ -68,15 +68,15 @@ with app.app_context():
                     if ref_table:
                         sql += f' REFERENCES {ref_table}(id)'
                     db.session.execute(text(sql))
-                    print(f"Coluna {col_name} adicionada à tabela quadro_operacional", file=sys.stderr)
+                    print(f"Coluna {col_name} adicionada")
                 except Exception as e:
-                    print(f"Erro ao adicionar {col_name}: {e}", file=sys.stderr)
+                    print(f"Erro ao adicionar {col_name}: {e}")
 
         db.session.commit()
-        print("Migração da tabela quadro_operacional concluída!", file=sys.stderr)
+        print("Migração concluída!")
     else:
         db.create_all()
-        print("Tabela quadro_operacional criada", file=sys.stderr)
+        print("Tabela quadro_operacional criada")
 
 @login_manager.user_loader
 def load_user(user_id):
