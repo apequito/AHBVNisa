@@ -2780,7 +2780,7 @@ def dispensas():
         # Utilizador normal vê apenas as suas dispensas
         dispensas_lista = Dispensa.query.filter_by(bombeiro_id=current_user.id).order_by(Dispensa.id.desc()).all()
 
-    return render_template('dispensas.html', dispensas=dispensas_lista, is_central=is_central)
+    return render_template('dispensas.html', dispensas=dispensas_lista, is_central=is_central,now=date.today())
 
 
 @app.route('/dispensas/detalhes/<int:id>')
@@ -2872,7 +2872,57 @@ def imprimir_minhas_deslocacoes():
                            linhas=linhas)
 
 
+@app.route('/dispensas/anular/<int:id>')
+@login_required
+def anular_dispensa(id):
+    dispensa = Dispensa.query.get_or_404(id)
 
+    # Verificar permissões: apenas o próprio bombeiro pode anular
+    if current_user.id != dispensa.bombeiro_id:
+        flash('Apenas o bombeiro que solicitou a dispensa pode anulá-la.', 'danger')
+        return redirect(url_for('dispensas'))
+
+    # Verificar se a dispensa já foi aprovada
+    if dispensa.aprovada:
+        flash('Não é possível anular uma dispensa já aprovada.', 'warning')
+        return redirect(url_for('dispensas'))
+
+    # Verificar se ainda é possível anular (até ao dia anterior)
+    hoje = date.today()
+    if dispensa.data_inicio <= hoje:
+        flash('Não é possível anular a dispensa após o dia de início.', 'warning')
+        return redirect(url_for('dispensas'))
+
+    # Verificar se a dispensa já foi aprovada (redundante, mas seguro)
+    if dispensa.aprovada:
+        flash('Não é possível anular uma dispensa já aprovada.', 'warning')
+        return redirect(url_for('dispensas'))
+
+    # Devolver créditos (se houver)
+    creditos = CreditoDispensa.query.filter_by(dispensa_id=dispensa.id, observacao='Gozado').all()
+    for cred in creditos:
+        cred.observacao = 'Não Gozado'
+        cred.dispensa_id = None
+
+    # Remover marcações de dispensa na escala
+    from datetime import timedelta
+    dia_atual = dispensa.data_inicio
+    while dia_atual <= dispensa.data_fim:
+        escalas = Escala.query.filter(
+            Escala.bombeiro_id == dispensa.bombeiro_id,
+            func.date(Escala.data_inicio) == dia_atual,
+            Escala.observacao == 'dispensado'
+        ).all()
+        for e in escalas:
+            e.observacao = None
+        dia_atual += timedelta(days=1)
+
+    # Remover a dispensa
+    db.session.delete(dispensa)
+    db.session.commit()
+
+    flash('Dispensa anulada com sucesso. Os créditos foram restituídos.', 'success')
+    return redirect(url_for('dispensas'))
 
 @app.route('/dispensas/imprimir/<int:id>')
 @login_required

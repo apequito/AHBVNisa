@@ -23,55 +23,98 @@
 
 <div class="card shadow-sm">
     <div class="card-body p-0">
-        <table class="table table-striped table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Bombeiro</th><th>Início</th><th>Fim</th><th>Motivo</th>
-                    <th>Categoria</th><th>Turno</th><th>Aprovada</th>
-                    {% if not is_central %}<th>Ação</th>{% endif %}
-                    <th>Detalhes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for d in dispensas %}
-                <tr>
-                    <td>{{ d.bombeiro.nome if d.bombeiro else '-' }} ({{ d.bombeiro.mecanografico if d.bombeiro else '-' }})</td>
-                    <td>{{ d.data_inicio.strftime('%d/%m/%Y') if d.data_inicio else '' }}</td>
-                    <td>{{ d.data_fim.strftime('%d/%m/%Y') if d.data_fim else '' }}</td>
-                    <td>{{ d.motivo or '-' }}</td>
-                    <td>{{ d.categoria or '-' }}</td>
-                    <td>{{ d.turno or '-' }}</td>
-                    <td>
-                        {% if d.aprovada %}
-                            <span class="badge bg-success">Aprovada</span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark">Pendente</span>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bombeiro</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Motivo</th>
+                        <th>Categoria</th>
+                        <th>Turno</th>
+                        <th>Status</th>
+                        {% if not is_central %}<th>Ações</th>{% endif %}
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dispensas %}
+                    <tr>
+                        <td>{{ d.bombeiro.nome if d.bombeiro else '-' }} ({{ d.bombeiro.mecanografico if d.bombeiro else '-' }})</td>
+                        <td>{{ d.data_inicio.strftime('%d/%m/%Y') if d.data_inicio else '' }}</td>
+                        <td>{{ d.data_fim.strftime('%d/%m/%Y') if d.data_fim else '' }}</td>
+                        <td>{{ d.motivo or '-' }}</td>
+                        <td>{{ d.categoria or '-' }}</td>
+                        <td>{{ d.turno or '-' }}</td>
+                        <td>
+                            {% if d.aprovada %}
+                                <span class="badge bg-success">Aprovada</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                            {% endif %}
+
+                            {# Mostrar informação de prazo para anulação #}
+                            {% if not d.aprovada and d.bombeiro_id == current_user.id %}
+                                {% set dias_restantes = (d.data_inicio - now).days %}
+                                {% if dias_restantes > 0 %}
+                                    <small class="text-muted d-block" title="Pode anular até ao dia anterior ({{ d.data_inicio.strftime('%d/%m/%Y') }})">
+                                        ⏰ Prazo: {{ dias_restantes }} dia(s)
+                                    </small>
+                                {% elif dias_restantes == 0 %}
+                                    <small class="text-warning d-block">
+                                        ⚠️ Último dia para anular
+                                    </small>
+                                {% else %}
+                                    <small class="text-danger d-block">
+                                        ❌ Prazo expirado
+                                    </small>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        {% if not is_central %}
+                        <td class="text-center">
+                            {# Botão Aprovar (apenas Admin/Comando) #}
+                            {% if (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and not d.aprovada %}
+                            <a href="{{ url_for('aprovar_dispensa', id=d.id) }}" class="btn btn-sm btn-success mb-1 w-100"
+                               onclick="return confirm('Aprovar esta dispensa?\n\nBombeiro: {{ d.bombeiro.nome }}\nPeríodo: {{ d.data_inicio.strftime('%d/%m/%Y') }} a {{ d.data_fim.strftime('%d/%m/%Y') }}\n\nOs créditos serão automaticamente abatidos.')">
+                                <i class="bi bi-check-lg"></i> Aprovar
+                            </a>
+                            {% endif %}
+
+                            {# Botão Anular (apenas o próprio bombeiro, se não aprovada e antes do início) #}
+                            {% if not d.aprovada and d.bombeiro_id == current_user.id and d.data_inicio > now %}
+                            <button type="button" class="btn btn-sm btn-danger mb-1 w-100"
+                                    onclick="confirmarAnulacao({{ d.id }}, '{{ d.data_inicio.strftime('%d/%m/%Y') }}', '{{ d.data_fim.strftime('%d/%m/%Y') }}')">
+                                <i class="bi bi-x-circle"></i> Anular
+                            </button>
+                            {% elif not d.aprovada and d.bombeiro_id == current_user.id and d.data_inicio <= now %}
+                            <button type="button" class="btn btn-sm btn-secondary mb-1 w-100" disabled
+                                    title="Não é possível anular após o dia {{ d.data_inicio.strftime('%d/%m/%Y') }}">
+                                <i class="bi bi-x-circle"></i> Anular (expirado)
+                            </button>
+                            {% endif %}
+                        </td>
                         {% endif %}
-                    </td>
-                    {% if not is_central %}
-                    <td class="text-center">
-                        {% if (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and not d.aprovada %}
-                        <a href="{{ url_for('aprovar_dispensa', id=d.id) }}" class="btn btn-sm btn-success"
-                           onclick="return confirm('Aprovar esta dispensa?')">Aprovar</a>
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    {% endif %}
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-info" onclick="verDetalhes({{ d.id }})">
-                            <i class="bi bi-eye"></i> Ver
-                        </button>
-                        <a href="{{ url_for('imprimir_dispensa', id=d.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-printer"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="{{ 9 if not is_central else 8 }}" class="text-center text-muted">Nenhuma dispensa encontrada.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-info" onclick="verDetalhes({{ d.id }})">
+                                <i class="bi bi-eye"></i> Ver
+                            </button>
+                            <a href="{{ url_for('imprimir_dispensa', id=d.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 9 if not is_central else 8 }}" class="text-center text-muted">
+                            Nenhuma dispensa encontrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -80,7 +123,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Detalhes da Dispensa</h5>
+                <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detalhes da Dispensa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -109,15 +152,17 @@
                     <div class="col-md-8" id="det_estado">-</div>
                 </div>
                 <hr>
-                <h6>Créditos utilizados:</h6>
-                <table class="table table-sm table-bordered">
-                    <thead>
-                        <tr><th>Data</th><th>Descrição</th><th>Horas</th></tr>
-                    </thead>
-                    <tbody id="det_creditos_tbody">
-                        <td><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>
-                    </tbody>
-                </table>
+                <h6><i class="bi bi-tags me-1"></i>Créditos utilizados:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr><th>Data</th><th>Descrição</th><th>Horas</th></tr>
+                        </thead>
+                        <tbody id="det_creditos_tbody">
+                            <tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -128,7 +173,7 @@
 
 <!-- MODAL NOVA DISPENSA -->
 <div class="modal fade" id="modalNovaDispensa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <form method="POST" id="formDispensa">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
@@ -138,51 +183,83 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>As minhas escalas</strong></p>
+                            <div class="alert alert-info small">
+                                <i class="bi bi-info-circle"></i> Clique num dia do calendário para selecionar.
+                                <br>As escalas aparecem a <span class="badge bg-warning text-dark">amarelo</span>.
+                            </div>
                             <div id="calendarioDispensa" class="border p-2" style="min-height:320px; background:#fff;"></div>
                         </div>
                         <div class="col-md-6">
-                            <label>Data da Dispensa</label>
-                            <input type="date" name="data_inicio" id="data_inicio_disp" class="form-control mb-2" readonly required>
-                            <input type="hidden" name="data_fim" id="data_fim_disp">
-                            <input type="hidden" name="categoria_disp" id="categoria_disp_hidden">
-                            <input type="hidden" name="turno_disp" id="turno_disp_hidden">
-                            <label>Categoria</label>
-                            <input type="text" id="categoria_disp" class="form-control mb-2" readonly>
-                            <label>Turno</label>
-                            <input type="text" id="turno_disp" class="form-control mb-2" readonly>
-                            <label>Função</label>
-                            <input type="text" id="funcao_disp" class="form-control mb-2" readonly>
-                            <label>Justificação</label>
-                            <textarea name="motivo" class="form-control mb-2" rows="2"></textarea>
-                            <small class="text-muted">A dispensa será registada para o dia selecionado. Mínimo de 8 horas de créditos (12h para Socorrista/Centralista).</small>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Detalhes da Dispensa</h6>
+                                    <label class="form-label mt-2">Data da Dispensa</label>
+                                    <input type="date" name="data_inicio" id="data_inicio_disp" class="form-control mb-2" readonly required>
+                                    <input type="hidden" name="data_fim" id="data_fim_disp">
+                                    <input type="hidden" name="categoria_disp" id="categoria_disp_hidden">
+                                    <input type="hidden" name="turno_disp" id="turno_disp_hidden">
+
+                                    <label class="form-label">Categoria</label>
+                                    <input type="text" id="categoria_disp" class="form-control mb-2" readonly>
+
+                                    <label class="form-label">Turno</label>
+                                    <input type="text" id="turno_disp" class="form-control mb-2" readonly>
+
+                                    <label class="form-label">Função</label>
+                                    <input type="text" id="funcao_disp" class="form-control mb-2" readonly>
+
+                                    <label class="form-label">Justificação <span class="text-danger">*</span></label>
+                                    <textarea name="motivo" class="form-control mb-2" rows="3" required></textarea>
+
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> A dispensa será registada para o dia selecionado.
+                                        Mínimo de 8 horas de créditos (12h para Socorrista/Centralista).
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mt-3">
-                        <label>Selecione os créditos (dias não gozados) para abater:</label>
-                        <div class="table-responsive" style="max-height: 200px;">
-                            <table class="table table-sm table-bordered" id="tabelaCreditos">
-                                <thead class="table-light">
-                                    <tr><th style="width: 10%">Sel.</th><th>Data</th><th>Descrição</th><th>Horas</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr id="loadingCreditosRow">
-                                        <td colspan="4" class="text-muted text-center">Carregando créditos...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-tags"></i> Selecione os créditos (dias não gozados) para abater:</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 200px;">
+                                    <table class="table table-sm table-bordered" id="tabelaCreditos">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 10%">Selecionar</th>
+                                                <th>Data</th>
+                                                <th>Descrição</th>
+                                                <th>Horas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr id="loadingCreditosRow">
+                                                <td colspan="4" class="text-muted text-center">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Carregando créditos...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3 p-2 bg-light rounded">
+                                    <strong>Total de horas selecionadas: <span id="totalHoras" class="text-primary">0</span>h</strong>
+                                    <div id="msgErroHoras" class="alert alert-danger mt-2" style="display:none;"></div>
+                                    <div id="msgSucessoHoras" class="alert alert-success mt-2" style="display:none;"></div>
+                                </div>
+                                <input type="hidden" name="creditos_selecionados" id="creditosSelecionados">
+                            </div>
                         </div>
-                        <div class="mt-2">
-                            <strong>Total de horas selecionadas: <span id="totalHoras">0</span>h</strong>
-                            <span id="msgErroHoras" class="text-danger ms-3" style="display:none;"></span>
-                        </div>
-                        <input type="hidden" name="creditos_selecionados" id="creditosSelecionados">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger" id="btnEnviar">Enviar Pedido</button>
+                    <button type="submit" class="btn btn-danger" id="btnEnviar">
+                        <i class="bi bi-send"></i> Enviar Pedido
+                    </button>
                 </div>
             </div>
         </form>
@@ -200,7 +277,7 @@ function carregarCalendarioDispensa() {
     const container = document.getElementById('calendarioDispensa');
     if (!container) return;
 
-    container.innerHTML = '<div class="text-center p-3">Carregando calendário...</div>';
+    container.innerHTML = '<div class="text-center p-3"><i class="bi bi-hourglass-split me-1"></i>Carregando calendário...</div>';
 
     const url = `/api/escala_usuario/${userId}?ano=${anoAtualDisp}&mes=${mesAtualDisp}`;
 
@@ -231,40 +308,62 @@ function criarCalendarioDisp(dados) {
     let html = `
         <div class="d-flex justify-content-between align-items-center mb-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMesDisp(-1)">&lt;</button>
-            <strong>${meses[mes - 1]} ${ano}</strong>
+            <strong><i class="bi bi-calendar3 me-1"></i>${meses[mes - 1]} ${ano}</strong>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mudarMesDisp(1)">&gt;</button>
         </div>
-        <table class="table table-bordered table-sm text-center">
-            <thead class="table-light">
-                <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
-            </thead>
-            <tbody>`;
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm text-center">
+                <thead class="table-light">
+                    <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
+                </thead>
+                <tbody>`;
 
     let dia = 1;
     for (let semana = 0; semana < 6; semana++) {
         html += '<tr>';
         for (let d = 0; d < 7; d++) {
             if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
-                html += '<td class="text-muted">&nbsp;</td>';
+                html += '<td class="text-muted bg-light">&nbsp;</td>';
             } else {
+                const hoje = new Date();
+                const dataAtual = new Date(ano, mes - 1, dia);
+                const isDomingo = d === 0;
+                const isFuturo = dataAtual >= hoje.setHours(0,0,0,0);
                 const temEscala = dados[dia] && dados[dia].length > 0;
                 const tooltip = temEscala ? `title="${dados[dia].map(e => `${e.categoria} - ${e.turno}`).join('\\n')}"` : '';
-                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}" ${tooltip}>${dia}</td>`;
+                let classes = '';
+                if (temEscala) classes += 'bg-warning';
+                if (isDomingo) classes += ' text-danger';
+                if (!isFuturo) classes += ' bg-light text-muted';
+
+                html += `<td class="${classes}" style="cursor:pointer;" data-dia="${dia}" ${tooltip}>${dia}</td>`;
                 dia++;
             }
         }
         html += '</tr>';
         if (dia > totalDias) break;
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
 
     // Adicionar eventos de clique
     container.querySelectorAll('td[data-dia]').forEach(td => {
+        const diaNum = parseInt(td.getAttribute('data-dia'));
+        const dataAtual = new Date(anoAtualDisp, mesAtualDisp - 1, diaNum);
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        // Desabilitar dias passados
+        if (dataAtual < hoje) {
+            td.style.cursor = 'not-allowed';
+            td.style.opacity = '0.5';
+            td.title = 'Não é possível solicitar dispensa para dias passados';
+            return;
+        }
+
         td.addEventListener('click', function() {
-            const diaNum = parseInt(this.getAttribute('data-dia'));
             const escalasDoDia = dados[diaNum] || [];
-            const dataStr = `${ano}-${String(mes).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
+            const dataStr = `${anoAtualDisp}-${String(mesAtualDisp).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
             document.getElementById('data_inicio_disp').value = dataStr;
             document.getElementById('data_fim_disp').value = dataStr;
 
@@ -313,7 +412,7 @@ function carregarCreditos() {
             const tbody = document.querySelector('#tabelaCreditos tbody');
             tbody.innerHTML = '';
             if (!creditos || creditos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Nenhum crédito disponível.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center"><i class="bi bi-info-circle"></i> Nenhum crédito disponível.</td></tr>';
                 return;
             }
             creditos.forEach(c => {
@@ -322,7 +421,7 @@ function carregarCreditos() {
                     <td class="text-center"><input type="checkbox" class="check-credito" value="${c.id}" data-horas="${c.horas}"></td>
                     <td>${c.data}</td>
                     <td>${c.descricao || '-'}</td>
-                    <td>${c.horas}h</td>
+                    <td><span class="badge bg-info">${c.horas}h</span></td>
                 `;
             });
             document.querySelectorAll('.check-credito').forEach(cb => {
@@ -330,7 +429,11 @@ function carregarCreditos() {
             });
             atualizarTotalHoras();
         })
-        .catch(err => console.error("Erro ao carregar créditos:", err));
+        .catch(err => {
+            console.error("Erro ao carregar créditos:", err);
+            const tbody = document.querySelector('#tabelaCreditos tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-danger text-center">Erro ao carregar créditos.</td></tr>';
+        });
 }
 
 function atualizarTotalHoras() {
@@ -346,23 +449,47 @@ function atualizarMinimoHoras() {
     const total = parseInt(document.getElementById('totalHoras').textContent);
     const minHoras = (categoriaSelecionada === 'Socorrista' || categoriaSelecionada === 'Centralista') ? 12 : 8;
     const msgErro = document.getElementById('msgErroHoras');
-    if (total < minHoras) {
-        msgErro.style.display = 'inline';
-        msgErro.textContent = `Selecione pelo menos ${minHoras} horas (mínimo para ${categoriaSelecionada || 'Bombeiro'}).`;
+    const msgSucesso = document.getElementById('msgSucessoHoras');
+
+    if (total === 0) {
+        msgErro.style.display = 'block';
+        msgErro.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Selecione pelo menos um crédito para abater.`;
+        msgSucesso.style.display = 'none';
+    } else if (total < minHoras) {
+        msgErro.style.display = 'block';
+        msgErro.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Selecione pelo menos ${minHoras} horas (mínimo para ${categoriaSelecionada || 'Bombeiro'}).`;
+        msgSucesso.style.display = 'none';
     } else {
         msgErro.style.display = 'none';
+        msgSucesso.style.display = 'block';
+        msgSucesso.innerHTML = `<i class="bi bi-check-circle"></i> Horas suficientes! Pode submeter o pedido.`;
     }
 }
 
 // Validação do formulário
 document.getElementById('formDispensa')?.addEventListener('submit', function(e) {
+    const dataInicio = document.getElementById('data_inicio_disp').value;
+    if (!dataInicio) {
+        e.preventDefault();
+        alert('Por favor, selecione uma data no calendário.');
+        return false;
+    }
+
     const total = parseInt(document.getElementById('totalHoras').textContent);
     const minHoras = (categoriaSelecionada === 'Socorrista' || categoriaSelecionada === 'Centralista') ? 12 : 8;
+
+    if (total === 0) {
+        e.preventDefault();
+        alert('Por favor, selecione pelo menos um crédito para abater.');
+        return false;
+    }
+
     if (total < minHoras) {
         e.preventDefault();
         alert(`Selecione pelo menos ${minHoras} horas de créditos.`);
         return false;
     }
+
     const ids = Array.from(document.querySelectorAll('.check-credito:checked')).map(cb => cb.value).join(',');
     document.getElementById('creditosSelecionados').value = ids;
 });
@@ -378,9 +505,9 @@ function verDetalhes(id) {
             }
             document.getElementById('det_bombeiro').innerText = `${data.bombeiro} (${data.mecanografico})`;
             document.getElementById('det_periodo').innerText = `${data.data_inicio} a ${data.data_fim}`;
-            document.getElementById('det_categoria').innerText = data.categoria;
-            document.getElementById('det_turno').innerText = data.turno;
-            document.getElementById('det_motivo').innerText = data.motivo;
+            document.getElementById('det_categoria').innerText = data.categoria || '-';
+            document.getElementById('det_turno').innerText = data.turno || '-';
+            document.getElementById('det_motivo').innerText = data.motivo || '-';
             document.getElementById('det_estado').innerHTML = data.aprovada ? '<span class="badge bg-success">Aprovada</span>' : '<span class="badge bg-warning text-dark">Pendente</span>';
 
             const tbody = document.getElementById('det_creditos_tbody');
@@ -390,12 +517,47 @@ function verDetalhes(id) {
             } else {
                 data.creditos.forEach(c => {
                     const row = tbody.insertRow();
-                    row.innerHTML = `<td>${c.data}</td><td>${c.descricao}</td><td>${c.horas}h</td>`;
+                    row.innerHTML = `<td>${c.data}</td><td>${c.descricao}</td><td><span class="badge bg-info">${c.horas}h</span></td>`;
                 });
             }
             new bootstrap.Modal(document.getElementById('modalDetalhesDispensa')).show();
         })
         .catch(err => console.error(err));
+}
+
+// ========== ANULAR DISPENSA ==========
+function confirmarAnulacao(id, dataInicio, dataFim) {
+    Swal.fire({
+        title: '⚠️ Anular dispensa?',
+        html: `
+            <div class="text-left">
+                <p><strong>Tem a certeza que pretende anular esta dispensa?</strong></p>
+                <hr>
+                <p><i class="bi bi-calendar"></i> <strong>Período:</strong> ${dataInicio} a ${dataFim}</p>
+                <p><i class="bi bi-exclamation-triangle text-warning"></i> <span class="text-warning">Esta ação é irreversível!</span></p>
+                <p class="text-success"><i class="bi bi-arrow-repeat"></i> Os créditos serão restituídos automaticamente.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '<i class="bi bi-check-lg"></i> Sim, anular',
+        cancelButtonText: '<i class="bi bi-x-lg"></i> Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `/dispensas/anular/${id}`;
+        }
+    });
+}
+
+// Fallback para navegadores sem SweetAlert2
+if (typeof Swal === 'undefined') {
+    window.confirmarAnulacao = function(id, dataInicio, dataFim) {
+        if (confirm(`Tem a certeza que pretende anular esta dispensa?\n\nPeríodo: ${dataInicio} a ${dataFim}\n\nEsta ação é irreversível e os créditos serão restituídos.`)) {
+            window.location.href = `/dispensas/anular/${id}`;
+        }
+    };
 }
 
 // ========== INICIALIZAÇÃO ==========
@@ -412,8 +574,55 @@ if (modalDispensa) {
         document.getElementById('funcao_disp').value = '';
         document.getElementById('totalHoras').textContent = '0';
         document.getElementById('msgErroHoras').style.display = 'none';
+        document.getElementById('msgSucessoHoras').style.display = 'none';
         categoriaSelecionada = '';
     });
 }
+
+// Tooltips automáticos
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
+
+<style>
+    /* Estilos adicionais para melhor visualização */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .btn-sm {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .w-100 {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+
+    .card {
+        border-radius: 0.5rem;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+    }
+
+    .bg-warning {
+        cursor: pointer;
+    }
+
+    .bg-warning:hover {
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+</style>
 {% endblock %}
