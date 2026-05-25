@@ -4,27 +4,32 @@
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 
+<!-- Aviso para Central (apenas leitura para aprovações) -->
 {% if is_central %}
 <div class="alert alert-info mb-3">
     <i class="bi bi-eye me-2"></i> A Central pode visualizar todas as trocas e criar as suas próprias, mas não pode aprovar pedidos.
 </div>
 {% endif %}
 
+<!-- Abas -->
 <ul class="nav nav-tabs mb-4" id="trocaTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="listar-tab" data-bs-toggle="tab" data-bs-target="#listar" type="button" role="tab">
             <i class="bi bi-list-ul me-1"></i> Listar Trocas
         </button>
     </li>
+    <!-- Central também pode criar trocas -->
     <li class="nav-item" role="presentation">
-    <button class="nav-link" id="nova-tab" data-bs-toggle="tab" data-bs-target="#nova" type="button" role="tab">
-        <i class="bi bi-plus-circle me-1"></i> Nova Troca
-    </button>
-</li>
+        <button class="nav-link" id="nova-tab" data-bs-toggle="tab" data-bs-target="#nova" type="button" role="tab">
+            <i class="bi bi-plus-circle me-1"></i> Nova Troca
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content">
+    <!-- ========== ABA LISTAR TROCAS ========== -->
     <div class="tab-pane fade show active" id="listar" role="tabpanel">
+        <!-- Filtros -->
         <div class="card mb-3">
             <div class="card-header bg-light">Filtros</div>
             <div class="card-body">
@@ -44,16 +49,22 @@
             </div>
         </div>
 
+        <!-- Tabela de trocas -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th><th>Data Pedido</th><th>Requerente</th>
-                            <th>Data Origem</th><th>Turno Origem</th>
-                            <th>Aceitante</th><th>Data Destino</th>
-                            <th>Turno Destino</th><th>Estado</th>
-                            {% if not is_central %}<th>Ações</th>{% endif %}
+                            <th>ID</th>
+                            <th>Data Pedido</th>
+                            <th>Requerente</th>
+                            <th>Data Origem</th>
+                            <th>Turno Origem</th>
+                            <th>Aceitante</th>
+                            <th>Data Destino</th>
+                            <th>Turno Destino</th>
+                            <th>Estado</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -61,13 +72,13 @@
                         <tr>
                             <td>{{ t.id }}</td>
                             <td>{{ t.data_pedido.strftime('%d/%m/%Y %H:%M') if t.data_pedido else '' }}</td>
-                            <td>{{ t.bombeiro_origem.nome if t.bombeiro_origem else '-' }}</td>
+                            <td>{{ t.bombeiro_origem.nome if t.bombeiro_origem else '-' }} ({{ t.bombeiro_origem.mecanografico if t.bombeiro_origem else '-' }})</td>
                             <td>{{ t.data_origem.strftime('%d/%m/%Y') if t.data_origem else '' }}</td>
                             <td>{{ t.turno_origem or '-' }}</td>
-                            <td>{{ t.bombeiro_destino.nome if t.bombeiro_destino else '-' }}</td>
+                            <td>{{ t.bombeiro_destino.nome if t.bombeiro_destino else '-' }} ({{ t.bombeiro_destino.mecanografico if t.bombeiro_destino else '-' }})</td>
                             <td>{{ t.data_destino.strftime('%d/%m/%Y') if t.data_destino else '' }}</td>
                             <td>{{ t.turno_destino or '-' }}</td>
-                            <td>
+                            <td class="text-center">
                                 {% if t.estado == 'pendente_colega' %}
                                     <span class="badge bg-warning text-dark">Aguardar Colega</span>
                                 {% elif t.estado == 'aceite_colega' %}
@@ -80,30 +91,37 @@
                                     <span class="badge bg-secondary">{{ t.estado }}</span>
                                 {% endif %}
                             </td>
-                            {% if not is_central %}
                             <td class="text-center">
+                                <!-- Ações disponíveis -->
                                 {% if current_user.id == t.bombeiro_destino_id and t.estado == 'pendente_colega' %}
-                                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success">Aceitar</a>
-                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
+                                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">
+                                        <i class="bi bi-check-lg"></i> Aceitar
+                                    </a>
+                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
+                                        <i class="bi bi-x-lg"></i> Recusar
+                                    </a>
                                 {% elif (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and t.estado == 'aceite_colega' %}
-                                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success">Aprovar</a>
-                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger">Recusar</a>
+                                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">
+                                        <i class="bi bi-check2-circle"></i> Aprovar
+                                    </a>
+                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
+                                        <i class="bi bi-x-lg"></i> Recusar
+                                    </a>
                                 {% endif %}
-                                <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
                                     <i class="bi bi-printer"></i>
                                 </a>
                             </td>
-                            {% endif %}
                         </tr>
                         {% else %}
-                        <tr><td colspan="{% if is_central %}9{% else %}10{% endif %}" class="text-center text-muted">Nenhuma troca encontrada.{% endfor %}
+                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.{% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    {% if not is_central %}
+    <!-- ========== ABA NOVA TROCA (visível para todos) ========== -->
     <div class="tab-pane fade" id="nova" role="tabpanel">
         <div class="card shadow-sm">
             <div class="card-body">
@@ -111,14 +129,23 @@
                 <form method="POST">
                     <div class="row">
                         <div class="col-md-6">
+                            <label class="form-label">Tipo de Troca</label>
+                            <select name="tipo_pedido" class="form-select mb-3" required>
+                                <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
+                                <option value="ecin">ECIN / ELAC</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Colega com quem pretende trocar</label>
                             <select name="destino_id" class="form-select" required>
                                 <option value="">-- Selecione --</option>
                                 {% for b in bombeiros %}
-                                <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }})</option>
+                                <option value="{{ b.id }}">{{ b.nome }} ({{ b.mecanografico }}) - {{ b.tipo_bombeiro }}</option>
                                 {% endfor %}
                             </select>
                         </div>
+                    </div>
+                    <div class="row mt-3">
                         <div class="col-md-3">
                             <label class="form-label">Data do seu serviço</label>
                             <input type="date" name="data_origem" class="form-control" required>
@@ -130,10 +157,14 @@
                                 <option value="1 - 00h/08h">1 - 00h/08h</option>
                                 <option value="2 - 08h/16h">2 - 08h/16h</option>
                                 <option value="3 - 16h/24h">3 - 16h/24h</option>
+                                <option value="4 - 11h/19h">4 - 11h/19h</option>
+                                <option value="5 - 10h/18h">5 - 10h/18h</option>
+                                <option value="6 - 07h/19h">6 - 07h/19h</option>
+                                <option value="7 - 19h/07h">7 - 19h/07h</option>
+                                <option value="8 - 08h/20h">8 - 08h/20h</option>
+                                <option value="9 - 20h/08h">9 - 20h/08h</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="row mt-3">
                         <div class="col-md-3">
                             <label class="form-label">Data do serviço do colega</label>
                             <input type="date" name="data_destino" class="form-control" required>
@@ -145,20 +176,27 @@
                                 <option value="1 - 00h/08h">1 - 00h/08h</option>
                                 <option value="2 - 08h/16h">2 - 08h/16h</option>
                                 <option value="3 - 16h/24h">3 - 16h/24h</option>
+                                <option value="4 - 11h/19h">4 - 11h/19h</option>
+                                <option value="5 - 10h/18h">5 - 10h/18h</option>
+                                <option value="6 - 07h/19h">6 - 07h/19h</option>
+                                <option value="7 - 19h/07h">7 - 19h/07h</option>
+                                <option value="8 - 08h/20h">8 - 08h/20h</option>
+                                <option value="9 - 20h/08h">9 - 20h/08h</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
                             <label class="form-label">Motivo</label>
-                            <textarea name="motivo" class="form-control" rows="2"></textarea>
+                            <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca (opcional)"></textarea>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary">Enviar Pedido</button>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> Enviar Pedido</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

@@ -181,8 +181,8 @@
                         </ul>
                     </li>
 
-                    <!-- ============ DROPDOWN VIATURAS ============ -->
-
+  <!-- ============ DROPDOWN VIATURAS ========== -->
+<!-- Apenas mostrar o menu para quem tem permissão -->
 {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina', 'Central'] %}
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
