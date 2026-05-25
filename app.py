@@ -1,5 +1,4 @@
 import os
-import sys
 from datetime import datetime, timedelta, date
 from io import BytesIO
 import calendar
@@ -9,10 +8,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import openpyxl
 from openpyxl.styles import Font, PatternFill
-from sqlalchemy import func, inspect, text
+from sqlalchemy import func
 
-# Importar modelos
 from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem, PontoAgua, QuadroOperacional
+
 app = Flask(__name__)
 
 # Chave secreta (obrigatória para sessões e formulários)
@@ -39,44 +38,6 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-# Adicionar após db.init_app(app) e antes das rotas
-with app.app_context():
-    from sqlalchemy import inspect, text
-
-    inspector = inspect(db.engine)
-    if 'quadro_operacional' in inspector.get_table_names():
-        columns = [col['name'] for col in inspector.get_columns('quadro_operacional')]
-        print("Colunas existentes:", columns)
-
-        novas_colunas = [
-            ('motorista_inem_id', 'INTEGER', 'bombeiros'),
-            ('motorista_inem_numero', 'VARCHAR(20)', None),
-            ('motorista_inem_mec', 'VARCHAR(20)', None),
-            ('reserva_1_id', 'INTEGER', 'bombeiros'),
-            ('reserva_1_numero', 'VARCHAR(20)', None),
-            ('reserva_1_mec', 'VARCHAR(20)', None),
-            ('reserva_2_id', 'INTEGER', 'bombeiros'),
-            ('reserva_2_numero', 'VARCHAR(20)', None),
-            ('reserva_2_mec', 'VARCHAR(20)', None)
-        ]
-
-        for col_name, col_type, ref_table in novas_colunas:
-            if col_name not in columns:
-                try:
-                    sql = f'ALTER TABLE quadro_operacional ADD COLUMN {col_name} {col_type}'
-                    if ref_table:
-                        sql += f' REFERENCES {ref_table}(id)'
-                    db.session.execute(text(sql))
-                    print(f"Coluna {col_name} adicionada")
-                except Exception as e:
-                    print(f"Erro ao adicionar {col_name}: {e}")
-
-        db.session.commit()
-        print("Migração concluída!")
-    else:
-        db.create_all()
-        print("Tabela quadro_operacional criada")
 
 @login_manager.user_loader
 def load_user(user_id):
