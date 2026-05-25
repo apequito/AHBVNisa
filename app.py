@@ -505,12 +505,19 @@ def importar_bombeiros():
 @app.route('/viaturas')
 @login_required
 def listar_viaturas():
+    # Apenas Admin, Comando, Oficina e Central podem ver viaturas
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Oficina', 'Central']:
+        flash('Acesso restrito. Apenas Administração, Comando, Oficina e Central podem aceder a esta área.', 'danger')
+        return redirect(url_for('dashboard'))
+
     viaturas = Viatura.query.order_by(Viatura.tipo, Viatura.matricula).all()
+
     # Contagens case‑insensitive
     total_operacionais = Viatura.query.filter(func.lower(Viatura.estado) == 'operacional').count()
     total_inoperacionais = Viatura.query.filter(func.lower(Viatura.estado) == 'inoperacional').count()
     total_manutencao = Viatura.query.filter(func.lower(Viatura.estado) == 'manutenção').count()
     total_geral = Viatura.query.count()
+
     return render_template('viaturas.html',
                            viaturas=viaturas,
                            total_operacionais=total_operacionais,
@@ -2313,7 +2320,15 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
-    separador = request.args.get('tipo', 'assalariado')  # 'assalariado', 'ecin' ou 'todas'
+    separador = request.args.get('tipo', 'assalariado')  # 'assalariado', 'ecin', 'todas'
+
+    # Verificar se é Central (apenas leitura para aprovações)
+    is_central_readonly = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
+
+    # Central não pode criar trocas (apenas visualizar)
+    if request.method == 'POST' and is_central_readonly:
+        flash('A Central não pode criar pedidos de troca.', 'danger')
+        return redirect(url_for('trocas'))
 
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
@@ -2354,58 +2369,59 @@ def trocas():
     # --- GET: construir a query base ---
     query = TrocaServico.query
 
-    # Aplicar filtro por tipo de troca (apenas se não for 'todas')
+    # Aplicar filtro por tipo de troca
     if separador == 'assalariado':
-        # Profissionais que estejam escalados nas categorias Motorista/Socorrista/Centralista no dia de origem
         sub_assalariado = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
-                Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
-                func.date(Escala.data_inicio) <= TrocaServico.data_origem,
-                func.date(Escala.data_fim) >= TrocaServico.data_origem,
-                Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-            )) \
+            Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
+            func.date(Escala.data_inicio) <= TrocaServico.data_origem,
+            func.date(Escala.data_fim) >= TrocaServico.data_origem,
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        )) \
             .join(Bombeiro, Bombeiro.id == TrocaServico.bombeiro_origem_id) \
             .filter(Bombeiro.tipo_bombeiro == 'Profissional') \
             .subquery()
         query = query.filter(TrocaServico.id.in_(sub_assalariado))
-
     elif separador == 'ecin':
         sub_ecin = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
-                Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
-                func.date(Escala.data_inicio) <= TrocaServico.data_origem,
-                func.date(Escala.data_fim) >= TrocaServico.data_origem,
-                Escala.categoria.in_(['ECIN', 'ELAC'])
-            )).subquery()
+            Escala.bombeiro_id == TrocaServico.bombeiro_origem_id,
+            func.date(Escala.data_inicio) <= TrocaServico.data_origem,
+            func.date(Escala.data_fim) >= TrocaServico.data_origem,
+            Escala.categoria.in_(['ECIN', 'ELAC'])
+        )).subquery()
         query = query.filter(TrocaServico.id.in_(sub_ecin))
-    # se separador == 'todas', não adiciona filtro extra
 
-    # Permissões: Admin/Comando vêem todas as trocas; os restantes vêem apenas as que lhes dizem respeito
+    # Permissões de visualização
     if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
+        # Admin e Comando veem todas as trocas
+        pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
+    elif current_user.resp_departamento == 'Central':
+        # Central pode ver todas as trocas (apenas leitura)
         pedidos = query.order_by(TrocaServico.data_pedido.desc()).all()
     else:
+        # Utilizador normal vê apenas as suas trocas
         pedidos = query.filter(
             (TrocaServico.bombeiro_origem_id == current_user.id) |
             (TrocaServico.bombeiro_destino_id == current_user.id)
         ).order_by(TrocaServico.data_pedido.desc()).all()
 
-    # Listas de bombeiros para os formulários de criação
+    # Listas para formulários
     bombeiros = Bombeiro.query.filter(Bombeiro.id != current_user.id, Bombeiro.ativo == True).all()
-
-    # Bombeiros elegíveis para troca assalariada: profissionais com escalas nas categorias certas
     bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
         .filter(
-            Bombeiro.id != current_user.id,
-            Bombeiro.ativo == True,
-            Bombeiro.tipo_bombeiro == 'Profissional',
-            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-        ).distinct().all()
+        Bombeiro.id != current_user.id,
+        Bombeiro.ativo == True,
+        Bombeiro.tipo_bombeiro == 'Profissional',
+        Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+    ).distinct().all()
 
     return render_template('trocas.html',
                            pedidos=pedidos,
                            bombeiros=bombeiros,
                            bombeiros_assalariados=bombeiros_assalariados,
-                           separador_atual=separador)
+                           separador_atual=separador,
+                           is_central_readonly=is_central_readonly)
 
 
 @app.route('/trocas/imprimir-ecin')
@@ -2587,6 +2603,11 @@ def recusar_troca(id):
 @app.route('/trocas/aprovar/<int:id>')
 @login_required
 def aprovar_troca(id):
+    # Central NÃO pode aprovar trocas
+    if current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin':
+        flash('A Central não pode aprovar trocas.', 'danger')
+        return redirect(url_for('trocas'))
+
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
         flash('Apenas o Comando pode aprovar trocas.', 'danger')
         return redirect(url_for('trocas'))
@@ -2596,10 +2617,9 @@ def aprovar_troca(id):
         flash('A troca precisa de ser aceite pelo colega primeiro.', 'warning')
         return redirect(url_for('trocas'))
 
-    # Determinar o tipo da troca para saber se é ECIN/ELAC
     tipo = determinar_tipo_troca(troca)
 
-    # Atualizar as escalas de serviço (Escala)
+    # Atualizar as escalas de serviço
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
         func.date(Escala.data_inicio) == troca.data_origem,
@@ -2612,7 +2632,6 @@ def aprovar_troca(id):
         Escala.turno == troca.turno_destino
     ).all()
 
-    # Trocar os bombeiros nas escalas
     for escala in escalas_origem:
         escala.bombeiro_id = troca.bombeiro_destino_id
     for escala in escalas_destino:
@@ -2620,20 +2639,16 @@ def aprovar_troca(id):
 
     # Se for ECIN, atualizar também os registos na tabela Ecin
     if tipo == 'ecin':
-        # Para cada registo Ecin do bombeiro original na data/turno da origem,
-        # mudar o bombeiro para o destino e manter o estado
         ecins_origem = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_origem_id,
             Ecin.data == troca.data_origem,
             Ecin.turno == troca.turno_origem
         ).all()
-
         ecins_destino = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_destino_id,
             Ecin.data == troca.data_destino,
             Ecin.turno == troca.turno_destino
         ).all()
-
         for ec in ecins_origem:
             ec.bombeiro_id = troca.bombeiro_destino_id
         for ec in ecins_destino:
@@ -2651,19 +2666,20 @@ def aprovar_troca(id):
 @app.route('/dispensas', methods=['GET', 'POST'])
 @login_required
 def dispensas():
-    # Restrição: apenas Profissionais, Admin ou Comando
-    if current_user.tipo_bombeiro != 'Profissional' and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        flash('Acesso restrito apenas a bombeiros profissionais, administradores ou comando.', 'danger')
-        return redirect(url_for('dashboard'))
+    # Verificar se é Central (apenas leitura para aprovações, mas pode criar a sua própria)
+    is_central_readonly = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
     if request.method == 'POST':
+        # Central pode criar a sua própria dispensa
+        # (não há restrição para criar)
         data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
         data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date()
         motivo = request.form.get('motivo', '')
         categoria = request.form.get('categoria_disp', '')
         turno = request.form.get('turno_disp', '')
         creditos_ids_str = request.form.get('creditos_selecionados', '')
-        creditos_ids = [int(x.strip()) for x in creditos_ids_str.split(',') if x.strip().isdigit()] if creditos_ids_str else []
+        creditos_ids = [int(x.strip()) for x in creditos_ids_str.split(',') if
+                        x.strip().isdigit()] if creditos_ids_str else []
 
         nova = Dispensa(
             bombeiro_id=current_user.id,
@@ -2671,7 +2687,8 @@ def dispensas():
             data_fim=data_fim,
             motivo=motivo,
             categoria=categoria,
-            turno=turno
+            turno=turno,
+            aprovada=False
         )
         db.session.add(nova)
         db.session.commit()
@@ -2685,13 +2702,20 @@ def dispensas():
         flash('Pedido de dispensa enviado.', 'success')
         return redirect(url_for('dispensas'))
 
-    # GET – listagem
-    if current_user.tipo_user == 'Admin':
+    # --- GET: listagem com permissões ---
+    if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando':
+        # Admin e Comando veem todas as dispensas
+        dispensas_lista = Dispensa.query.order_by(Dispensa.id.desc()).all()
+    elif current_user.resp_departamento == 'Central':
+        # Central pode ver todas as dispensas (apenas leitura para aprovações)
         dispensas_lista = Dispensa.query.order_by(Dispensa.id.desc()).all()
     else:
+        # Utilizador normal vê apenas as suas dispensas
         dispensas_lista = Dispensa.query.filter_by(bombeiro_id=current_user.id).order_by(Dispensa.id.desc()).all()
 
-    return render_template('dispensas.html', dispensas=dispensas_lista)
+    return render_template('dispensas.html',
+                           dispensas=dispensas_lista,
+                           is_central_readonly=is_central_readonly)
 
 
 
@@ -2791,6 +2815,11 @@ def imprimir_dispensa(id):
 @app.route('/dispensas/aprovar/<int:id>')
 @login_required
 def aprovar_dispensa(id):
+    # Central NÃO pode aprovar dispensas
+    if current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin':
+        flash('A Central não pode aprovar dispensas.', 'danger')
+        return redirect(url_for('dispensas'))
+
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
         flash('Apenas o Comando pode aprovar dispensas.', 'danger')
         return redirect(url_for('dispensas'))
@@ -2803,18 +2832,18 @@ def aprovar_dispensa(id):
     # Marcar dispensa como aprovada
     dispensa.aprovada = True
 
-    # Atualizar créditos associados (Não Gozados) para Gozado
+    # Atualizar créditos associados
     creditos = CreditoDispensa.query.filter_by(dispensa_id=dispensa.id, observacao='Não Gozado').all()
     for cred in creditos:
         cred.observacao = 'Gozado'
 
-    # Localizar escalas do bombeiro nas datas da dispensa e atualizar observação
+    # Localizar escalas do bombeiro nas datas da dispensa
     from datetime import timedelta
     dia_atual = dispensa.data_inicio
     while dia_atual <= dispensa.data_fim:
         escalas = Escala.query.filter(
             Escala.bombeiro_id == dispensa.bombeiro_id,
-            Escala.data_inicio == dia_atual
+            func.date(Escala.data_inicio) == dia_atual
         ).all()
         for e in escalas:
             e.observacao = 'dispensado'
