@@ -8585,10 +8585,7 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (depende do turno atual) - CORRIGIDO ==========
-    # Determinar turno ECIN baseado na hora atual
-    hora_atual = datetime.now().hour
-
+    # ========== 3. ECIN (depende do turno atual) ==========
     # ECIN: Turno 6 = 07h-19h, Turno 7 = 19h-07h
     if 7 <= hora_atual < 19:
         turno_ecin = '6 - 07h/19h'
@@ -8597,7 +8594,7 @@ def quadro_operacional():
         turno_ecin = '7 - 19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
-    # Buscar ECINs para o turno atual - IMPORTANTE: verificar turno na tabela Ecin
+    # Buscar ECINs para o turno atual
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8605,34 +8602,35 @@ def quadro_operacional():
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).order_by(Ecin.funcao).all()
 
-    # Se não encontrar ECINs no turno específico, tentar com o formato alternativo
+    # Se não encontrar ECINs no turno específico, tentar buscar qualquer ECIN do dia
     if not ecins:
-        # Tentar com o formato "07h/19h" sem o prefixo "6 - "
-        turno_sem_prefixo = turno_ecin.split(' - ')[1] if ' - ' in turno_ecin else turno_ecin
         ecins = Ecin.query.filter(
             Ecin.data == hoje,
             Ecin.categoria == 'ECIN',
-            Ecin.turno == turno_sem_prefixo,
             Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
         ).order_by(Ecin.funcao).all()
-
         if ecins:
-            turno_ecin_desc = f"ECIN - Turno {turno_sem_prefixo}"
+            turno_ecin_desc = "ECIN (Turno não especificado)"
 
-    # ========== 4. EIP (5 bombeiros do turno) ==========
+    # Organizar ECIN por função - INICIALIZAR as variáveis
+    ecin_chefe = None
+    ecin_motorista = None
+    ecin_guarnicao = []
+
+    for ec in ecins:
+        if ec.funcao == 'Chefe':
+            ecin_chefe = ec
+        elif ec.funcao == 'Motorista':
+            ecin_motorista = ec
+        elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
+            ecin_guarnicao.append(ec)
+
+    # ========== 4. EIP (5 bombeiros) ==========
     eips = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP',
-        Escala.turno == turno_ecin
+        Escala.categoria == 'EIP'
     ).order_by(Escala.bombeiro_id).limit(5).all()
-
-    if not eips:
-        eips = Escala.query.filter(
-            func.date(Escala.data_inicio) <= hoje,
-            func.date(Escala.data_fim) >= hoje,
-            Escala.categoria == 'EIP'
-        ).order_by(Escala.bombeiro_id).limit(5).all()
 
     # ========== 5. INEM ==========
     if 7 <= hora_atual < 19:
@@ -8668,16 +8666,8 @@ def quadro_operacional():
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP',
-        Escala.turno == turno_ecin
+        Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
-
-    if not todos_eip:
-        todos_eip = Escala.query.join(Bombeiro).filter(
-            func.date(Escala.data_inicio) <= hoje,
-            func.date(Escala.data_fim) >= hoje,
-            Escala.categoria == 'EIP'
-        ).order_by(Bombeiro.nome).all()
 
     # ========== 8. BUSCAR CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
