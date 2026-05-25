@@ -581,5 +581,4 @@ class QuadroOperacional(db.Model):
     reserva_1 = db.relationship('Bombeiro', foreign_keys=[reserva_1_id])
     reserva_2 = db.relationship('Bombeiro', foreign_keys=[reserva_2_id])
 
-
-    criador = db.relationship('Bombeiro', foreign_keys=[criado_por]).relationship('Bombeiro', foreign_keys=[criado_por])
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])

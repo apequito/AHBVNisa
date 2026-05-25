@@ -8669,7 +8669,6 @@ def quadro_operacional():
                            config=config)
 
 
-
 @app.route('/api/salvar-quadro-operacional', methods=['POST'])
 @login_required
 def salvar_quadro_operacional():

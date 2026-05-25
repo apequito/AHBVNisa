@@ -12,6 +12,7 @@
                 <i class="bi bi-clock me-2"></i>
                 <strong>Turno Atual:</strong> {{ turno_atual }} |
                 <strong>Central:</strong> {{ turno_central }} |
+                <strong>ECIN:</strong> {{ turno_ecin }} |
                 <strong>INEM (Socorrista):</strong> {{ turno_inem }}
             </div>
         </div>
@@ -23,6 +24,7 @@
             <div class="card border-danger h-100">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0"><i class="bi bi-fire"></i> ECIN - Equipa de Combate a Incêndios</h5>
+                    <small class="d-block mt-1">{{ turno_ecin }}</small>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -81,6 +83,7 @@
             <div class="card border-warning h-100">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="bi bi-shield-shaded"></i> EIP - Equipa de Intervenção Permanente</h5>
+                    <small class="d-block mt-1">{{ turno_atual }}</small>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -129,11 +132,9 @@
             <div class="card border-success h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="bi bi-heart-pulse"></i> INEM - Equipa de Suporte</h5>
+                    <small class="d-block mt-1">{{ turno_inem }}</small>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info small">
-                        <i class="bi bi-clock"></i> Socorrista: {{ turno_inem }}
-                    </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
@@ -147,7 +148,7 @@
                             <tbody>
                                 <tr class="table-info">
                                     <td class="text-center"><strong>1</strong></td>
-                                    <td><strong>Socorrista ({{ turno_inem }})</strong><br>{{ inem_um.bombeiro.nome if inem_um else '____________________' }}</td>
+                                    <td><strong>Socorrista</strong><br>{{ inem_um.bombeiro.nome if inem_um else '____________________' }}</td>
                                     <td>{{ inem_um.bombeiro.numero_interno if inem_um else '_____' }}</td>
                                     <td>{{ inem_um.bombeiro.mecanografico if inem_um else '_____' }}</td>
                                 </tr>
@@ -169,8 +170,8 @@
                                             {% endfor %}
                                         </select>
                                     </td>
-                                    <td id="motorista_inem_numero">{% if config and config.motorista_inem_id %}{{ config.motorista_inem_numero }}{% endif %}</td>
-                                    <td id="motorista_inem_mec">{% if config and config.motorista_inem_id %}{{ config.motorista_inem_mec }}{% endif %}</td>
+                                    <td id="motorista_inem_numero">{% if config and config.motorista_inem_numero %}{{ config.motorista_inem_numero }}{% endif %}</td>
+                                    <td id="motorista_inem_mec">{% if config and config.motorista_inem_mec %}{{ config.motorista_inem_mec }}{% endif %}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -197,6 +198,7 @@
             <div class="card border-info h-100">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="bi bi-people"></i> RESERVA (EIP)</h5>
+                    <small class="d-block mt-1">{{ turno_atual }}</small>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-secondary small">
@@ -281,12 +283,20 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Função</th>
+                                    <th width="40%">Nome</th>
+                                    <th width="15%">Nº Interno</th>
+                                    <th width="15%">Mecanográfico</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr class="table-secondary">
-                                    <td width="30%"><strong>Comandante</strong></td>
-                                    <td width="40%">{{ comando.nome if comando else '____________________' }}</td>
-                                    <td width="15%">{{ comando.numero_interno if comando else '_____' }}</td>
-                                    <td width="15%">{{ comando.mecanografico if comando else '_____' }}</td>
+                                    <td><strong>Comandante</strong></td>
+                                    <td>{{ comando.nome if comando else '____________________' }}</td>
+                                    <td>{{ comando.numero_interno if comando else '_____' }}</td>
+                                    <td>{{ comando.mecanografico if comando else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -310,16 +320,25 @@
             <div class="card border-secondary">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0"><i class="bi bi-broadcast"></i> CENTRAL</h5>
+                    <small class="d-block mt-1">{{ turno_central }}</small>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Função</th>
+                                    <th width="40%">Nome</th>
+                                    <th width="15%">Nº Interno</th>
+                                    <th width="15%">Mecanográfico</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr class="table-info">
-                                    <td width="30%"><strong>Central ({{ turno_central }})</strong></td>
-                                    <td width="40%">{{ central.bombeiro.nome if central else '____________________' }}</td>
-                                    <td width="15%">{{ central.bombeiro.numero_interno if central else '_____' }}</td>
-                                    <td width="15%">{{ central.bombeiro.mecanografico if central else '_____' }}</td>
+                                    <td><strong>Central</strong></td>
+                                    <td>{{ central.bombeiro.nome if central else '____________________' }}</td>
+                                    <td>{{ central.bombeiro.numero_interno if central else '_____' }}</td>
+                                    <td>{{ central.bombeiro.mecanografico if central else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -339,16 +358,19 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
-                            <span class="badge bg-info">08h00 - 20h00</span> Central (Turno 8)
+                            <span class="badge bg-danger">07h-19h / 08h-20h</span> ECIN / EIP
                         </div>
                         <div class="col-md-3">
-                            <span class="badge bg-secondary">20h00 - 08h00</span> Central (Turno 9)
+                            <span class="badge bg-info">08h-20h</span> Central (Turno 8)
                         </div>
                         <div class="col-md-3">
-                            <span class="badge bg-success">07h00 - 19h00</span> INEM (Turno 6)
+                            <span class="badge bg-secondary">20h-08h</span> Central (Turno 9)
                         </div>
                         <div class="col-md-3">
-                            <span class="badge bg-warning">19h00 - 07h00</span> INEM (Turno 7)
+                            <span class="badge bg-success">07h-19h</span> INEM (Turno 6)
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-warning">19h-07h</span> INEM (Turno 7)
                         </div>
                     </div>
                 </div>
@@ -378,7 +400,7 @@ function atualizarMotoristaInem() {
     const select = document.getElementById('motorista_inem');
     const selectedOption = select.options[select.selectedIndex];
 
-    if (selectedOption.value) {
+    if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
         document.getElementById('motorista_inem_numero').innerText = numero;
@@ -394,7 +416,7 @@ function atualizarReserva1() {
     const select = document.getElementById('reserva_1');
     const selectedOption = select.options[select.selectedIndex];
 
-    if (selectedOption.value) {
+    if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
         document.getElementById('reserva_1_numero').innerText = numero;
@@ -410,7 +432,7 @@ function atualizarReserva2() {
     const select = document.getElementById('reserva_2');
     const selectedOption = select.options[select.selectedIndex];
 
-    if (selectedOption.value) {
+    if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
         document.getElementById('reserva_2_numero').innerText = numero;
@@ -423,7 +445,6 @@ function atualizarReserva2() {
 
 // Inicializar os dados quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
-    // Se houver valores salvos, atualizar as células
     atualizarMotoristaInem();
     atualizarReserva1();
     atualizarReserva2();
@@ -559,6 +580,14 @@ function exportarExcel() {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Erro na exportação:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro!',
+            text: 'Erro ao exportar o ficheiro Excel.'
+        });
     });
 }
 
@@ -585,6 +614,10 @@ style.textContent = `
             background: transparent;
             -webkit-appearance: none;
             appearance: none;
+        }
+        select.form-select, select.form-select-sm {
+            border: none;
+            padding: 0;
         }
     }
 `;
@@ -621,17 +654,20 @@ document.head.appendChild(style);
         border-color: #0d6efd;
         box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
     }
-    
+
     .btn-lg {
         margin: 0 10px;
         padding: 12px 30px;
     }
-    
+
     @media (max-width: 768px) {
         .btn-lg {
             margin: 5px;
             padding: 8px 15px;
             font-size: 14px;
+        }
+        .table td, .table th {
+            font-size: 12px;
         }
     }
 </style>
