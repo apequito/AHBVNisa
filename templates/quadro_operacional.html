@@ -145,8 +145,18 @@
                                 </tr>
                                 <tr class="table-secondary">
                                     <td class="text-center"><strong>2</strong></td>
-                                    <td><strong>Motorista</strong><br>{{ inem_dois.bombeiro.nome if inem_dois else '____________________' }}</td>
-                                    <td>{{ inem_dois.bombeiro.mecanografico if inem_dois else '_____' }}</td>
+                                    <td>
+                                        <strong>Motorista</strong>
+                                        <select class="form-select form-select-sm mt-1" id="motorista_inem">
+                                            <option value="">Selecionar Motorista</option>
+                                            {% for m in motoristas_turno %}
+                                            <option value="{{ m.bombeiro.id }}" {% if config and config.motorista_inem_id == m.bombeiro.id %}selected{% endif %}>
+                                                {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }}) - {{ m.turno }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td id="motorista_inem_mec">{% if config and config.motorista_inem_id %}{{ config.motorista_inem_mec }}{% endif %}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -168,7 +178,7 @@
             </div>
         </div>
 
-        <!-- RESERVA (2 bombeiros da EIP não escalados) -->
+        <!-- RESERVA - 2 bombeiros da EIP (Combobox) -->
         <div class="col-md-4 mb-4">
             <div class="card border-info h-100">
                 <div class="card-header bg-info text-white">
@@ -176,25 +186,46 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-secondary small">
-                        <i class="bi bi-info-circle"></i> Bombeiros da EIP não escalados na equipa principal
+                        <i class="bi bi-info-circle"></i> Bombeiros da EIP em reserva
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
                                 <tr>
                                     <th width="10%">#</th>
-                                    <th width="60%">Nome</th>
-                                    <th width="30%">Mecanográfico</th>
+                                    <th width="70%">Nome</th>
+                                    <th width="20%">Mecanográfico</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for i in range(2) %}
                                 <tr>
-                                    <td class="text-center"><strong>{{ i+1 }}</strong></td>
-                                    <td>{{ reserva[i].bombeiro.nome if i < reserva|length else '____________________' }}</td>
-                                    <td>{{ reserva[i].bombeiro.mecanografico if i < reserva|length else '_____' }}</td>
+                                    <td class="text-center"><strong>1</strong></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" id="reserva_1">
+                                            <option value="">Selecionar Bombeiro</option>
+                                            {% for eip in todos_eip %}
+                                            <option value="{{ eip.bombeiro.id }}" data-mec="{{ eip.bombeiro.mecanografico }}" {% if config and config.reserva_1_id == eip.bombeiro.id %}selected{% endif %}>
+                                                {{ eip.bombeiro.nome }} ({{ eip.bombeiro.mecanografico }})
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td id="reserva_1_mec">{% if config and config.reserva_1_mec %}{{ config.reserva_1_mec }}{% endif %}</td>
                                 </tr>
-                                {% endfor %}
+                                <tr>
+                                    <td class="text-center"><strong>2</strong></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" id="reserva_2">
+                                            <option value="">Selecionar Bombeiro</option>
+                                            {% for eip in todos_eip %}
+                                            <option value="{{ eip.bombeiro.id }}" data-mec="{{ eip.bombeiro.mecanografico }}" {% if config and config.reserva_2_id == eip.bombeiro.id %}selected{% endif %}>
+                                                {{ eip.bombeiro.nome }} ({{ eip.bombeiro.mecanografico }})
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td id="reserva_2_mec">{% if config and config.reserva_2_mec %}{{ config.reserva_2_mec }}{% endif %}</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -215,38 +246,27 @@
             </div>
         </div>
 
-        <!-- COMANDO e CENTRAL -->
+        <!-- COMANDO e CENTRAL (separados) -->
         <div class="col-md-4 mb-4">
-            <div class="card border-dark h-100">
+            <!-- COMANDO -->
+            <div class="card border-dark mb-3">
                 <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0"><i class="bi bi-megaphone"></i> COMANDO e CENTRAL</h5>
+                    <h5 class="mb-0"><i class="bi bi-megaphone"></i> COMANDO</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th width="30%">Função</th>
-                                    <th width="50%">Nome</th>
-                                    <th width="20%">Mecanográfico</th>
-                                </tr>
-                            </thead>
                             <tbody>
                                 <tr class="table-secondary">
-                                    <td><strong>Comandante</strong></td>
-                                    <td>{{ comando.nome if comando else '____________________' }}</td>
-                                    <td>{{ comando.mecanografico if comando else '_____' }}</td>
-                                </tr>
-                                <tr class="table-info">
-                                    <td><strong>Central ({{ turno_central }})</strong></td>
-                                    <td>{{ central.bombeiro.nome if central else '____________________' }}</td>
-                                    <td>{{ central.bombeiro.mecanografico if central else '_____' }}</td>
+                                    <td width="30%"><strong>Comandante</strong></td>
+                                    <td width="50%">{{ comando.nome if comando else '____________________' }}</td>
+                                    <td width="20%">{{ comando.mecanografico if comando else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="mt-3">
+                    <div class="mt-2">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura Comando (VCOT)</label>
                         <select class="form-select" id="viatura_comando">
                             <option value="">Selecionar Viatura</option>
@@ -256,7 +276,26 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <small class="text-muted">Selecione a viatura VCOT afeta ao Comando</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTRAL -->
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-broadcast"></i> CENTRAL</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                <tr class="table-info">
+                                    <td width="30%"><strong>Central ({{ turno_central }})</strong></td>
+                                    <td width="50%">{{ central.bombeiro.nome if central else '____________________' }}</td>
+                                    <td width="20%">{{ central.bombeiro.mecanografico if central else '_____' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -307,6 +346,26 @@
 </div>
 
 <script>
+// Atualizar mec no select do motorista INEM
+document.getElementById('motorista_inem')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const mec = selectedOption.getAttribute('data-mec') || '';
+    document.getElementById('motorista_inem_mec').innerText = mec;
+});
+
+// Atualizar mec nos selects da reserva
+document.getElementById('reserva_1')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const mec = selectedOption.getAttribute('data-mec') || '';
+    document.getElementById('reserva_1_mec').innerText = mec;
+});
+
+document.getElementById('reserva_2')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const mec = selectedOption.getAttribute('data-mec') || '';
+    document.getElementById('reserva_2_mec').innerText = mec;
+});
+
 // Função para salvar a configuração do quadro
 function salvarQuadro() {
     const dados = {
@@ -315,6 +374,9 @@ function salvarQuadro() {
         viatura_inem: document.getElementById('viatura_inem').value,
         viatura_reserva: document.getElementById('viatura_reserva').value,
         viatura_comando: document.getElementById('viatura_comando').value,
+        motorista_inem_id: document.getElementById('motorista_inem').value,
+        reserva_1_id: document.getElementById('reserva_1').value,
+        reserva_2_id: document.getElementById('reserva_2').value,
         data: '{{ hoje.isoformat() }}'
     };
 
@@ -355,7 +417,6 @@ function salvarQuadro() {
 
 // Função para exportar para Excel
 function exportarExcel() {
-    // Coletar dados atuais
     const dados = {
         data: '{{ hoje.isoformat() }}',
         turno_atual: '{{ turno_atual }}',
@@ -379,15 +440,14 @@ function exportarExcel() {
         },
         inem: {
             socorrista: '{{ inem_um.bombeiro.nome if inem_um else "" }}',
-            motorista: '{{ inem_dois.bombeiro.nome if inem_dois else "" }}',
+            motorista: document.getElementById('motorista_inem').selectedOptions[0]?.text.split(' - ')[0] || '',
             turno: '{{ turno_inem }}',
             viatura: document.getElementById('viatura_inem').selectedOptions[0]?.text || ''
         },
         reserva: {
             elementos: [
-                {% for r in reserva %}
-                '{{ r.bombeiro.nome if r else "" }}',
-                {% endfor %}
+                document.getElementById('reserva_1').selectedOptions[0]?.text.split(' (')[0] || '',
+                document.getElementById('reserva_2').selectedOptions[0]?.text.split(' (')[0] || ''
             ],
             viatura: document.getElementById('viatura_reserva').selectedOptions[0]?.text || ''
         },
@@ -401,7 +461,6 @@ function exportarExcel() {
         }
     };
 
-    // Enviar para exportação
     fetch('/api/exportar-quadro-operacional', {
         method: 'POST',
         headers: {
@@ -440,6 +499,12 @@ style.textContent = `
             padding: 0;
             margin: 0;
         }
+        select {
+            border: none;
+            background: transparent;
+            -webkit-appearance: none;
+            appearance: none;
+        }
     }
 `;
 document.head.appendChild(style);
@@ -450,27 +515,28 @@ document.head.appendChild(style);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: transform 0.3s;
     }
-    
+
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
-    
+
     .table-responsive {
         border-radius: 8px;
         overflow: hidden;
     }
-    
+
     .table td, .table th {
         vertical-align: middle;
     }
-    
-    select.form-select {
+
+    select.form-select, select.form-select-sm {
         background-color: #f8f9fa;
         border: 2px solid #dee2e6;
+        font-size: 0.875rem;
     }
-    
-    select.form-select:focus {
+
+    select.form-select:focus, select.form-select-sm:focus {
         border-color: #0d6efd;
         box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
     }

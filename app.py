@@ -8489,7 +8489,7 @@ def quadro_operacional():
         return redirect(url_for('dashboard'))
 
     # ========== 1. COMANDO ==========
-    # Comando é sempre o bombeiro com resp_departamento = 'Comando' que está de serviço
+    # Comando é sempre o bombeiro com resp_departamento = 'Comando' que está ativo
     comando = Bombeiro.query.filter(
         Bombeiro.resp_departamento == 'Comando',
         Bombeiro.ativo == True
@@ -8536,7 +8536,7 @@ def quadro_operacional():
         Escala.categoria == 'EIP'
     ).order_by(Escala.bombeiro_id).limit(5).all()
 
-    # ========== 5. INEM (depende do turno para o nº1, nº2 é motorista) ==========
+    # ========== 5. INEM ==========
     # Definir turno para socorrista (INEM)
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
@@ -8551,31 +8551,26 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # Nº2 - Motorista (qualquer turno, primeiro da lista)
-    inem_dois = Escala.query.filter(
+    # ========== 6. MOTORISTAS DO TURNO PARA INEM (Combobox) ==========
+    # Buscar todos os motoristas escalados no dia (qualquer turno)
+    motoristas_turno = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'Motorista'
-    ).order_by(Escala.bombeiro_id).first()
+    ).order_by(Escala.turno, Escala.bombeiro.nome).all()
 
-    inem = []
-    if inem_um:
-        inem.append(inem_um)
-    if inem_dois:
-        inem.append(inem_dois)
-
-    # ========== 6. RESERVA (2 bombeiros da categoria EIP que não estão na EIP principal) ==========
-    # Buscar IDs dos EIPs principais
-    eips_ids = [e.bombeiro_id for e in eips]
-
-    reserva = Escala.query.filter(
+    # ========== 7. TODOS OS EIP PARA AS COMBOBOX DA RESERVA ==========
+    todos_eip = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP',
-        ~Escala.bombeiro_id.in_(eips_ids) if eips_ids else True
-    ).limit(2).all()
+        Escala.categoria == 'EIP'
+    ).order_by(Escala.bombeiro.nome).all()
 
-    # ========== 7. BUSCAR VIATURAS ==========
+    # ========== 8. RESERVA (buscar da configuração salva) ==========
+    # Buscar configuração salva para hoje
+    config = QuadroOperacional.query.filter_by(data=hoje).first()
+
+    # ========== 9. BUSCAR VIATURAS ==========
     viaturas_vfci = Viatura.query.filter(
         Viatura.tipo.ilike('%VFCI%'),
         Viatura.estado == 'operacional'
@@ -8590,9 +8585,6 @@ def quadro_operacional():
         Viatura.tipo.ilike('%VCOT%'),
         Viatura.estado == 'operacional'
     ).order_by(Viatura.matricula).all()
-
-    # Buscar configuração salva para hoje
-    config = QuadroOperacional.query.filter_by(data=hoje).first()
 
     # Determinar turno atual para exibição
     turno_atual = ""
@@ -8613,10 +8605,9 @@ def quadro_operacional():
                            ecin_motorista=ecin_motorista,
                            ecin_guarnicao=ecin_guarnicao,
                            eips=eips,
-                           inem=inem,
                            inem_um=inem_um,
-                           inem_dois=inem_dois,
-                           reserva=reserva,
+                           motoristas_turno=motoristas_turno,
+                           todos_eip=todos_eip,
                            viaturas_vfci=viaturas_vfci,
                            viaturas_absc=viaturas_absc,
                            viaturas_vcot=viaturas_vcot,
@@ -8645,6 +8636,11 @@ def salvar_quadro_operacional():
     quadro.viatura_reserva_id = data.get('viatura_reserva') or None
     quadro.viatura_comando_id = data.get('viatura_comando') or None
 
+    # Atualizar motorista INEM e reservas
+    quadro.motorista_inem_id = data.get('motorista_inem_id') or None
+    quadro.reserva_1_id = data.get('reserva_1_id') or None
+    quadro.reserva_2_id = data.get('reserva_2_id') or None
+
     db.session.commit()
 
     return jsonify({'success': True})
@@ -8657,7 +8653,7 @@ def exportar_quadro_operacional():
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = f"Quadro Operacional {data['data']}"
+    ws.title = f"Quadro Operacional"
 
     # Estilos
     header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
@@ -8673,17 +8669,25 @@ def exportar_quadro_operacional():
     cell.font = title_font
     cell.alignment = openpyxl.styles.Alignment(horizontal='center')
 
-    row = 3
+    # Subtítulo com turno
+    ws.merge_cells('A2:D2')
+    ws['A2'].value = f"Turno Atual: {data.get('turno_atual', '')}"
+    ws['A2'].alignment = openpyxl.styles.Alignment(horizontal='center')
+
+    row = 4
 
     # ECIN
-    ws.cell(row=row, column=1).value = "ECIN"
-    ws.cell(row=row, column=1).fill = header_fill
-    ws.cell(row=row, column=1).font = header_font
+    ws.cell(row=row, column=1).value = "ECIN - Equipa de Combate a Incêndios"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='DC3545', end_color='DC3545', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
     row += 1
 
     ws.cell(row=row, column=1).value = "Função"
     ws.cell(row=row, column=2).value = "Nome"
     ws.cell(row=row, column=3).value = "Mecanográfico"
+    for col in range(1, 4):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
     row += 1
 
     ws.cell(row=row, column=1).value = "Chefe"
@@ -8693,82 +8697,117 @@ def exportar_quadro_operacional():
     ws.cell(row=row, column=2).value = data['ecin']['motorista']
     row += 1
     for i, g in enumerate(data['ecin']['guarnicao'], 1):
-        ws.cell(row=row, column=1).value = f"Guarnição {i}"
-        ws.cell(row=row, column=2).value = g
-        row += 1
+        if g:
+            ws.cell(row=row, column=1).value = f"Guarnição {i}"
+            ws.cell(row=row, column=2).value = g
+            row += 1
 
     ws.cell(row=row, column=1).value = "Viatura ECIN"
     ws.cell(row=row, column=2).value = data['ecin']['viatura']
     row += 2
 
     # EIP
-    ws.cell(row=row, column=1).value = "EIP"
-    ws.cell(row=row, column=1).fill = header_fill
-    ws.cell(row=row, column=1).font = header_font
+    ws.cell(row=row, column=1).value = "EIP - Equipa de Intervenção Permanente"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='FFC107', end_color='FFC107', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
     row += 1
 
     ws.cell(row=row, column=1).value = "#"
     ws.cell(row=row, column=2).value = "Nome"
     ws.cell(row=row, column=3).value = "Mecanográfico"
+    for col in range(1, 4):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
     row += 1
 
     for i, e in enumerate(data['eip']['elementos'], 1):
-        ws.cell(row=row, column=1).value = i
-        ws.cell(row=row, column=2).value = e
-        row += 1
+        if e:
+            ws.cell(row=row, column=1).value = i
+            ws.cell(row=row, column=2).value = e
+            row += 1
 
     ws.cell(row=row, column=1).value = "Viatura EIP"
     ws.cell(row=row, column=2).value = data['eip']['viatura']
     row += 2
 
     # INEM
-    ws.cell(row=row, column=1).value = "INEM"
-    ws.cell(row=row, column=1).fill = header_fill
-    ws.cell(row=row, column=1).font = header_font
+    ws.cell(row=row, column=1).value = f"INEM - Equipa de Suporte (Turno: {data['inem']['turno']})"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='198754', end_color='198754', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
     row += 1
 
-    for i, i_n in enumerate(data['inem']['elementos'], 1):
-        ws.cell(row=row, column=1).value = i
-        ws.cell(row=row, column=2).value = i_n
-        row += 1
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Função/Nome"
+    ws.cell(row=row, column=3).value = "Mecanográfico"
+    for col in range(1, 4):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
+    row += 1
+
+    ws.cell(row=row, column=1).value = "1"
+    ws.cell(row=row, column=2).value = f"Socorrista ({data['inem']['turno']})\n{data['inem']['socorrista']}"
+    row += 1
+    ws.cell(row=row, column=1).value = "2"
+    ws.cell(row=row, column=2).value = f"Motorista\n{data['inem']['motorista']}"
+    row += 1
 
     ws.cell(row=row, column=1).value = "Viatura INEM"
     ws.cell(row=row, column=2).value = data['inem']['viatura']
     row += 2
 
-    # Reserva
-    ws.cell(row=row, column=1).value = "RESERVA"
-    ws.cell(row=row, column=1).fill = header_fill
-    ws.cell(row=row, column=1).font = header_font
+    # RESERVA
+    ws.cell(row=row, column=1).value = "RESERVA (EIP)"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='0DCAF0', end_color='0DCAF0', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "#"
+    ws.cell(row=row, column=2).value = "Nome"
+    ws.cell(row=row, column=3).value = "Mecanográfico"
+    for col in range(1, 4):
+        ws.cell(row=row, column=col).fill = header_fill
+        ws.cell(row=row, column=col).font = header_font
     row += 1
 
     for i, r in enumerate(data['reserva']['elementos'], 1):
-        ws.cell(row=row, column=1).value = i
-        ws.cell(row=row, column=2).value = r
-        row += 1
+        if r:
+            ws.cell(row=row, column=1).value = i
+            ws.cell(row=row, column=2).value = r
+            row += 1
 
     ws.cell(row=row, column=1).value = "Viatura Reserva"
     ws.cell(row=row, column=2).value = data['reserva']['viatura']
     row += 2
 
-    # Comando e Central
-    ws.cell(row=row, column=1).value = "COMANDO e CENTRAL"
-    ws.cell(row=row, column=1).fill = header_fill
-    ws.cell(row=row, column=1).font = header_font
+    # COMANDO
+    ws.cell(row=row, column=1).value = "COMANDO"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='212529', end_color='212529', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
     row += 1
 
-    ws.cell(row=row, column=1).value = "Comando"
+    ws.cell(row=row, column=1).value = "Comandante"
     ws.cell(row=row, column=2).value = data['comando']['nome']
-    row += 1
-    ws.cell(row=row, column=1).value = "Central"
-    ws.cell(row=row, column=2).value = data['central']
     row += 1
     ws.cell(row=row, column=1).value = "Viatura Comando"
     ws.cell(row=row, column=2).value = data['comando']['viatura']
+    row += 2
+
+    # CENTRAL
+    ws.cell(row=row, column=1).value = f"CENTRAL (Turno: {data['central']['turno']})"
+    ws.cell(row=row, column=1).fill = PatternFill(start_color='6C757D', end_color='6C757D', fill_type='solid')
+    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
+    row += 1
+
+    ws.cell(row=row, column=1).value = "Central"
+    ws.cell(row=row, column=2).value = data['central']['nome']
 
     # Ajustar larguras
     for col in ['A', 'B', 'C', 'D']:
-        ws.column_dimensions[col].width = 25
+        ws.column_dimensions[col].width = 30
+
+    # Ajustar altura das linhas
+    for r in range(1, row + 5):
+        ws.row_dimensions[r].height = 20
 
     output = BytesIO()
     wb.save(output)
