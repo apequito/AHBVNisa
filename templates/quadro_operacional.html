@@ -8,7 +8,12 @@
                 <i class="bi bi-grid-3x3-gap-fill me-2"></i>Quadro Operacional
                 <small class="text-muted">{{ hoje.strftime('%d de %B de %Y') }}</small>
             </h2>
-            <p class="text-muted">Gestão diária das equipas operacionais</p>
+            <div class="alert alert-info mt-2">
+                <i class="bi bi-clock me-2"></i>
+                <strong>Turno Atual:</strong> {{ turno_atual }} |
+                <strong>Central:</strong> {{ turno_central }} |
+                <strong>INEM (Socorrista):</strong> {{ turno_inem }}
+            </div>
         </div>
     </div>
 
@@ -50,13 +55,15 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura ECIN (VFCI)</label>
                         <select class="form-select" id="viatura_ecin">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_vfci %}
-                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            <option value="{{ v.id }}" {% if config and config.viatura_ecin_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                            </option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Selecione a viatura VFCI afeta à equipa ECIN</small>
@@ -92,13 +99,15 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura EIP (VFCI)</label>
                         <select class="form-select" id="viatura_eip">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_vfci %}
-                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            <option value="{{ v.id }}" {% if config and config.viatura_eip_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                            </option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Selecione a viatura VFCI afeta à equipa EIP</small>
@@ -109,40 +118,48 @@
     </div>
 
     <div class="row">
-        <!-- INEM -->
+        <!-- INEM - Equipa de Suporte -->
         <div class="col-md-4 mb-4">
             <div class="card border-success h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="bi bi-heart-pulse"></i> INEM - Equipa de Suporte</h5>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-clock"></i> Socorrista: {{ turno_inem }}
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
                                 <tr>
                                     <th width="10%">#</th>
-                                    <th width="60%">Nome</th>
+                                    <th width="60%">Função/Nome</th>
                                     <th width="30%">Mecanográfico</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for i in range(2) %}
-                                <tr>
-                                    <td class="text-center"><strong>{{ i+1 }}</strong></td>
-                                    <td>{{ inem[i].bombeiro.nome if i < inem|length else '____________________' }}</td>
-                                    <td>{{ inem[i].bombeiro.mecanografico if i < inem|length else '_____' }}</td>
+                                <tr class="table-info">
+                                    <td class="text-center"><strong>1</strong></td>
+                                    <td><strong>Socorrista ({{ turno_inem }})</strong><br>{{ inem_um.bombeiro.nome if inem_um else '____________________' }}</td>
+                                    <td>{{ inem_um.bombeiro.mecanografico if inem_um else '_____' }}</td>
                                 </tr>
-                                {% endfor %}
+                                <tr class="table-secondary">
+                                    <td class="text-center"><strong>2</strong></td>
+                                    <td><strong>Motorista</strong><br>{{ inem_dois.bombeiro.nome if inem_dois else '____________________' }}</td>
+                                    <td>{{ inem_dois.bombeiro.mecanografico if inem_dois else '_____' }}</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura INEM (ABSC)</label>
                         <select class="form-select" id="viatura_inem">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_absc %}
-                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            <option value="{{ v.id }}" {% if config and config.viatura_inem_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                            </option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Selecione a viatura ABSC afeta à equipa INEM</small>
@@ -151,13 +168,16 @@
             </div>
         </div>
 
-        <!-- RESERVA -->
+        <!-- RESERVA (2 bombeiros da EIP não escalados) -->
         <div class="col-md-4 mb-4">
             <div class="card border-info h-100">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="bi bi-people"></i> RESERVA</h5>
+                    <h5 class="mb-0"><i class="bi bi-people"></i> RESERVA (EIP)</h5>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-secondary small">
+                        <i class="bi bi-info-circle"></i> Bombeiros da EIP não escalados na equipa principal
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
@@ -178,13 +198,15 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura Reserva (ABSC)</label>
                         <select class="form-select" id="viatura_reserva">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_absc %}
-                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            <option value="{{ v.id }}" {% if config and config.viatura_reserva_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                            </option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Selecione a viatura ABSC afeta à equipa Reserva</small>
@@ -211,25 +233,27 @@
                             </thead>
                             <tbody>
                                 <tr class="table-secondary">
-                                    <td><strong>Comando</strong></td>
-                                    <td>{{ comando.bombeiro.nome if comando else '____________________' }}</td>
-                                    <td>{{ comando.bombeiro.mecanografico if comando else '_____' }}</td>
+                                    <td><strong>Comandante</strong></td>
+                                    <td>{{ comando.nome if comando else '____________________' }}</td>
+                                    <td>{{ comando.mecanografico if comando else '_____' }}</td>
                                 </tr>
-                                <tr class="table-secondary">
-                                    <td><strong>Central</strong></td>
+                                <tr class="table-info">
+                                    <td><strong>Central ({{ turno_central }})</strong></td>
                                     <td>{{ central.bombeiro.nome if central else '____________________' }}</td>
                                     <td>{{ central.bombeiro.mecanografico if central else '_____' }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura Comando (VCOT)</label>
                         <select class="form-select" id="viatura_comando">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_vcot %}
-                            <option value="{{ v.id }}">{{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})</option>
+                            <option value="{{ v.id }}" {% if config and config.viatura_comando_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                            </option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Selecione a viatura VCOT afeta ao Comando</small>
@@ -239,13 +263,40 @@
         </div>
     </div>
 
-    <!-- Botões de Ação -->
+    <!-- Legenda de Turnos -->
     <div class="row mt-3">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Legenda de Turnos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <span class="badge bg-info">08h00 - 20h00</span> Central (Turno 8)
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-secondary">20h00 - 08h00</span> Central (Turno 9)
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-success">07h00 - 19h00</span> INEM (Turno 6)
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-warning">19h00 - 07h00</span> INEM (Turno 7)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="row mt-4">
         <div class="col text-center">
             <button type="button" class="btn btn-success btn-lg" onclick="salvarQuadro()">
                 <i class="bi bi-save"></i> Salvar Configuração
             </button>
-            <button type="button" class="btn btn-primary btn-lg" onclick="imprimirQuadro()">
+            <button type="button" class="btn btn-primary btn-lg" onclick="window.print()">
                 <i class="bi bi-printer"></i> Imprimir Quadro
             </button>
             <button type="button" class="btn btn-secondary btn-lg" onclick="exportarExcel()">
@@ -266,7 +317,7 @@ function salvarQuadro() {
         viatura_comando: document.getElementById('viatura_comando').value,
         data: '{{ hoje.isoformat() }}'
     };
-    
+
     fetch('/api/salvar-quadro-operacional', {
         method: 'POST',
         headers: {
@@ -302,16 +353,12 @@ function salvarQuadro() {
     });
 }
 
-// Função para imprimir o quadro
-function imprimirQuadro() {
-    window.print();
-}
-
 // Função para exportar para Excel
 function exportarExcel() {
     // Coletar dados atuais
     const dados = {
         data: '{{ hoje.isoformat() }}',
+        turno_atual: '{{ turno_atual }}',
         ecin: {
             chefe: '{{ ecin_chefe.bombeiro.nome if ecin_chefe else "" }}',
             motorista: '{{ ecin_motorista.bombeiro.nome if ecin_motorista else "" }}',
@@ -331,11 +378,9 @@ function exportarExcel() {
             viatura: document.getElementById('viatura_eip').selectedOptions[0]?.text || ''
         },
         inem: {
-            elementos: [
-                {% for i in inem %}
-                '{{ i.bombeiro.nome if i else "" }}',
-                {% endfor %}
-            ],
+            socorrista: '{{ inem_um.bombeiro.nome if inem_um else "" }}',
+            motorista: '{{ inem_dois.bombeiro.nome if inem_dois else "" }}',
+            turno: '{{ turno_inem }}',
             viatura: document.getElementById('viatura_inem').selectedOptions[0]?.text || ''
         },
         reserva: {
@@ -347,12 +392,15 @@ function exportarExcel() {
             viatura: document.getElementById('viatura_reserva').selectedOptions[0]?.text || ''
         },
         comando: {
-            nome: '{{ comando.bombeiro.nome if comando else "" }}',
+            nome: '{{ comando.nome if comando else "" }}',
             viatura: document.getElementById('viatura_comando').selectedOptions[0]?.text || ''
         },
-        central: '{{ central.bombeiro.nome if central else "" }}'
+        central: {
+            nome: '{{ central.bombeiro.nome if central else "" }}',
+            turno: '{{ turno_central }}'
+        }
     };
-    
+
     // Enviar para exportação
     fetch('/api/exportar-quadro-operacional', {
         method: 'POST',
@@ -378,7 +426,7 @@ function exportarExcel() {
 const style = document.createElement('style');
 style.textContent = `
     @media print {
-        .btn, .navbar, .sidebar, footer {
+        .btn, .navbar, .sidebar, footer, .alert-info {
             display: none !important;
         }
         .card {
@@ -398,7 +446,6 @@ document.head.appendChild(style);
 </script>
 
 <style>
-    /* Estilos personalizados */
     .card {
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: transform 0.3s;

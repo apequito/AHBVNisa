@@ -8475,6 +8475,7 @@ def apagar_correio_massa():
 def quadro_operacional():
     # Verificar permissões: Admin, Comando ou bombeiros escalados para hoje
     hoje = date.today()
+    hora_atual = datetime.now().hour
 
     # Verificar se o utilizador está escalado para hoje
     is_escalado_hoje = Escala.query.filter(
@@ -8487,7 +8488,28 @@ def quadro_operacional():
         flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Buscar ECINs escalados para hoje
+    # ========== 1. COMANDO ==========
+    # Comando é sempre o bombeiro com resp_departamento = 'Comando' que está de serviço
+    comando = Bombeiro.query.filter(
+        Bombeiro.resp_departamento == 'Comando',
+        Bombeiro.ativo == True
+    ).first()
+
+    # ========== 2. CENTRAL (depende do turno) ==========
+    # Turno 8 - 08h/20h ou Turno 9 - 20h/08h
+    if 8 <= hora_atual < 20:
+        turno_central = '8 - 08h/20h'
+    else:
+        turno_central = '9 - 20h/08h'
+
+    central = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Centralista',
+        Escala.turno == turno_central
+    ).first()
+
+    # ========== 3. ECIN (buscar da tabela Ecin) ==========
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8507,43 +8529,53 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # Buscar EIPs (Equipa de Intervenção Permanente)
+    # ========== 4. EIP (5 bombeiros) ==========
     eips = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP'
     ).order_by(Escala.bombeiro_id).limit(5).all()
 
-    # Buscar INEM (2 bombeiros)
-    inem = Escala.query.filter(
+    # ========== 5. INEM (depende do turno para o nº1, nº2 é motorista) ==========
+    # Definir turno para socorrista (INEM)
+    if 7 <= hora_atual < 19:
+        turno_inem = '6 - 07h/19h'
+    else:
+        turno_inem = '7 - 19h/07h'
+
+    # Nº1 - Socorrista do turno correspondente
+    inem_um = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Socorrista'
-    ).limit(2).all()
+        Escala.categoria == 'Socorrista',
+        Escala.turno == turno_inem
+    ).first()
 
-    # Buscar Reserva (2 bombeiros)
+    # Nº2 - Motorista (qualquer turno, primeiro da lista)
+    inem_dois = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Motorista'
+    ).order_by(Escala.bombeiro_id).first()
+
+    inem = []
+    if inem_um:
+        inem.append(inem_um)
+    if inem_dois:
+        inem.append(inem_dois)
+
+    # ========== 6. RESERVA (2 bombeiros da categoria EIP que não estão na EIP principal) ==========
+    # Buscar IDs dos EIPs principais
+    eips_ids = [e.bombeiro_id for e in eips]
+
     reserva = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Bombeiro'
+        Escala.categoria == 'EIP',
+        ~Escala.bombeiro_id.in_(eips_ids) if eips_ids else True
     ).limit(2).all()
 
-    # Buscar Comando
-    comando = Escala.query.filter(
-        func.date(Escala.data_inicio) <= hoje,
-        func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Centralista'
-    ).first()
-
-    # Central
-    central = Escala.query.filter(
-        func.date(Escala.data_inicio) <= hoje,
-        func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Centralista',
-        Escala.funcao == 'Central'
-    ).first()
-
-    # Buscar viaturas por tipo
+    # ========== 7. BUSCAR VIATURAS ==========
     viaturas_vfci = Viatura.query.filter(
         Viatura.tipo.ilike('%VFCI%'),
         Viatura.estado == 'operacional'
@@ -8559,19 +8591,36 @@ def quadro_operacional():
         Viatura.estado == 'operacional'
     ).order_by(Viatura.matricula).all()
 
+    # Buscar configuração salva para hoje
+    config = QuadroOperacional.query.filter_by(data=hoje).first()
+
+    # Determinar turno atual para exibição
+    turno_atual = ""
+    if 8 <= hora_atual < 20:
+        turno_atual = "08h00 - 20h00"
+    else:
+        turno_atual = "20h00 - 08h00"
+
     return render_template('quadro_operacional.html',
                            hoje=hoje,
+                           hora_atual=hora_atual,
+                           turno_atual=turno_atual,
+                           turno_central=turno_central,
+                           turno_inem=turno_inem,
+                           comando=comando,
+                           central=central,
                            ecin_chefe=ecin_chefe,
                            ecin_motorista=ecin_motorista,
                            ecin_guarnicao=ecin_guarnicao,
                            eips=eips,
                            inem=inem,
+                           inem_um=inem_um,
+                           inem_dois=inem_dois,
                            reserva=reserva,
-                           comando=comando,
-                           central=central,
                            viaturas_vfci=viaturas_vfci,
                            viaturas_absc=viaturas_absc,
-                           viaturas_vcot=viaturas_vcot)
+                           viaturas_vcot=viaturas_vcot,
+                           config=config)
 
 
 @app.route('/api/salvar-quadro-operacional', methods=['POST'])
