@@ -34,16 +34,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 # Inicializar a extensão com a aplicação
 db.init_app(app)
 
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(Bombeiro, int(user_id))
-
-
 # Adicionar após db.init_app(app) e antes das rotas
 with app.app_context():
     from sqlalchemy import inspect, text
@@ -52,37 +42,64 @@ with app.app_context():
     try:
         inspector = inspect(db.engine)
 
+        # Verificar se a tabela existe
         if 'quadro_operacional' in inspector.get_table_names():
             columns = [col['name'] for col in inspector.get_columns('quadro_operacional')]
             print(f"Colunas existentes na tabela quadro_operacional: {columns}", file=sys.stderr)
 
-            # Dicionário com as colunas que devem existir e seus tipos
+            # Apenas colunas que podem estar em falta
             colunas_necessarias = {
-                'motorista_inem_id': 'INTEGER REFERENCES bombeiros(id)',
+                'motorista_inem_id': 'INTEGER',
                 'motorista_inem_numero': 'VARCHAR(20)',
                 'motorista_inem_mec': 'VARCHAR(20)',
-                'eip_reserva_1_id': 'INTEGER REFERENCES bombeiros(id)',
+                'eip_reserva_1_id': 'INTEGER',
                 'eip_reserva_1_numero': 'VARCHAR(20)',
                 'eip_reserva_1_mec': 'VARCHAR(20)',
-                'eip_reserva_2_id': 'INTEGER REFERENCES bombeiros(id)',
+                'eip_reserva_2_id': 'INTEGER',
                 'eip_reserva_2_numero': 'VARCHAR(20)',
                 'eip_reserva_2_mec': 'VARCHAR(20)',
-                'criado_por': 'INTEGER REFERENCES bombeiros(id)',
+                'criado_por': 'INTEGER',
                 'data_criacao': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
             }
 
-            # Verificar e adicionar colunas em falta
+            # Adicionar colunas em falta
+            colunas_adicionadas = 0
             for col_name, col_type in colunas_necessarias.items():
                 if col_name not in columns:
                     try:
+                        # Primeiro adicionar a coluna
                         db.session.execute(
                             text(f'ALTER TABLE quadro_operacional ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
+
+                        # Depois adicionar a FK se for uma coluna de relação
+                        if col_name in ['motorista_inem_id', 'eip_reserva_1_id', 'eip_reserva_2_id', 'criado_por']:
+                            try:
+                                fk_name = f'fk_quadro_operacional_{col_name}'
+                                db.session.execute(text(f'''
+                                    DO $$ 
+                                    BEGIN
+                                        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints 
+                                                       WHERE constraint_name = '{fk_name}') THEN
+                                            ALTER TABLE quadro_operacional 
+                                            ADD CONSTRAINT {fk_name} 
+                                            FOREIGN KEY ({col_name}) REFERENCES bombeiros(id);
+                                        END IF;
+                                    END $$;
+                                '''))
+                            except Exception as fk_error:
+                                print(f"Nota: FK para {col_name} pode já existir: {fk_error}", file=sys.stderr)
+
                         print(f"Coluna {col_name} adicionada à tabela quadro_operacional", file=sys.stderr)
+                        colunas_adicionadas += 1
                     except Exception as e:
                         print(f"Erro ao adicionar coluna {col_name}: {e}", file=sys.stderr)
 
-            db.session.commit()
-            print("Migração da tabela quadro_operacional concluída!", file=sys.stderr)
+            if colunas_adicionadas > 0:
+                db.session.commit()
+                print(f"Migração concluída! {colunas_adicionadas} colunas adicionadas.", file=sys.stderr)
+            else:
+                print("Tabela quadro_operacional já está atualizada.", file=sys.stderr)
+
         else:
             # Criar tabela do zero
             db.create_all()
@@ -91,6 +108,14 @@ with app.app_context():
     except Exception as e:
         print(f"Erro durante a migração: {e}", file=sys.stderr)
         db.session.rollback()
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(Bombeiro, int(user_id))
 
 
 # ---------- Criação da BD e admin inicial ----------
