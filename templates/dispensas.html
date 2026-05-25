@@ -42,7 +42,7 @@
                         {% else %}
                             <span class="badge bg-warning text-dark">Pendente</span>
                         {% endif %}
-                     </td>
+                    </td>
                     {% if not is_central %}
                     <td class="text-center">
                         {% if (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and not d.aprovada %}
@@ -51,7 +51,7 @@
                         {% else %}
                         <span class="text-muted">-</span>
                         {% endif %}
-                      </td>
+                    </td>
                     {% endif %}
                     <td class="text-center">
                         <button class="btn btn-sm btn-info" onclick="verDetalhes({{ d.id }})">
@@ -60,7 +60,7 @@
                         <a href="{{ url_for('imprimir_dispensa', id=d.id) }}" target="_blank" class="btn btn-sm btn-outline-info">
                             <i class="bi bi-printer"></i>
                         </a>
-                      </td>
+                    </td>
                 </tr>
                 {% else %}
                 <tr><td colspan="{% if is_central %}8{% else %}9{% endif %}" class="text-center text-muted">Nenhuma dispensa encontrada.{% endfor %}
@@ -106,7 +106,9 @@
                 <h6>Créditos utilizados:</h6>
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Data</th><th>Descrição</th><th>Horas</th></tr></thead>
-                    <tbody id="det_creditos_tbody"></tbody>
+                    <tbody id="det_creditos_tbody">
+                        <tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.{% endfor %}
+                    </tbody>
                 </table>
             </div>
             <div class="modal-footer">
@@ -157,7 +159,9 @@
                                     <tr><th style="width: 10%">Sel.</th><th>Data</th><th>Descrição</th><th>Horas</th></tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td colspan="4" class="text-muted text-center">Carregando créditos...{% endfor %}
+                                    <tr id="loadingCreditosRow">
+                                        <td colspan="4" class="text-muted text-center">Carregando créditos...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -231,8 +235,7 @@ function criarCalendarioDisp(diasEscala) {
                 html += '<td>&nbsp;</td>';
             } else {
                 const temEscala = diasEscala[dia] ? true : false;
-                const tooltip = temEscala ? 'title="Tem escala neste dia"' : '';
-                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}" ${tooltip}>${dia}</td>`;
+                html += `<td class="${temEscala ? 'bg-warning' : ''}" style="cursor:pointer;" data-dia="${dia}">${dia}</td>`;
                 dia++;
             }
         }
@@ -291,13 +294,13 @@ function carregarCreditos() {
             const tbody = document.querySelector('#tabelaCreditos tbody');
             tbody.innerHTML = '';
             if (!creditos || creditos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Nenhum crédito disponível.{% endfor %}';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Nenhum crédito disponível.</td></tr>';
                 return;
             }
             creditos.forEach(c => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
-                    <td><input type="checkbox" class="check-credito" value="${c.id}" data-horas="${c.horas}"></td>
+                    <td class="text-center"><input type="checkbox" class="check-credito" value="${c.id}" data-horas="${c.horas}"></td>
                     <td>${c.data}</td>
                     <td>${c.descricao || '-'}</td>
                     <td>${c.horas}h</td>
@@ -364,7 +367,7 @@ function verDetalhes(id) {
             const tbody = document.getElementById('det_creditos_tbody');
             tbody.innerHTML = '';
             if (data.creditos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.{% endfor %}';
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>';
             } else {
                 data.creditos.forEach(c => {
                     const row = tbody.insertRow();
