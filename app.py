@@ -2741,36 +2741,6 @@ def detalhes_dispensa(id):
 
 
 
-@app.route('/dispensas/detalhes/<int:id>')
-@login_required
-def detalhes_dispensa(id):
-    dispensa = Dispensa.query.get_or_404(id)
-    # Permissão: só o próprio, Admin ou Comando
-    if current_user.id != dispensa.bombeiro_id and current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        return jsonify({'erro': 'Acesso negado'}), 403
-
-    creditos = []
-    for cred in dispensa.creditos:
-        creditos.append({
-            'data': cred.data.strftime('%d/%m/%Y'),
-            'descricao': cred.descricao,
-            'horas': cred.horas
-        })
-
-    dados = {
-        'bombeiro': dispensa.bombeiro.nome,
-        'mecanografico': dispensa.bombeiro.mecanografico,
-        'data_inicio': dispensa.data_inicio.strftime('%d/%m/%Y'),
-        'data_fim': dispensa.data_fim.strftime('%d/%m/%Y'),
-        'categoria': dispensa.categoria or '-',
-        'turno': dispensa.turno or '-',
-        'motivo': dispensa.motivo or '-',
-        'aprovada': dispensa.aprovada,
-        'creditos': creditos
-    }
-    return jsonify(dados)
-
-
 @app.route('/api/creditos_nao_gozados/<int:user_id>')
 @login_required
 def api_creditos_nao_gozados(user_id):
