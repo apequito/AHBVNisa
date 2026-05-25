@@ -2488,15 +2488,26 @@ def imprimir_troca(id):
 def api_escala_usuario(user_id):
     ano = request.args.get('ano', type=int)
     mes = request.args.get('mes', type=int)
+    tipo_filtro = request.args.get('tipo', 'todas')  # 'assalariado', 'ecin', 'todas'
+
     if not ano or not mes:
         return jsonify({'erro': 'Parâmetros ano e mes obrigatórios'}), 400
 
-    # Buscar escalas do utilizador no mês/ano
-    escalas = Escala.query.filter(
+    # Query base
+    query = Escala.query.filter(
         Escala.bombeiro_id == user_id,
         db.extract('year', Escala.data_inicio) == ano,
         db.extract('month', Escala.data_inicio) == mes
-    ).order_by(Escala.data_inicio.asc()).all()
+    )
+
+    # Aplicar filtro por tipo
+    if tipo_filtro == 'assalariado':
+        query = query.filter(Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista']))
+    elif tipo_filtro == 'ecin':
+        query = query.filter(Escala.categoria.in_(['ECIN', 'ELAC']))
+    # se for 'todas', não aplica filtro
+
+    escalas = query.order_by(Escala.data_inicio.asc()).all()
 
     result = {}
     for e in escalas:
@@ -2509,7 +2520,7 @@ def api_escala_usuario(user_id):
             'funcao': e.funcao or ''
         })
 
-    # Garantir que todos os dias do mês estão representados (mesmo sem escala)
+    # Garantir que todos os dias do mês estão representados
     import calendar
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     for dia in range(1, ultimo_dia + 1):

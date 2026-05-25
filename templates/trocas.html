@@ -111,7 +111,8 @@
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.{% endfor %}
+                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.</td></tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -220,8 +221,9 @@ function carregarMeuCalendario() {
 
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
+    const tipo = tipoAtual;
 
-    fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}`)
+    fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
             meuCalendarioDados = dados;
@@ -240,8 +242,9 @@ function carregarColegaCalendario(colegaId) {
 
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
+    const tipo = tipoAtual;
 
-    fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}`)
+    fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
             colegaCalendarioDados = dados;
@@ -288,7 +291,7 @@ function criarCalendario(containerId, dados, isMeu) {
                 let escalasHtml = '';
                 if (temEscala) {
                     if (tipoAtual === 'assalariado') {
-                        escalasHtml = dados[dia].map(e => `${e.turno}`).join('<br>');
+                        escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.turno}`).join('<br>');
                     } else {
                         escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.funcao || 'Equipa'}`).join('<br>');
                     }
@@ -312,7 +315,12 @@ function criarCalendario(containerId, dados, isMeu) {
         td.addEventListener('click', function() {
             const dia = parseInt(this.getAttribute('data-dia'));
             const isMeuCalendario = this.getAttribute('data-is-meu') === 'true';
-            const escalas = isMeuCalendario ? dados[dia] : dados[dia];
+            const escalas = dados[dia] || [];
+
+            if (escalas.length === 0) {
+                alert('Este dia não tem escala para o tipo selecionado.');
+                return;
+            }
 
             if (isMeuCalendario) {
                 selecionarMeuTurno(dia, escalas);
@@ -320,7 +328,6 @@ function criarCalendario(containerId, dados, isMeu) {
                 selecionarColegaTurno(dia, escalas);
             }
 
-            // Remover seleção anterior
             container.querySelectorAll('.escala-dia.selected').forEach(t => t.classList.remove('selected'));
             this.classList.add('selected');
         });
@@ -341,7 +348,6 @@ function selecionarMeuTurno(dia, escalas) {
 
     meuTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
 
-    // Mostrar informações do turno selecionado
     const infoDiv = document.getElementById('meuTurnoInfo');
     const detalhesDiv = document.getElementById('meuTurnoDetalhes');
 
@@ -361,15 +367,6 @@ function selecionarMeuTurno(dia, escalas) {
     }
     infoDiv.style.display = 'block';
 
-    // Destacar visualmente no calendário
-    document.getElementById('meuCalendario').querySelectorAll('.escala-dia').forEach(td => {
-        td.classList.remove('selected');
-        if (parseInt(td.getAttribute('data-dia')) === dia) {
-            td.classList.add('selected');
-        }
-    });
-
-    // Se for ECIN/ELAC e não tiver checkbox marcada, não precisa de turno do colega
     if (tipoAtual === 'ecin') {
         const checkbox = document.getElementById('trocarTurnoCheckbox');
         if (!checkbox.checked) {
@@ -400,7 +397,6 @@ function selecionarColegaTurno(dia, escalas) {
 
     colegaTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
 
-    // Mostrar informações do turno selecionado
     const infoDiv = document.getElementById('colegaTurnoInfo');
     const detalhesDiv = document.getElementById('colegaTurnoDetalhes');
 
@@ -420,14 +416,6 @@ function selecionarColegaTurno(dia, escalas) {
     }
     infoDiv.style.display = 'block';
 
-    // Destacar visualmente no calendário
-    document.getElementById('colegaCalendario').querySelectorAll('.escala-dia').forEach(td => {
-        td.classList.remove('selected');
-        if (parseInt(td.getAttribute('data-dia')) === dia) {
-            td.classList.add('selected');
-        }
-    });
-
     if (tipoAtual === 'ecin') {
         document.getElementById('trocar_turno_hidden').value = '1';
     }
@@ -441,24 +429,20 @@ function verificarHabilitarBotao() {
     const checkbox = document.getElementById('trocarTurnoCheckbox');
 
     if (tipoAtual === 'assalariado') {
-        // Assalariado: precisa do turno do próprio E do colega
         if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
             btn.disabled = false;
         } else {
             btn.disabled = true;
         }
     } else {
-        // ECIN/ELAC: precisa do turno do próprio
         if (meuTurnoSelecionado && colegaIdSelecionado) {
             if (checkbox.checked) {
-                // Se for trocar turno, precisa também do turno do colega
                 if (colegaTurnoSelecionado) {
                     btn.disabled = false;
                 } else {
                     btn.disabled = true;
                 }
             } else {
-                // Se for apenas ceder, não precisa do turno do colega
                 btn.disabled = false;
             }
         } else {
@@ -470,17 +454,13 @@ function verificarHabilitarBotao() {
 // ========== CHECKBOX PARA TROCA DE TURNO (ECIN) ==========
 document.getElementById('trocarTurnoCheckbox').addEventListener('change', function() {
     if (this.checked) {
-        // Se marcar trocar turno, precisa selecionar um turno do colega
-        document.getElementById('colegaCalendario').classList.remove('opacity-50');
         if (colegaTurnoSelecionado) {
             document.getElementById('trocar_turno_hidden').value = '1';
         } else {
-            // Se não tiver turno selecionado, desativa o botão
             document.getElementById('btnEnviarTroca').disabled = true;
             alert('Selecione um turno do colega para a troca.');
         }
     } else {
-        // Se desmarcar, não precisa de turno do colega
         document.getElementById('trocar_turno_hidden').value = '0';
         colegaTurnoSelecionado = null;
         document.getElementById('data_destino_hidden').value = '';
@@ -488,7 +468,6 @@ document.getElementById('trocarTurnoCheckbox').addEventListener('change', functi
         document.getElementById('categoria_destino_hidden').value = '';
         document.getElementById('funcao_destino_hidden').value = '';
         document.getElementById('colegaTurnoInfo').style.display = 'none';
-        // Limpar seleção no calendário
         document.getElementById('colegaCalendario').querySelectorAll('.escala-dia.selected').forEach(td => {
             td.classList.remove('selected');
         });
@@ -520,12 +499,15 @@ function atualizarListaColegas() {
             selectDestino.innerHTML = '<option value="">Erro ao carregar colegas</option>';
         });
 
-    // Resetar seleções
     colegaIdSelecionado = null;
     colegaTurnoSelecionado = null;
+    meuTurnoSelecionado = null;
     document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
     document.getElementById('colegaTurnoInfo').style.display = 'none';
+    document.getElementById('meuTurnoInfo').style.display = 'none';
     document.getElementById('opcoesEcin').style.display = tipo === 'ecin' ? 'block' : 'none';
+
+    carregarMeuCalendario();
 
     if (tipo === 'ecin') {
         document.getElementById('trocarTurnoCheckbox').checked = false;
@@ -554,24 +536,7 @@ document.getElementById('destino_id_select').addEventListener('change', function
 // ========== MUDANÇA DE TIPO ==========
 document.getElementById('tipo_pedido_select').addEventListener('change', function() {
     atualizarListaColegas();
-    // Resetar seleções do próprio
-    meuTurnoSelecionado = null;
-    colegaTurnoSelecionado = null;
-    colegaIdSelecionado = null;
-    document.getElementById('data_origem_hidden').value = '';
-    document.getElementById('turno_origem_hidden').value = '';
-    document.getElementById('categoria_origem_hidden').value = '';
-    document.getElementById('funcao_origem_hidden').value = '';
-    document.getElementById('data_destino_hidden').value = '';
-    document.getElementById('turno_destino_hidden').value = '';
-    document.getElementById('categoria_destino_hidden').value = '';
-    document.getElementById('funcao_destino_hidden').value = '';
-    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
-    document.getElementById('meuTurnoInfo').style.display = 'none';
-    document.getElementById('colegaTurnoInfo').style.display = 'none';
     document.getElementById('btnEnviarTroca').disabled = true;
-    // Recarregar o calendário do próprio
-    carregarMeuCalendario();
 });
 
 // ========== INICIALIZAÇÃO ==========
