@@ -8553,18 +8553,20 @@ def quadro_operacional():
 
     # ========== 6. MOTORISTAS DO TURNO PARA INEM (Combobox) ==========
     # Buscar todos os motoristas escalados no dia (qualquer turno)
-    motoristas_turno = Escala.query.filter(
+    # CORRIGIDO: usar join com Bombeiro para ordenar por nome
+    motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'Motorista'
-    ).order_by(Escala.turno, Escala.bombeiro.nome).all()
+    ).order_by(Escala.turno, Bombeiro.nome).all()
 
     # ========== 7. TODOS OS EIP PARA AS COMBOBOX DA RESERVA ==========
-    todos_eip = Escala.query.filter(
+    # CORRIGIDO: usar join com Bombeiro para ordenar por nome
+    todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP'
-    ).order_by(Escala.bombeiro.nome).all()
+    ).order_by(Bombeiro.nome).all()
 
     # ========== 8. RESERVA (buscar da configuração salva) ==========
     # Buscar configuração salva para hoje
