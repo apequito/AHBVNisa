@@ -8544,6 +8544,7 @@ def apagar_correio_massa():
 
 
 # ==================== QUADRO OPERACIONAL ====================
+# ==================== QUADRO OPERACIONAL ====================
 
 @app.route('/quadro-operacional')
 @login_required
@@ -8600,7 +8601,6 @@ def quadro_operacional():
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).order_by(Ecin.funcao).all()
 
-    # Se não encontrar ECINs no turno específico, buscar qualquer ECIN do dia
     if not ecins:
         ecins = Ecin.query.filter(
             Ecin.data == hoje,
@@ -8709,26 +8709,65 @@ def quadro_operacional():
         turno_atual = "Turno Noturno (19h00 - 07h00)"
 
     return render_template('quadro_operacional.html',
-                           hoje=hoje,
-                           hora_atual=hora_atual,
-                           turno_atual=turno_atual,
-                           turno_central=turno_central_desc,
-                           turno_ecin=turno_ecin_desc,
-                           turno_inem=turno_inem_desc,
-                           comando=comando,
-                           central=central,
-                           ecin_chefe=ecin_chefe,
-                           ecin_motorista=ecin_motorista,
-                           ecin_guarnicao=ecin_guarnicao,
-                           eips=eips,
-                           inem_um=inem_um,
-                           motoristas_turno=motoristas_turno,
-                           todos_eip=todos_eip,
-                           viaturas_vfci=viaturas_vfci,
-                           viaturas_absc=viaturas_absc,
-                           viaturas_vcot=viaturas_vcot,
-                           config=config)
+                         hoje=hoje,
+                         hora_atual=hora_atual,
+                         turno_atual=turno_atual,
+                         turno_central=turno_central_desc,
+                         turno_ecin=turno_ecin_desc,
+                         turno_inem=turno_inem_desc,
+                         comando=comando,
+                         central=central,
+                         ecin_chefe=ecin_chefe,
+                         ecin_motorista=ecin_motorista,
+                         ecin_guarnicao=ecin_guarnicao,
+                         eips=eips,
+                         inem_um=inem_um,
+                         motoristas_turno=motoristas_turno,
+                         todos_eip=todos_eip,
+                         viaturas_vfci=viaturas_vfci,
+                         viaturas_absc=viaturas_absc,
+                         viaturas_vcot=viaturas_vcot,
+                         config=config)
 
+
+@app.route('/api/salvar-quadro-operacional', methods=['POST'])
+@login_required
+def salvar_quadro_operacional():
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
+        return jsonify({'error': 'Acesso restrito'}), 403
+
+    data = request.get_json()
+    hoje = date.today()
+
+    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
+    if not quadro:
+        quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
+        db.session.add(quadro)
+
+    # Atualizar viaturas
+    quadro.viatura_ecin_id = data.get('viatura_ecin') or None
+    quadro.viatura_eip_id = data.get('viatura_eip') or None
+    quadro.viatura_inem_id = data.get('viatura_inem') or None
+    quadro.viatura_reserva_id = data.get('viatura_reserva') or None
+    quadro.viatura_comando_id = data.get('viatura_comando') or None
+
+    # Atualizar motorista INEM
+    quadro.motorista_inem_id = data.get('motorista_inem_id') or None
+    quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
+    quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
+
+    # Atualizar EIP Reserva
+    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or None
+    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or None
+    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or None
+
+    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or None
+    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or None
+    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or None
+
+    db.session.commit()
+
+    return jsonify({'success': True})
 
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])
@@ -8979,220 +9018,5 @@ def get_quadro_operacional_config():
     return jsonify({})
 
 
-@app.route('/api/salvar-quadro-operacional', methods=['POST'])
-@login_required
-def salvar_quadro_operacional():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        return jsonify({'error': 'Acesso restrito'}), 403
-
-    data = request.get_json()
-    hoje = date.today()
-
-    # Verificar se já existe configuração para hoje
-    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
-    if not quadro:
-        quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
-        db.session.add(quadro)
-
-    # Atualizar viaturas
-    quadro.viatura_ecin_id = data.get('viatura_ecin') or None
-    quadro.viatura_eip_id = data.get('viatura_eip') or None
-    quadro.viatura_inem_id = data.get('viatura_inem') or None
-    quadro.viatura_reserva_id = data.get('viatura_reserva') or None
-    quadro.viatura_comando_id = data.get('viatura_comando') or None
-
-    # Atualizar motorista INEM
-    quadro.motorista_inem_id = data.get('motorista_inem_id') or None
-    quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
-    quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
-
-    # Atualizar EIP Reserva 1
-    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or None
-    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or None
-    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or None
-
-    # Atualizar EIP Reserva 2
-    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or None
-    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or None
-    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or None
-
-    db.session.commit()
-
-    return jsonify({'success': True})
-
-
-
-@app.route('/api/exportar-quadro-operacional', methods=['POST'])
-@login_required
-def exportar_quadro_operacional():
-    data = request.get_json()
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = f"Quadro Operacional"
-
-    # Estilos
-    header_fill = PatternFill(start_color='FFC000', end_color='FFC000', fill_type='solid')
-    header_font = Font(bold=True, size=12)
-    title_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
-    title_font = Font(bold=True, size=14, color='FFFFFF')
-
-    # Título
-    ws.merge_cells('A1:D1')
-    cell = ws['A1']
-    cell.value = f"QUADRO OPERACIONAL - {data['data']}"
-    cell.fill = title_fill
-    cell.font = title_font
-    cell.alignment = openpyxl.styles.Alignment(horizontal='center')
-
-    # Subtítulo com turno
-    ws.merge_cells('A2:D2')
-    ws['A2'].value = f"Turno Atual: {data.get('turno_atual', '')}"
-    ws['A2'].alignment = openpyxl.styles.Alignment(horizontal='center')
-
-    row = 4
-
-    # ECIN
-    ws.cell(row=row, column=1).value = "ECIN - Equipa de Combate a Incêndios"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='DC3545', end_color='DC3545', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "Função"
-    ws.cell(row=row, column=2).value = "Nome"
-    ws.cell(row=row, column=3).value = "Mecanográfico"
-    for col in range(1, 4):
-        ws.cell(row=row, column=col).fill = header_fill
-        ws.cell(row=row, column=col).font = header_font
-    row += 1
-
-    ws.cell(row=row, column=1).value = "Chefe"
-    ws.cell(row=row, column=2).value = data['ecin']['chefe']
-    row += 1
-    ws.cell(row=row, column=1).value = "Motorista"
-    ws.cell(row=row, column=2).value = data['ecin']['motorista']
-    row += 1
-    for i, g in enumerate(data['ecin']['guarnicao'], 1):
-        if g:
-            ws.cell(row=row, column=1).value = f"Guarnição {i}"
-            ws.cell(row=row, column=2).value = g
-            row += 1
-
-    ws.cell(row=row, column=1).value = "Viatura ECIN"
-    ws.cell(row=row, column=2).value = data['ecin']['viatura']
-    row += 2
-
-    # EIP
-    ws.cell(row=row, column=1).value = "EIP - Equipa de Intervenção Permanente"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='FFC107', end_color='FFC107', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "#"
-    ws.cell(row=row, column=2).value = "Nome"
-    ws.cell(row=row, column=3).value = "Mecanográfico"
-    for col in range(1, 4):
-        ws.cell(row=row, column=col).fill = header_fill
-        ws.cell(row=row, column=col).font = header_font
-    row += 1
-
-    for i, e in enumerate(data['eip']['elementos'], 1):
-        if e:
-            ws.cell(row=row, column=1).value = i
-            ws.cell(row=row, column=2).value = e
-            row += 1
-
-    ws.cell(row=row, column=1).value = "Viatura EIP"
-    ws.cell(row=row, column=2).value = data['eip']['viatura']
-    row += 2
-
-    # INEM
-    ws.cell(row=row, column=1).value = f"INEM - Equipa de Suporte (Turno: {data['inem']['turno']})"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='198754', end_color='198754', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "#"
-    ws.cell(row=row, column=2).value = "Função/Nome"
-    ws.cell(row=row, column=3).value = "Mecanográfico"
-    for col in range(1, 4):
-        ws.cell(row=row, column=col).fill = header_fill
-        ws.cell(row=row, column=col).font = header_font
-    row += 1
-
-    ws.cell(row=row, column=1).value = "1"
-    ws.cell(row=row, column=2).value = f"Socorrista ({data['inem']['turno']})\n{data['inem']['socorrista']}"
-    row += 1
-    ws.cell(row=row, column=1).value = "2"
-    ws.cell(row=row, column=2).value = f"Motorista\n{data['inem']['motorista']}"
-    row += 1
-
-    ws.cell(row=row, column=1).value = "Viatura INEM"
-    ws.cell(row=row, column=2).value = data['inem']['viatura']
-    row += 2
-
-    # RESERVA
-    ws.cell(row=row, column=1).value = "RESERVA (EIP)"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='0DCAF0', end_color='0DCAF0', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='000000')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "#"
-    ws.cell(row=row, column=2).value = "Nome"
-    ws.cell(row=row, column=3).value = "Mecanográfico"
-    for col in range(1, 4):
-        ws.cell(row=row, column=col).fill = header_fill
-        ws.cell(row=row, column=col).font = header_font
-    row += 1
-
-    for i, r in enumerate(data['reserva']['elementos'], 1):
-        if r:
-            ws.cell(row=row, column=1).value = i
-            ws.cell(row=row, column=2).value = r
-            row += 1
-
-    ws.cell(row=row, column=1).value = "Viatura Reserva"
-    ws.cell(row=row, column=2).value = data['reserva']['viatura']
-    row += 2
-
-    # COMANDO
-    ws.cell(row=row, column=1).value = "COMANDO"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='212529', end_color='212529', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "Comandante"
-    ws.cell(row=row, column=2).value = data['comando']['nome']
-    row += 1
-    ws.cell(row=row, column=1).value = "Viatura Comando"
-    ws.cell(row=row, column=2).value = data['comando']['viatura']
-    row += 2
-
-    # CENTRAL
-    ws.cell(row=row, column=1).value = f"CENTRAL (Turno: {data['central']['turno']})"
-    ws.cell(row=row, column=1).fill = PatternFill(start_color='6C757D', end_color='6C757D', fill_type='solid')
-    ws.cell(row=row, column=1).font = Font(bold=True, color='FFFFFF')
-    row += 1
-
-    ws.cell(row=row, column=1).value = "Central"
-    ws.cell(row=row, column=2).value = data['central']['nome']
-
-    # Ajustar larguras
-    for col in ['A', 'B', 'C', 'D']:
-        ws.column_dimensions[col].width = 30
-
-    # Ajustar altura das linhas
-    for r in range(1, row + 5):
-        ws.row_dimensions[r].height = 20
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True,
-                     download_name=f'quadro_operacional_{data["data"]}.xlsx',
-                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-
-#if __name__ == '__main__':
-    #app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
