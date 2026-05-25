@@ -2331,7 +2331,11 @@ def exportar_escala():
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
-    separador = request.args.get('tipo', 'assalariado')
+    # Determinar se é voluntário
+    is_voluntario = (current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin')
+
+    # Voluntários só podem ver ECIN, profissionais podem ver todos
+    separador = request.args.get('tipo', 'ecin' if is_voluntario else 'todas')
 
     is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
@@ -2340,7 +2344,6 @@ def trocas():
         return redirect(url_for('trocas'))
 
     if request.method == 'POST':
-        # ... código existente de criação de troca ...
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
         data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
@@ -2349,6 +2352,12 @@ def trocas():
         motivo = request.form.get('motivo', '')
         tipo_pedido = request.form.get('tipo_pedido', 'assalariado')
 
+        # Voluntários só podem criar trocas ECIN
+        if is_voluntario and tipo_pedido == 'assalariado':
+            flash('Bombeiros voluntários só podem criar trocas ECIN/ELAC.', 'danger')
+            return redirect(url_for('trocas', tipo='ecin'))
+
+        # Validação extra para ECINs
         if tipo_pedido == 'ecin':
             escalado = Escala.query.filter(
                 Escala.bombeiro_id == current_user.id,
@@ -2378,6 +2387,7 @@ def trocas():
     # --- GET: construir a query base ---
     query = TrocaServico.query
 
+    # Aplicar filtro por tipo de troca
     if separador == 'assalariado':
         sub_assalariado = db.session.query(TrocaServico.id) \
             .join(Escala, db.and_(
@@ -2417,37 +2427,36 @@ def trocas():
         Bombeiro.ativo == True
     ).order_by(Bombeiro.nome.asc()).all()
 
-    # Bombeiros elegíveis para troca assalariada - ordenados por nome
-    if separador == 'assalariado':
-        bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
-            .filter(
-            Bombeiro.id != current_user.id,
-            Bombeiro.ativo == True,
-            Bombeiro.tipo_bombeiro == 'Profissional',
-            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-        ).distinct().order_by(Bombeiro.nome.asc()).all()
-    else:
-        # Para ECIN/ELAC, mostrar todos os bombeiros ativos (não apenas profissionais)
-        bombeiros_assalariados = Bombeiro.query.filter(
-            Bombeiro.id != current_user.id,
-            Bombeiro.ativo == True
-        ).order_by(Bombeiro.nome.asc()).all()
+    # Bombeiros elegíveis para troca assalariada (apenas profissionais)
+    bombeiros_assalariados = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
+        .filter(
+        Bombeiro.id != current_user.id,
+        Bombeiro.ativo == True,
+        Bombeiro.tipo_bombeiro == 'Profissional',
+        Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+    ).distinct().order_by(Bombeiro.nome.asc()).all()
 
     return render_template('trocas.html',
                            pedidos=pedidos,
                            bombeiros=bombeiros,
                            bombeiros_assalariados=bombeiros_assalariados,
                            separador_atual=separador,
-                           is_central=is_central)
+                           is_central=is_central,
+                           is_voluntario=is_voluntario)
 
 
 @app.route('/api/colegas_para_troca')
 @login_required
 def api_colegas_para_troca():
     tipo = request.args.get('tipo', 'assalariado')
+    is_voluntario = (current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin')
+
+    # Voluntários só podem ver colegas para ECIN
+    if is_voluntario and tipo == 'assalariado':
+        tipo = 'ecin'
 
     if tipo == 'assalariado':
-        # Apenas profissionais que tenham escalas nas categorias certas
+        # Apenas profissionais com escalas nas categorias certas
         colegas = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
             .filter(
             Bombeiro.id != current_user.id,
@@ -2456,7 +2465,7 @@ def api_colegas_para_troca():
             Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
         ).distinct().order_by(Bombeiro.nome.asc()).all()
     else:
-        # ECIN/ELAC: todos os bombeiros ativos
+        # ECIN/ELAC: todos os bombeiros ativos (voluntários e profissionais)
         colegas = Bombeiro.query.filter(
             Bombeiro.id != current_user.id,
             Bombeiro.ativo == True

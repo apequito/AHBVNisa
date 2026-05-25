@@ -3,10 +3,17 @@
 <h2><i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço</h2>
 
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
+{% set is_voluntario = (current_user.tipo_bombeiro == 'Voluntário') and current_user.tipo_user != 'Admin' %}
 
 {% if is_central %}
 <div class="alert alert-info mb-3">
     <i class="bi bi-eye me-2"></i> A Central pode visualizar todas as trocas e criar as suas próprias, mas não pode aprovar pedidos.
+</div>
+{% endif %}
+
+{% if is_voluntario %}
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle me-2"></i> Bombeiros voluntários podem apenas visualizar e criar trocas ECIN/ELAC.
 </div>
 {% endif %}
 
@@ -35,9 +42,13 @@
                     <div class="col-auto">
                         <label class="form-label">Tipo</label>
                         <select name="tipo" class="form-select form-select-sm">
+                            {% if not is_voluntario %}
                             <option value="assalariado" {% if separador_atual == 'assalariado' %}selected{% endif %}>Assalariado</option>
+                            {% endif %}
                             <option value="ecin" {% if separador_atual == 'ecin' %}selected{% endif %}>ECIN/ELAC</option>
+                            {% if not is_voluntario %}
                             <option value="todas" {% if separador_atual == 'todas' %}selected{% endif %}>Todas</option>
+                            {% endif %}
                         </select>
                     </div>
                     <div class="col-auto">
@@ -111,8 +122,7 @@
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.</td></tr>
-                        {% endfor %}
+                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.{% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -129,7 +139,9 @@
                         <div class="col-md-6">
                             <label class="form-label">Tipo de Troca</label>
                             <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required>
+                                {% if not is_voluntario %}
                                 <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
+                                {% endif %}
                                 <option value="ecin">ECIN / ELAC</option>
                             </select>
                         </div>
@@ -162,7 +174,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <!-- Opções para ECIN/ELAC -->
                     <div id="opcoesEcin" class="row mt-3" style="display: none;">
                         <div class="col-md-12">
@@ -177,7 +189,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="row mt-3">
                         <div class="col-md-12">
                             <input type="hidden" name="data_origem" id="data_origem_hidden">
@@ -206,23 +218,24 @@
 </div>
 
 <script>
-let tipoAtual = 'assalariado';
+let tipoAtual = '{% if is_voluntario %}ecin{% else %}assalariado{% endif %}';
 let meuCalendarioDados = {};
 let colegaCalendarioDados = {};
 let meuTurnoSelecionado = null;
 let colegaTurnoSelecionado = null;
 let colegaIdSelecionado = null;
 const userId = {{ current_user.id }};
+const isVoluntario = {{ 'true' if is_voluntario else 'false' }};
 
 // ========== CARREGAR CALENDÁRIO DO UTILIZADOR ==========
 function carregarMeuCalendario() {
     const container = document.getElementById('meuCalendario');
     container.innerHTML = '<div class="text-center p-3">Carregando seus turnos...</div>';
-
+    
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
     const tipo = tipoAtual;
-
+    
     fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
@@ -239,11 +252,11 @@ function carregarMeuCalendario() {
 function carregarColegaCalendario(colegaId) {
     const container = document.getElementById('colegaCalendario');
     container.innerHTML = '<div class="text-center p-3">Carregando turnos do colega...</div>';
-
+    
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
     const tipo = tipoAtual;
-
+    
     fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
@@ -261,15 +274,15 @@ function criarCalendario(containerId, dados, isMeu) {
     const container = document.getElementById(containerId);
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
-
+    
     const primeiroDia = new Date(ano, mes - 1, 1);
     const ultimoDia = new Date(ano, mes, 0);
     const totalDias = ultimoDia.getDate();
     const diaSemanaInicio = primeiroDia.getDay();
-
-    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
+    
     let html = `
         <div class="d-flex justify-content-between align-items-center mb-2">
             <strong>${meses[mes - 1]} ${ano}</strong>
@@ -279,7 +292,7 @@ function criarCalendario(containerId, dados, isMeu) {
                 <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
             </thead>
             <tbody>`;
-
+    
     let dia = 1;
     for (let semana = 0; semana < 6; semana++) {
         html += '<tr>';
@@ -296,9 +309,9 @@ function criarCalendario(containerId, dados, isMeu) {
                         escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.funcao || 'Equipa'}`).join('<br>');
                     }
                 }
-                html += `<td class="${temEscala ? 'bg-warning escala-dia' : ''}"
-                               style="cursor:pointer;"
-                               data-dia="${dia}"
+                html += `<td class="${temEscala ? 'bg-warning escala-dia' : ''}" 
+                               style="cursor:pointer;" 
+                               data-dia="${dia}" 
                                data-is-meu="${isMeu}"
                                title="${escalasHtml}">${dia}</td>`;
                 dia++;
@@ -309,25 +322,25 @@ function criarCalendario(containerId, dados, isMeu) {
     }
     html += '</tbody></table>';
     container.innerHTML = html;
-
+    
     // Adicionar eventos de clique nos dias com escala
     container.querySelectorAll('.escala-dia').forEach(td => {
         td.addEventListener('click', function() {
             const dia = parseInt(this.getAttribute('data-dia'));
             const isMeuCalendario = this.getAttribute('data-is-meu') === 'true';
             const escalas = dados[dia] || [];
-
+            
             if (escalas.length === 0) {
                 alert('Este dia não tem escala para o tipo selecionado.');
                 return;
             }
-
+            
             if (isMeuCalendario) {
                 selecionarMeuTurno(dia, escalas);
             } else {
                 selecionarColegaTurno(dia, escalas);
             }
-
+            
             container.querySelectorAll('.escala-dia.selected').forEach(t => t.classList.remove('selected'));
             this.classList.add('selected');
         });
@@ -337,20 +350,20 @@ function criarCalendario(containerId, dados, isMeu) {
 // ========== SELECIONAR MEU TURNO ==========
 function selecionarMeuTurno(dia, escalas) {
     if (!escalas || escalas.length === 0) return;
-
+    
     const escala = escalas[0];
     const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-
+    
     document.getElementById('data_origem_hidden').value = dataStr;
     document.getElementById('turno_origem_hidden').value = escala.turno;
     document.getElementById('categoria_origem_hidden').value = escala.categoria || '';
     document.getElementById('funcao_origem_hidden').value = escala.funcao || '';
-
+    
     meuTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
-
+    
     const infoDiv = document.getElementById('meuTurnoInfo');
     const detalhesDiv = document.getElementById('meuTurnoDetalhes');
-
+    
     if (tipoAtual === 'assalariado') {
         detalhesDiv.innerHTML = `
             <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
@@ -366,7 +379,7 @@ function selecionarMeuTurno(dia, escalas) {
         `;
     }
     infoDiv.style.display = 'block';
-
+    
     if (tipoAtual === 'ecin') {
         const checkbox = document.getElementById('trocarTurnoCheckbox');
         if (!checkbox.checked) {
@@ -379,27 +392,27 @@ function selecionarMeuTurno(dia, escalas) {
             document.getElementById('trocar_turno_hidden').value = '0';
         }
     }
-
+    
     verificarHabilitarBotao();
 }
 
 // ========== SELECIONAR TURNO DO COLEGA ==========
 function selecionarColegaTurno(dia, escalas) {
     if (!escalas || escalas.length === 0) return;
-
+    
     const escala = escalas[0];
     const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-
+    
     document.getElementById('data_destino_hidden').value = dataStr;
     document.getElementById('turno_destino_hidden').value = escala.turno;
     document.getElementById('categoria_destino_hidden').value = escala.categoria || '';
     document.getElementById('funcao_destino_hidden').value = escala.funcao || '';
-
+    
     colegaTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
-
+    
     const infoDiv = document.getElementById('colegaTurnoInfo');
     const detalhesDiv = document.getElementById('colegaTurnoDetalhes');
-
+    
     if (tipoAtual === 'assalariado') {
         detalhesDiv.innerHTML = `
             <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
@@ -415,11 +428,11 @@ function selecionarColegaTurno(dia, escalas) {
         `;
     }
     infoDiv.style.display = 'block';
-
+    
     if (tipoAtual === 'ecin') {
         document.getElementById('trocar_turno_hidden').value = '1';
     }
-
+    
     verificarHabilitarBotao();
 }
 
@@ -427,7 +440,7 @@ function selecionarColegaTurno(dia, escalas) {
 function verificarHabilitarBotao() {
     const btn = document.getElementById('btnEnviarTroca');
     const checkbox = document.getElementById('trocarTurnoCheckbox');
-
+    
     if (tipoAtual === 'assalariado') {
         if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
             btn.disabled = false;
@@ -480,9 +493,9 @@ function atualizarListaColegas() {
     const tipo = document.getElementById('tipo_pedido_select').value;
     tipoAtual = tipo;
     const selectDestino = document.getElementById('destino_id_select');
-
+    
     selectDestino.innerHTML = '<option value="">Carregando...</option>';
-
+    
     fetch(`/api/colegas_para_troca?tipo=${tipo}`)
         .then(response => response.json())
         .then(data => {
@@ -498,7 +511,7 @@ function atualizarListaColegas() {
             console.error(err);
             selectDestino.innerHTML = '<option value="">Erro ao carregar colegas</option>';
         });
-
+    
     colegaIdSelecionado = null;
     colegaTurnoSelecionado = null;
     meuTurnoSelecionado = null;
@@ -506,14 +519,14 @@ function atualizarListaColegas() {
     document.getElementById('colegaTurnoInfo').style.display = 'none';
     document.getElementById('meuTurnoInfo').style.display = 'none';
     document.getElementById('opcoesEcin').style.display = tipo === 'ecin' ? 'block' : 'none';
-
+    
     carregarMeuCalendario();
-
+    
     if (tipo === 'ecin') {
         document.getElementById('trocarTurnoCheckbox').checked = false;
         document.getElementById('trocar_turno_hidden').value = '0';
     }
-
+    
     verificarHabilitarBotao();
 }
 
@@ -541,6 +554,10 @@ document.getElementById('tipo_pedido_select').addEventListener('change', functio
 
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', function() {
+    // Se for voluntário, o tipo já está definido como 'ecin' e não pode mudar
+    if (isVoluntario) {
+        document.getElementById('tipo_pedido_select').disabled = true;
+    }
     carregarMeuCalendario();
     atualizarListaColegas();
 });
