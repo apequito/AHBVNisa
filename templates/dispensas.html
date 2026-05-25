@@ -63,7 +63,8 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="{% if is_central %}8{% else %}9{% endif %}" class="text-center text-muted">Nenhuma dispensa encontrada.{% endfor %}
+                <tr><td colspan="{{ 9 if not is_central else 8 }}" class="text-center text-muted">Nenhuma dispensa encontrada.</td></tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -105,9 +106,11 @@
                 <hr>
                 <h6>Créditos utilizados:</h6>
                 <table class="table table-sm table-bordered">
-                    <thead><tr><th>Data</th><th>Descrição</th><th>Horas</th></tr></thead>
+                    <thead>
+                        <tr><th>Data</th><th>Descrição</th><th>Horas</th></tr>
+                    </thead>
                     <tbody id="det_creditos_tbody">
-                        <tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.{% endfor %}
+                        <tr><td colspan="3" class="text-muted text-center">Nenhum crédito associado.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -239,7 +242,7 @@ function criarCalendarioDisp(diasEscala) {
                 dia++;
             }
         }
-        html += '</tr>';
+        html += '</table>';
         if (dia > totalDias) break;
     }
     html += '</tbody></table>';
@@ -272,7 +275,6 @@ function criarCalendarioDisp(diasEscala) {
             }
             atualizarMinimoHoras();
 
-            // Adicionar classe visual no dia selecionado
             document.querySelectorAll('#calendarioDispensa td[data-dia]').forEach(t => t.classList.remove('table-primary'));
             this.classList.add('table-primary');
         });
@@ -387,7 +389,6 @@ if (modalDispensa) {
         anoAtualDisp = new Date().getFullYear();
         carregarCalendarioDispensa();
         carregarCreditos();
-        // Limpar campos
         document.getElementById('data_inicio_disp').value = '';
         document.getElementById('categoria_disp').value = '';
         document.getElementById('turno_disp').value = '';
