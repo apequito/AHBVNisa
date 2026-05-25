@@ -8544,16 +8544,13 @@ def apagar_correio_massa():
 
 
 # ==================== QUADRO OPERACIONAL ====================
-# ==================== QUADRO OPERACIONAL ====================
-
 @app.route('/quadro-operacional')
 @login_required
 def quadro_operacional():
-    # Verificar permissões: Admin, Comando ou bombeiros escalados para hoje
     hoje = date.today()
     hora_atual = datetime.now().hour
 
-    # Verificar se o utilizador está escalado para hoje
+    # Verificar permissões
     is_escalado_hoje = Escala.query.filter(
         Escala.bombeiro_id == current_user.id,
         func.date(Escala.data_inicio) <= hoje,
@@ -8561,7 +8558,7 @@ def quadro_operacional():
     ).first() is not None
 
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' and not is_escalado_hoje:
-        flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
+        flash('Acesso restrito.', 'danger')
         return redirect(url_for('dashboard'))
 
     # ========== 1. COMANDO ==========
@@ -8570,7 +8567,7 @@ def quadro_operacional():
         Bombeiro.ativo == True
     ).first()
 
-    # ========== 2. CENTRAL (depende do turno) ==========
+    # ========== 2. CENTRAL ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8585,8 +8582,8 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (depende do turno atual) ==========
-    # ECIN: Turno 6 = 07h-19h, Turno 7 = 19h-07h
+    # ========== 3. ECIN ==========
+    # Determinar turno ECIN baseado na hora atual
     if 7 <= hora_atual < 19:
         turno_ecin = '6 - 07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
@@ -8594,25 +8591,15 @@ def quadro_operacional():
         turno_ecin = '7 - 19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
-    # Buscar ECINs para o turno atual
+    # Buscar ECINs da tabela Ecin com o turno correto
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
         Ecin.turno == turno_ecin,
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
-    ).order_by(Ecin.funcao).all()
+    ).all()
 
-    # Se não encontrar ECINs no turno específico, tentar buscar qualquer ECIN do dia
-    if not ecins:
-        ecins = Ecin.query.filter(
-            Ecin.data == hoje,
-            Ecin.categoria == 'ECIN',
-            Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
-        ).order_by(Ecin.funcao).all()
-        if ecins:
-            turno_ecin_desc = "ECIN (Turno não especificado)"
-
-    # Organizar ECIN por função - INICIALIZAR as variáveis
+    # Organizar ECIN por função
     ecin_chefe = None
     ecin_motorista = None
     ecin_guarnicao = []
@@ -8625,12 +8612,31 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== 4. EIP (5 bombeiros) ==========
-    eips = Escala.query.filter(
+    # ========== 4. EIP (ordenação específica) ==========
+    ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
+
+    # Buscar todos os EIPs escalados hoje
+    eips_query = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP'
-    ).order_by(Escala.bombeiro_id).limit(5).all()
+    ).all()
+
+    # Ordenar conforme a ordem definida
+    eips = []
+    for nome in ordem_eip:
+        for e in eips_query:
+            if e.bombeiro.nome == nome:
+                eips.append(e)
+                break
+
+    # Adicionar os restantes (caso existam mais)
+    for e in eips_query:
+        if e not in eips:
+            eips.append(e)
+
+    # Limitar a 5
+    eips = eips[:5]
 
     # ========== 5. INEM ==========
     if 7 <= hora_atual < 19:
@@ -8647,22 +8653,14 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # ========== 6. MOTORISTAS DO TURNO PARA INEM ==========
+    # ========== 6. MOTORISTAS PARA INEM ==========
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'Motorista',
-        Escala.turno == turno_inem
+        Escala.categoria == 'Motorista'
     ).order_by(Bombeiro.nome).all()
 
-    if not motoristas_turno:
-        motoristas_turno = Escala.query.join(Bombeiro).filter(
-            func.date(Escala.data_inicio) <= hoje,
-            func.date(Escala.data_fim) >= hoje,
-            Escala.categoria == 'Motorista'
-        ).order_by(Escala.turno, Bombeiro.nome).all()
-
-    # ========== 7. TODOS OS EIP PARA AS COMBOBOX DA RESERVA ==========
+    # ========== 7. TODOS OS EIP PARA RESERVA ==========
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8672,7 +8670,7 @@ def quadro_operacional():
     # ========== 8. BUSCAR CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
-    # ========== 9. BUSCAR VIATURAS ==========
+    # ========== 9. VIATURAS ==========
     viaturas_vfci = Viatura.query.filter(
         Viatura.tipo.ilike('%VFCI%'),
         Viatura.estado == 'operacional'
@@ -8688,32 +8686,31 @@ def quadro_operacional():
         Viatura.estado == 'operacional'
     ).order_by(Viatura.matricula).all()
 
-    # Determinar turno atual para exibição
+    # Turno atual para exibição
     if 7 <= hora_atual < 19:
         turno_atual = "Turno Diurno (07h00 - 19h00)"
     else:
         turno_atual = "Turno Noturno (19h00 - 07h00)"
 
     return render_template('quadro_operacional.html',
-                         hoje=hoje,
-                         hora_atual=hora_atual,
-                         turno_atual=turno_atual,
-                         turno_central=turno_central_desc,
-                         turno_ecin=turno_ecin_desc,
-                         turno_inem=turno_inem_desc,
-                         comando=comando,
-                         central=central,
-                         ecin_chefe=ecin_chefe,
-                         ecin_motorista=ecin_motorista,
-                         ecin_guarnicao=ecin_guarnicao,
-                         eips=eips,
-                         inem_um=inem_um,
-                         motoristas_turno=motoristas_turno,
-                         todos_eip=todos_eip,
-                         viaturas_vfci=viaturas_vfci,
-                         viaturas_absc=viaturas_absc,
-                         viaturas_vcot=viaturas_vcot,
-                         config=config)
+                           hoje=hoje,
+                           turno_atual=turno_atual,
+                           turno_central=turno_central_desc,
+                           turno_ecin=turno_ecin_desc,
+                           turno_inem=turno_inem_desc,
+                           comando=comando,
+                           central=central,
+                           ecin_chefe=ecin_chefe,
+                           ecin_motorista=ecin_motorista,
+                           ecin_guarnicao=ecin_guarnicao,
+                           eips=eips,
+                           inem_um=inem_um,
+                           motoristas_turno=motoristas_turno,
+                           todos_eip=todos_eip,
+                           viaturas_vfci=viaturas_vfci,
+                           viaturas_absc=viaturas_absc,
+                           viaturas_vcot=viaturas_vcot,
+                           config=config)
 
 
 @app.route('/api/salvar-quadro-operacional', methods=['POST'])
@@ -8725,42 +8722,34 @@ def salvar_quadro_operacional():
     data = request.get_json()
     hoje = date.today()
 
-    print(f"Dados recebidos para salvar: {data}", file=sys.stderr)  # Debug
-
-    # Verificar se já existe configuração para hoje
     quadro = QuadroOperacional.query.filter_by(data=hoje).first()
     if not quadro:
         quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
         db.session.add(quadro)
 
-    # Atualizar viaturas
+    # Viaturas
     quadro.viatura_ecin_id = data.get('viatura_ecin') or None
     quadro.viatura_eip_id = data.get('viatura_eip') or None
     quadro.viatura_inem_id = data.get('viatura_inem') or None
     quadro.viatura_reserva_id = data.get('viatura_reserva') or None
     quadro.viatura_comando_id = data.get('viatura_comando') or None
 
-    # Atualizar motorista INEM
+    # Motorista INEM
     quadro.motorista_inem_id = data.get('motorista_inem_id') or None
     quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
     quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
 
-    # Atualizar EIP Reserva 1
-    quadro.eip_reserva_1_id = data.get('eip_reserva_1_id') or data.get('reserva_1_id') or None
-    quadro.eip_reserva_1_numero = data.get('eip_reserva_1_numero') or data.get('reserva_1_numero') or None
-    quadro.eip_reserva_1_mec = data.get('eip_reserva_1_mec') or data.get('reserva_1_mec') or None
+    # Reserva 1
+    quadro.reserva_1_id = data.get('reserva_1_id') or data.get('eip_reserva_1_id') or None
+    quadro.reserva_1_numero = data.get('reserva_1_numero') or data.get('eip_reserva_1_numero') or None
+    quadro.reserva_1_mec = data.get('reserva_1_mec') or data.get('eip_reserva_1_mec') or None
 
-    # Atualizar EIP Reserva 2
-    quadro.eip_reserva_2_id = data.get('eip_reserva_2_id') or data.get('reserva_2_id') or None
-    quadro.eip_reserva_2_numero = data.get('eip_reserva_2_numero') or data.get('reserva_2_numero') or None
-    quadro.eip_reserva_2_mec = data.get('eip_reserva_2_mec') or data.get('reserva_2_mec') or None
+    # Reserva 2
+    quadro.reserva_2_id = data.get('reserva_2_id') or data.get('eip_reserva_2_id') or None
+    quadro.reserva_2_numero = data.get('reserva_2_numero') or data.get('eip_reserva_2_numero') or None
+    quadro.reserva_2_mec = data.get('reserva_2_mec') or data.get('eip_reserva_2_mec') or None
 
     db.session.commit()
-
-    print(f"Configuração salva para {hoje}", file=sys.stderr)
-    print(f"Reserva 1 ID: {quadro.eip_reserva_1_id}", file=sys.stderr)
-    print(f"Reserva 2 ID: {quadro.eip_reserva_2_id}", file=sys.stderr)
-
     return jsonify({'success': True})
 
 
