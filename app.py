@@ -8730,46 +8730,6 @@ def quadro_operacional():
                            config=config)
 
 
-@app.route('/api/salvar-quadro-operacional', methods=['POST'])
-@login_required
-def salvar_quadro_operacional():
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        return jsonify({'error': 'Acesso restrito'}), 403
-
-    data = request.get_json()
-    hoje = date.today()
-
-    # Verificar se já existe configuração para hoje
-    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
-    if not quadro:
-        quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
-        db.session.add(quadro)
-
-    # Atualizar viaturas
-    quadro.viatura_ecin_id = data.get('viatura_ecin') or None
-    quadro.viatura_eip_id = data.get('viatura_eip') or None
-    quadro.viatura_inem_id = data.get('viatura_inem') or None
-    quadro.viatura_reserva_id = data.get('viatura_reserva') or None
-    quadro.viatura_comando_id = data.get('viatura_comando') or None
-
-    # Atualizar motorista INEM
-    quadro.motorista_inem_id = data.get('motorista_inem_id') or None
-    quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
-    quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
-
-    # Atualizar reservas
-    quadro.reserva_1_id = data.get('reserva_1_id') or None
-    quadro.reserva_1_numero = data.get('reserva_1_numero') or None
-    quadro.reserva_1_mec = data.get('reserva_1_mec') or None
-
-    quadro.reserva_2_id = data.get('reserva_2_id') or None
-    quadro.reserva_2_numero = data.get('reserva_2_numero') or None
-    quadro.reserva_2_mec = data.get('reserva_2_mec') or None
-
-    db.session.commit()
-
-    return jsonify({'success': True})
-
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])
 @login_required
@@ -9009,12 +8969,12 @@ def get_quadro_operacional_config():
             'motorista_inem_id': quadro.motorista_inem_id,
             'motorista_inem_numero': quadro.motorista_inem_numero,
             'motorista_inem_mec': quadro.motorista_inem_mec,
-            'reserva_1_id': quadro.reserva_1_id,
-            'reserva_1_numero': quadro.reserva_1_numero,
-            'reserva_1_mec': quadro.reserva_1_mec,
-            'reserva_2_id': quadro.reserva_2_id,
-            'reserva_2_numero': quadro.reserva_2_numero,
-            'reserva_2_mec': quadro.reserva_2_mec
+            'eip_reserva_1_id': quadro.eip_reserva_1_id,
+            'eip_reserva_1_numero': quadro.eip_reserva_1_numero,
+            'eip_reserva_1_mec': quadro.eip_reserva_1_mec,
+            'eip_reserva_2_id': quadro.eip_reserva_2_id,
+            'eip_reserva_2_numero': quadro.eip_reserva_2_numero,
+            'eip_reserva_2_mec': quadro.eip_reserva_2_mec
         })
     return jsonify({})
 
@@ -9060,31 +9020,6 @@ def salvar_quadro_operacional():
 
     return jsonify({'success': True})
 
-
-@app.route('/api/quadro-operacional-config', methods=['GET'])
-@login_required
-def get_quadro_operacional_config():
-    hoje = date.today()
-    quadro = QuadroOperacional.query.filter_by(data=hoje).first()
-
-    if quadro:
-        return jsonify({
-            'viatura_ecin': quadro.viatura_ecin_id,
-            'viatura_eip': quadro.viatura_eip_id,
-            'viatura_inem': quadro.viatura_inem_id,
-            'viatura_reserva': quadro.viatura_reserva_id,
-            'viatura_comando': quadro.viatura_comando_id,
-            'motorista_inem_id': quadro.motorista_inem_id,
-            'motorista_inem_numero': quadro.motorista_inem_numero,
-            'motorista_inem_mec': quadro.motorista_inem_mec,
-            'eip_reserva_1_id': quadro.eip_reserva_1_id,
-            'eip_reserva_1_numero': quadro.eip_reserva_1_numero,
-            'eip_reserva_1_mec': quadro.eip_reserva_1_mec,
-            'eip_reserva_2_id': quadro.eip_reserva_2_id,
-            'eip_reserva_2_numero': quadro.eip_reserva_2_numero,
-            'eip_reserva_2_mec': quadro.eip_reserva_2_mec
-        })
-    return jsonify({})
 
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])
