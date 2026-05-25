@@ -8549,6 +8549,9 @@ def apagar_correio_massa():
 def quadro_operacional():
     hoje = date.today()
     hora_atual = datetime.now().hour
+    minuto_atual = datetime.now().minute
+
+    print(f"DEBUG - Hora atual: {hora_atual}:{minuto_atual}", file=sys.stderr)
 
     # Verificar permissões
     is_escalado_hoje = Escala.query.filter(
@@ -8558,7 +8561,7 @@ def quadro_operacional():
     ).first() is not None
 
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando' and not is_escalado_hoje:
-        flash('Acesso restrito.', 'danger')
+        flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
         return redirect(url_for('dashboard'))
 
     # ========== 1. COMANDO ==========
@@ -8567,7 +8570,7 @@ def quadro_operacional():
         Bombeiro.ativo == True
     ).first()
 
-    # ========== 2. CENTRAL ==========
+    # ========== 2. CENTRAL (depende do turno) ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8582,14 +8585,16 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN ==========
-    # Determinar turno ECIN baseado na hora atual
+    # ========== 3. ECIN (CORRIGIDO - usar formato correto do banco) ==========
+    # ECIN: Turno diurno: 07h/19h | Turno noturno: 19h/07h
     if 7 <= hora_atual < 19:
-        turno_ecin = '6 - 07h/19h'
+        turno_ecin = '07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
     else:
-        turno_ecin = '7 - 19h/07h'
+        turno_ecin = '19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
+
+    print(f"DEBUG - Turno ECIN selecionado: '{turno_ecin}'", file=sys.stderr)
 
     # Buscar ECINs da tabela Ecin com o turno correto
     ecins = Ecin.query.filter(
@@ -8598,6 +8603,12 @@ def quadro_operacional():
         Ecin.turno == turno_ecin,
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).all()
+
+    print(f"DEBUG - ECINs encontrados: {len(ecins)}", file=sys.stderr)
+    for ec in ecins:
+        print(
+            f"DEBUG - ECIN: turno='{ec.turno}', funcao='{ec.funcao}', bombeiro={ec.bombeiro.nome if ec.bombeiro else 'None'}",
+            file=sys.stderr)
 
     # Organizar ECIN por função
     ecin_chefe = None
@@ -8615,7 +8626,6 @@ def quadro_operacional():
     # ========== 4. EIP (ordenação específica) ==========
     ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
 
-    # Buscar todos os EIPs escalados hoje
     eips_query = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8630,12 +8640,11 @@ def quadro_operacional():
                 eips.append(e)
                 break
 
-    # Adicionar os restantes (caso existam mais)
+    # Adicionar os restantes
     for e in eips_query:
         if e not in eips:
             eips.append(e)
 
-    # Limitar a 5
     eips = eips[:5]
 
     # ========== 5. INEM ==========
