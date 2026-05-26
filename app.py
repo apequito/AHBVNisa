@@ -8592,24 +8592,24 @@ def quadro_operacional():
         flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ========== 1. BUSCAR TODOS OS ESCALADOS DO DIA ==========
-    escalados_dia = Escala.query.filter(
-        func.date(Escala.data_inicio) <= hoje,
-        func.date(Escala.data_fim) >= hoje
-    ).all()
+    # ========== DETERMINAR TURNOS ==========
+    # ECIN: 07h-19h ou 19h-07h
+    if 7 <= hora_atual < 19:
+        turno_ecin = '07h/19h'
+        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
+        turno_inem = '6 - 07h/19h'
+        turno_inem_desc = "Turno Diurno (07h-19h)"
+        turno_atual = "Turno Diurno (07h00 - 19h00)"
+        turno_atual_chefe = 'Dia'  # Para identificar o turno do chefe
+    else:
+        turno_ecin = '19h/07h'
+        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
+        turno_inem = '7 - 19h/07h'
+        turno_inem_desc = "Turno Noturno (19h-07h)"
+        turno_atual = "Turno Noturno (19h00 - 07h00)"
+        turno_atual_chefe = 'Noite'
 
-    bombeiros_escalados = list(set([e.bombeiro for e in escalados_dia]))
-
-    # ========== 2. CALCULAR CHEFE DE SERVIÇO ==========
-    chefe_servico, posto_chefe = calcular_chefe_servico(bombeiros_escalados)
-
-    # ========== 3. COMANDO ==========
-    comando = Bombeiro.query.filter(
-        Bombeiro.resp_departamento == 'Comando',
-        Bombeiro.ativo == True
-    ).first()
-
-    # ========== 4. CENTRAL ==========
+    # CENTRAL: 08h-20h ou 20h-08h
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8617,6 +8617,27 @@ def quadro_operacional():
         turno_central = '9 - 20h/08h'
         turno_central_desc = "Turno Noturno (20h-08h)"
 
+    # ========== BUSCAR ESCALADOS DO TURNO ATUAL ==========
+    # Buscar apenas bombeiros escalados no turno atual
+    escalados_turno = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.turno.in_([turno_ecin, turno_inem, turno_central])
+    ).all()
+
+    # Filtrar bombeiros únicos escalados neste turno
+    bombeiros_escalados_turno = list(set([e.bombeiro for e in escalados_turno]))
+
+    # ========== CALCULAR CHEFE DE SERVIÇO (apenas do turno atual) ==========
+    chefe_servico, posto_chefe = calcular_chefe_servico(bombeiros_escalados_turno)
+
+    # ========== COMANDO ==========
+    comando = Bombeiro.query.filter(
+        Bombeiro.resp_departamento == 'Comando',
+        Bombeiro.ativo == True
+    ).first()
+
+    # ========== CENTRAL ==========
     central = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8624,14 +8645,7 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 5. ECIN ==========
-    if 7 <= hora_atual < 19:
-        turno_ecin = '07h/19h'
-        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
-    else:
-        turno_ecin = '19h/07h'
-        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
-
+    # ========== ECIN ==========
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8651,7 +8665,7 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== 6. EIP (turno único 10h-18h) ==========
+    # ========== EIP (turno único 10h-18h) ==========
     if 10 <= hora_atual < 18:
         ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
         eips_query = Escala.query.filter(
@@ -8675,14 +8689,7 @@ def quadro_operacional():
         eips = []
         eip_activo = False
 
-    # ========== 7. INEM ==========
-    if 7 <= hora_atual < 19:
-        turno_inem = '6 - 07h/19h'
-        turno_inem_desc = "Turno Diurno (07h-19h)"
-    else:
-        turno_inem = '7 - 19h/07h'
-        turno_inem_desc = "Turno Noturno (19h-07h)"
-
+    # ========== INEM ==========
     inem_um = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8690,7 +8697,7 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # ========== 8. MOTORISTAS E SOCORRISTAS PARA ACIDENTE VIAÇÃO ==========
+    # ========== MOTORISTAS E SOCORRISTAS ==========
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8704,25 +8711,24 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).order_by(Bombeiro.nome).all()
 
-    # ========== 9. TODOS OS EIP PARA RESERVA ==========
+    # ========== TODOS OS EIP PARA RESERVA ==========
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== 10. LISTA DE BOMBEIROS ESCALADOS (para comboboxes) ==========
-    # Criar lista de todos os bombeiros escalados no dia (para as comboboxes)
-    todos_escalados = []
-    for e in escalados_dia:
-        if e.bombeiro not in todos_escalados:
-            todos_escalados.append(e.bombeiro)
-    todos_escalados.sort(key=lambda x: x.nome)
+    # ========== LISTA DE BOMBEIROS ESCALADOS NO TURNO (para comboboxes) ==========
+    todos_escalados_turno = []
+    for e in escalados_turno:
+        if e.bombeiro not in todos_escalados_turno:
+            todos_escalados_turno.append(e.bombeiro)
+    todos_escalados_turno.sort(key=lambda x: x.nome)
 
-    # ========== 11. CONFIGURAÇÃO SALVA ==========
+    # ========== CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
-    # ========== 12. VIATURAS ==========
+    # ========== VIATURAS ==========
     viaturas_vfci = Viatura.query.filter(
         Viatura.tipo.ilike('%VFCI%'),
         Viatura.estado == 'operacional'
@@ -8738,12 +8744,6 @@ def quadro_operacional():
         Viatura.estado == 'operacional'
     ).order_by(Viatura.matricula).all()
 
-    # Turno atual para exibição
-    if 7 <= hora_atual < 19:
-        turno_atual = "Turno Diurno (07h00 - 19h00)"
-    else:
-        turno_atual = "Turno Noturno (19h00 - 07h00)"
-
     # Formatar data em português
     import locale
     try:
@@ -8752,7 +8752,6 @@ def quadro_operacional():
         pass
 
     data_formatada = hoje.strftime('%d de %B de %Y')
-    # Capitalizar mês
     meses = {
         'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
         'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
@@ -8784,7 +8783,7 @@ def quadro_operacional():
                            motoristas_turno=motoristas_turno,
                            socorristas_turno=socorristas_turno,
                            todos_eip=todos_eip,
-                           todos_escalados=todos_escalados,
+                           todos_escalados=todos_escalados_turno,
                            viaturas_vfci=viaturas_vfci,
                            viaturas_absc=viaturas_absc,
                            viaturas_vcot=viaturas_vcot,
@@ -8853,8 +8852,11 @@ def salvar_quadro_operacional():
     return jsonify({'success': True})
 
 
-def calcular_chefe_servico(bombeiros_escalados):
-    """Calcula o Chefe de Serviço baseado na ordem hierárquica definida"""
+def calcular_chefe_servico(bombeiros_escalados_turno):
+    """
+    Calcula o Chefe de Serviço baseado na ordem hierárquica definida.
+    Recebe apenas os bombeiros escalados no turno atual.
+    """
     ordem_hierarquica = [
         'Mota Pais', 'José Soldado', 'José Fernandes', 'João Mateus',
         'Flávio Belo', 'Paulo Branquinho', 'João Maurício', 'Tiago Bizarro',
@@ -8864,7 +8866,7 @@ def calcular_chefe_servico(bombeiros_escalados):
     ]
 
     for nome in ordem_hierarquica:
-        for bombeiro in bombeiros_escalados:
+        for bombeiro in bombeiros_escalados_turno:
             if bombeiro.nome == nome:
                 return bombeiro, bombeiro.posto
     return None, None
