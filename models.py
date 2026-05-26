@@ -548,32 +548,71 @@ class QuadroOperacional(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.Date, nullable=False, unique=True)
 
-    # Viaturas
+    # ECIN
     viatura_ecin_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
-    viatura_eip_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
-    viatura_inem_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
-    viatura_reserva_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
-    viatura_comando_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
 
-    # Motorista INEM
+    # EIP
+    viatura_eip_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+    # INEM
     motorista_inem_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
     motorista_inem_numero = db.Column(db.String(20), nullable=True)
     motorista_inem_mec = db.Column(db.String(20), nullable=True)
+    viatura_inem_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
 
-    # Reserva EIP (apenas estes 3 campos para cada reserva)
+    # RESERVA EIP
     reserva_1_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
     reserva_1_numero = db.Column(db.String(20), nullable=True)
     reserva_1_mec = db.Column(db.String(20), nullable=True)
-
     reserva_2_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
     reserva_2_numero = db.Column(db.String(20), nullable=True)
     reserva_2_mec = db.Column(db.String(20), nullable=True)
+    viatura_reserva_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+    # ACIDENTE VIAÇÃO - ABSC 1
+    absc1_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc1_socorrista_numero = db.Column(db.String(20), nullable=True)
+    absc1_socorrista_mec = db.Column(db.String(20), nullable=True)
+    absc1_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc1_motorista_numero = db.Column(db.String(20), nullable=True)
+    absc1_motorista_mec = db.Column(db.String(20), nullable=True)
+    viatura_absc1_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+    # ACIDENTE VIAÇÃO - ABSC 2
+    absc2_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc2_socorrista_numero = db.Column(db.String(20), nullable=True)
+    absc2_socorrista_mec = db.Column(db.String(20), nullable=True)
+    absc2_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc2_motorista_numero = db.Column(db.String(20), nullable=True)
+    absc2_motorista_mec = db.Column(db.String(20), nullable=True)
+    viatura_absc2_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+    # COMANDO
+    viatura_comando_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
 
     # Metadados
     criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    class AcidenteViacaoConfig(db.Model):
+    # Relações
+    viatura_ecin = db.relationship('Viatura', foreign_keys=[viatura_ecin_id])
+    viatura_eip = db.relationship('Viatura', foreign_keys=[viatura_eip_id])
+    viatura_inem = db.relationship('Viatura', foreign_keys=[viatura_inem_id])
+    viatura_reserva = db.relationship('Viatura', foreign_keys=[viatura_reserva_id])
+    viatura_comando = db.relationship('Viatura', foreign_keys=[viatura_comando_id])
+    viatura_absc1 = db.relationship('Viatura', foreign_keys=[viatura_absc1_id])
+    viatura_absc2 = db.relationship('Viatura', foreign_keys=[viatura_absc2_id])
+
+    motorista_inem = db.relationship('Bombeiro', foreign_keys=[motorista_inem_id])
+    reserva_1 = db.relationship('Bombeiro', foreign_keys=[reserva_1_id])
+    reserva_2 = db.relationship('Bombeiro', foreign_keys=[reserva_2_id])
+    absc1_socorrista = db.relationship('Bombeiro', foreign_keys=[absc1_socorrista_id])
+    absc1_motorista = db.relationship('Bombeiro', foreign_keys=[absc1_motorista_id])
+    absc2_socorrista = db.relationship('Bombeiro', foreign_keys=[absc2_socorrista_id])
+    absc2_motorista = db.relationship('Bombeiro', foreign_keys=[absc2_motorista_id])
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
+
+class AcidenteViacaoConfig(db.Model):
         __tablename__ = 'acidente_viacao_config'
         id = db.Column(db.Integer, primary_key=True)
         data = db.Column(db.Date, nullable=False, unique=True)

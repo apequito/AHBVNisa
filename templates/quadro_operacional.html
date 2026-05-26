@@ -6,7 +6,7 @@
         <div class="col">
             <h2>
                 <i class="bi bi-grid-3x3-gap-fill me-2"></i>Quadro Operacional
-                <small class="text-muted">{{ hoje.strftime('%d de %B de %Y') }}</small>
+                <small class="text-muted">{{ data_formatada }}</small>
             </h2>
             <div class="alert alert-info mt-2">
                 <i class="bi bi-clock me-2"></i>
@@ -202,7 +202,7 @@
                                     <th width="45%">Função/Nome</th>
                                     <th width="20%">Nº Interno</th>
                                     <th width="25%">Mecanográfico</th>
-                                </tr>
+                                </td>
                             </thead>
                             <tbody>
                                 <tr class="table-info">
@@ -351,13 +351,13 @@
                                         <td width="50%">
                                             <select class="form-select form-select-sm" id="absc1_socorrista" onchange="atualizarAbsc1Socorrista()">
                                                 <option value="">Selecionar</option>
-                                                {% for s in socorristas_turno %}
-                                                <option value="{{ s.bombeiro.id }}"
-                                                        data-nome="{{ s.bombeiro.nome }}"
-                                                        data-numero="{{ s.bombeiro.numero_interno }}"
-                                                        data-mec="{{ s.bombeiro.mecanografico }}"
-                                                        {% if config and config.absc1_socorrista_id == s.bombeiro.id %}selected{% endif %}>
-                                                    {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                                {% for b in todos_escalados %}
+                                                <option value="{{ b.id }}"
+                                                        data-nome="{{ b.nome }}"
+                                                        data-numero="{{ b.numero_interno }}"
+                                                        data-mec="{{ b.mecanografico }}"
+                                                        {% if config and config.absc1_socorrista_id == b.id %}selected{% endif %}>
+                                                    {{ b.nome }} ({{ b.mecanografico }}) - {{ b.posto }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -369,13 +369,13 @@
                                         <td>
                                             <select class="form-select form-select-sm" id="absc1_motorista" onchange="atualizarAbsc1Motorista()">
                                                 <option value="">Selecionar</option>
-                                                {% for m in motoristas_turno %}
-                                                <option value="{{ m.bombeiro.id }}"
-                                                        data-nome="{{ m.bombeiro.nome }}"
-                                                        data-numero="{{ m.bombeiro.numero_interno }}"
-                                                        data-mec="{{ m.bombeiro.mecanografico }}"
-                                                        {% if config and config.absc1_motorista_id == m.bombeiro.id %}selected{% endif %}>
-                                                    {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                                {% for b in todos_escalados %}
+                                                <option value="{{ b.id }}"
+                                                        data-nome="{{ b.nome }}"
+                                                        data-numero="{{ b.numero_interno }}"
+                                                        data-mec="{{ b.mecanografico }}"
+                                                        {% if config and config.absc1_motorista_id == b.id %}selected{% endif %}>
+                                                    {{ b.nome }} ({{ b.mecanografico }}) - {{ b.posto }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -385,7 +385,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <label class="form-label fw-bold small">Viatura ABSC 1</label>
+                        <label class="form-label fw-bold small mt-2">Viatura ABSC 1</label>
                         <select class="form-select form-select-sm" id="viatura_absc1">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_absc %}
@@ -407,13 +407,13 @@
                                         <td width="50%">
                                             <select class="form-select form-select-sm" id="absc2_socorrista" onchange="atualizarAbsc2Socorrista()">
                                                 <option value="">Selecionar</option>
-                                                {% for s in socorristas_turno %}
-                                                <option value="{{ s.bombeiro.id }}"
-                                                        data-nome="{{ s.bombeiro.nome }}"
-                                                        data-numero="{{ s.bombeiro.numero_interno }}"
-                                                        data-mec="{{ s.bombeiro.mecanografico }}"
-                                                        {% if config and config.absc2_socorrista_id == s.bombeiro.id %}selected{% endif %}>
-                                                    {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                                {% for b in todos_escalados %}
+                                                <option value="{{ b.id }}"
+                                                        data-nome="{{ b.nome }}"
+                                                        data-numero="{{ b.numero_interno }}"
+                                                        data-mec="{{ b.mecanografico }}"
+                                                        {% if config and config.absc2_socorrista_id == b.id %}selected{% endif %}>
+                                                    {{ b.nome }} ({{ b.mecanografico }}) - {{ b.posto }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -425,13 +425,13 @@
                                         <td>
                                             <select class="form-select form-select-sm" id="absc2_motorista" onchange="atualizarAbsc2Motorista()">
                                                 <option value="">Selecionar</option>
-                                                {% for m in motoristas_turno %}
-                                                <option value="{{ m.bombeiro.id }}"
-                                                        data-nome="{{ m.bombeiro.nome }}"
-                                                        data-numero="{{ m.bombeiro.numero_interno }}"
-                                                        data-mec="{{ m.bombeiro.mecanografico }}"
-                                                        {% if config and config.absc2_motorista_id == m.bombeiro.id %}selected{% endif %}>
-                                                    {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                                {% for b in todos_escalados %}
+                                                <option value="{{ b.id }}"
+                                                        data-nome="{{ b.nome }}"
+                                                        data-numero="{{ b.numero_interno }}"
+                                                        data-mec="{{ b.mecanografico }}"
+                                                        {% if config and config.absc2_motorista_id == b.id %}selected{% endif %}>
+                                                    {{ b.nome }} ({{ b.mecanografico }}) - {{ b.posto }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -441,7 +441,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <label class="form-label fw-bold small">Viatura ABSC 2</label>
+                        <label class="form-label fw-bold small mt-2">Viatura ABSC 2</label>
                         <select class="form-select form-select-sm" id="viatura_absc2">
                             <option value="">Selecionar Viatura</option>
                             {% for v in viaturas_absc %}
@@ -629,6 +629,7 @@ function atualizarReserva2() {
 }
 
 // ========== FUNÇÕES PARA ACIDENTE VIAÇÃO ==========
+// Funções para Acidente Viação - atualizadas para guardar também o número interno
 function atualizarAbsc1Socorrista() {
     const select = document.getElementById('absc1_socorrista');
     const selectedOption = select.options[select.selectedIndex];
@@ -675,6 +676,13 @@ function atualizarAbsc2Motorista() {
 
 // ========== SALVAR CONFIGURAÇÃO ==========
 function salvarQuadro() {
+    // Função auxiliar para obter o número interno do bombeiro selecionado
+    function getNumeroFromSelect(selectId) {
+        const select = document.getElementById(selectId);
+        const option = select.options[select.selectedIndex];
+        return option ? option.getAttribute('data-numero') || '' : '';
+    }
+
     const dados = {
         // Viaturas
         viatura_ecin: document.getElementById('viatura_ecin').value,
@@ -682,31 +690,35 @@ function salvarQuadro() {
         viatura_inem: document.getElementById('viatura_inem').value,
         viatura_reserva: document.getElementById('viatura_reserva').value,
         viatura_comando: document.getElementById('viatura_comando').value,
-        
+
         // Motorista INEM
         motorista_inem_id: document.getElementById('motorista_inem').value,
-        motorista_inem_numero: document.getElementById('motorista_inem_numero').innerText,
+        motorista_inem_numero: getNumeroFromSelect('motorista_inem'),
         motorista_inem_mec: document.getElementById('motorista_inem_mec').innerText,
-        
+
         // Reserva
         reserva_1_id: document.getElementById('reserva_1').value,
-        reserva_1_numero: document.getElementById('reserva_1_numero').innerText,
+        reserva_1_numero: getNumeroFromSelect('reserva_1'),
         reserva_1_mec: document.getElementById('reserva_1_mec').innerText,
         reserva_2_id: document.getElementById('reserva_2').value,
-        reserva_2_numero: document.getElementById('reserva_2_numero').innerText,
+        reserva_2_numero: getNumeroFromSelect('reserva_2'),
         reserva_2_mec: document.getElementById('reserva_2_mec').innerText,
-        
+
         // Acidente Viação - ABSC 1
         absc1_socorrista_id: document.getElementById('absc1_socorrista').value,
+        absc1_socorrista_numero: getNumeroFromSelect('absc1_socorrista'),
         absc1_socorrista_mec: document.getElementById('absc1_socorrista_mec').innerText,
         absc1_motorista_id: document.getElementById('absc1_motorista').value,
+        absc1_motorista_numero: getNumeroFromSelect('absc1_motorista'),
         absc1_motorista_mec: document.getElementById('absc1_motorista_mec').innerText,
         viatura_absc1_id: document.getElementById('viatura_absc1').value,
-        
+
         // Acidente Viação - ABSC 2
         absc2_socorrista_id: document.getElementById('absc2_socorrista').value,
+        absc2_socorrista_numero: getNumeroFromSelect('absc2_socorrista'),
         absc2_socorrista_mec: document.getElementById('absc2_socorrista_mec').innerText,
         absc2_motorista_id: document.getElementById('absc2_motorista').value,
+        absc2_motorista_numero: getNumeroFromSelect('absc2_motorista'),
         absc2_motorista_mec: document.getElementById('absc2_motorista_mec').innerText,
         viatura_absc2_id: document.getElementById('viatura_absc2').value,
         

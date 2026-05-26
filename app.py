@@ -8561,20 +8561,18 @@ def apagar_correio_massa():
 @app.route('/quadro-operacional')
 @login_required
 def quadro_operacional():
+    from datetime import datetime, date
+    import pytz
+
     hoje = date.today()
 
-    # Obter hora atual em Portugal (Europe/Lisbon)
+    # Obter hora atual em Portugal
     try:
-        import pytz
         portugal_tz = pytz.timezone('Europe/Lisbon')
         agora_portugal = datetime.now(portugal_tz)
         hora_atual = agora_portugal.hour
-        minuto_atual = agora_portugal.minute
-        print(f"DEBUG - Hora em Portugal: {hora_atual}:{minuto_atual}", file=sys.stderr)
-    except ImportError:
-        # Fallback se pytz não estiver instalado
+    except:
         utc_now = datetime.utcnow()
-        # Aproximação: horário de verão (UTC+1) entre março e outubro
         mes = utc_now.month
         if 3 <= mes <= 10:
             hora_atual = utc_now.hour + 1
@@ -8582,8 +8580,6 @@ def quadro_operacional():
                 hora_atual -= 24
         else:
             hora_atual = utc_now.hour
-        minuto_atual = utc_now.minute
-        print(f"DEBUG - Hora aproximada (sem pytz): {hora_atual}:{minuto_atual}", file=sys.stderr)
 
     # Verificar permissões
     is_escalado_hoje = Escala.query.filter(
@@ -8596,13 +8592,24 @@ def quadro_operacional():
         flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ========== 1. COMANDO ==========
+    # ========== 1. BUSCAR TODOS OS ESCALADOS DO DIA ==========
+    escalados_dia = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje
+    ).all()
+
+    bombeiros_escalados = list(set([e.bombeiro for e in escalados_dia]))
+
+    # ========== 2. CALCULAR CHEFE DE SERVIÇO ==========
+    chefe_servico, posto_chefe = calcular_chefe_servico(bombeiros_escalados)
+
+    # ========== 3. COMANDO ==========
     comando = Bombeiro.query.filter(
         Bombeiro.resp_departamento == 'Comando',
         Bombeiro.ativo == True
     ).first()
 
-    # ========== 2. CENTRAL (muda às 20h em Portugal) ==========
+    # ========== 4. CENTRAL ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8617,7 +8624,7 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (muda às 19h em Portugal) ==========
+    # ========== 5. ECIN ==========
     if 7 <= hora_atual < 19:
         turno_ecin = '07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
@@ -8625,9 +8632,6 @@ def quadro_operacional():
         turno_ecin = '19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
 
-    print(f"DEBUG - Turno ECIN selecionado: '{turno_ecin}'", file=sys.stderr)
-
-    # Buscar ECINs
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8635,9 +8639,6 @@ def quadro_operacional():
         Ecin.estado.in_(['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN'])
     ).all()
 
-    print(f"DEBUG - ECINs encontrados: {len(ecins)}", file=sys.stderr)
-
-    # Organizar ECIN por função
     ecin_chefe = None
     ecin_motorista = None
     ecin_guarnicao = []
@@ -8650,21 +8651,14 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== 4. EIP ==========
-    # ========== 4. EIP (turno único 10h-18h) ==========
-    # EIP tem turno fixo: 10h/18h (apenas diurno)
-    # Se estiver dentro do horário 10h-18h, mostrar EIPs
-    # Caso contrário, mostrar "Sem serviço" ou "Fora de horário"
+    # ========== 6. EIP (turno único 10h-18h) ==========
     if 10 <= hora_atual < 18:
-        # Buscar EIPs escalados (todos, independentemente do turno)
+        ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
         eips_query = Escala.query.filter(
             func.date(Escala.data_inicio) <= hoje,
             func.date(Escala.data_fim) >= hoje,
             Escala.categoria == 'EIP'
         ).all()
-
-        # Ordenar conforme ordem específica
-        ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
 
         eips = []
         for nome in ordem_eip:
@@ -8672,18 +8666,16 @@ def quadro_operacional():
                 if e.bombeiro.nome == nome:
                     eips.append(e)
                     break
-
         for e in eips_query:
             if e not in eips:
                 eips.append(e)
-
         eips = eips[:5]
         eip_activo = True
     else:
         eips = []
         eip_activo = False
 
-    # ========== 5. INEM (Socorrista - muda às 19h em Portugal) ==========
+    # ========== 7. INEM ==========
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
         turno_inem_desc = "Turno Diurno (07h-19h)"
@@ -8698,24 +8690,39 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # ========== 6. MOTORISTAS ==========
+    # ========== 8. MOTORISTAS E SOCORRISTAS PARA ACIDENTE VIAÇÃO ==========
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'Motorista'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== 7. TODOS OS EIP PARA RESERVA ==========
+    socorristas_turno = Escala.query.join(Bombeiro).filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'Socorrista',
+        Escala.turno == turno_inem
+    ).order_by(Bombeiro.nome).all()
+
+    # ========== 9. TODOS OS EIP PARA RESERVA ==========
     todos_eip = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== 8. CONFIGURAÇÃO SALVA ==========
+    # ========== 10. LISTA DE BOMBEIROS ESCALADOS (para comboboxes) ==========
+    # Criar lista de todos os bombeiros escalados no dia (para as comboboxes)
+    todos_escalados = []
+    for e in escalados_dia:
+        if e.bombeiro not in todos_escalados:
+            todos_escalados.append(e.bombeiro)
+    todos_escalados.sort(key=lambda x: x.nome)
+
+    # ========== 11. CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
-    # ========== 9. VIATURAS ==========
+    # ========== 12. VIATURAS ==========
     viaturas_vfci = Viatura.query.filter(
         Viatura.tipo.ilike('%VFCI%'),
         Viatura.estado == 'operacional'
@@ -8733,27 +8740,51 @@ def quadro_operacional():
 
     # Turno atual para exibição
     if 7 <= hora_atual < 19:
-        turno_atual = "Turno Diurno"
-        turno_detalhe = "07h00 - 19h00"
+        turno_atual = "Turno Diurno (07h00 - 19h00)"
     else:
-        turno_atual = "Turno Noturno"
-        turno_detalhe = "19h00 - 07h00"
+        turno_atual = "Turno Noturno (19h00 - 07h00)"
+
+    # Formatar data em português
+    import locale
+    try:
+        locale.setlocale(locale.LC_TIME, 'pt_PT.UTF-8')
+    except:
+        pass
+
+    data_formatada = hoje.strftime('%d de %B de %Y')
+    # Capitalizar mês
+    meses = {
+        'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
+        'April': 'Abril', 'May': 'Maio', 'June': 'Junho',
+        'July': 'Julho', 'August': 'Agosto', 'September': 'Setembro',
+        'October': 'Outubro', 'November': 'Novembro', 'December': 'Dezembro'
+    }
+    for eng, pt in meses.items():
+        if eng in data_formatada:
+            data_formatada = data_formatada.replace(eng, pt)
+            break
 
     return render_template('quadro_operacional.html',
                            hoje=hoje,
-                           turno_atual=f"{turno_atual} ({turno_detalhe})",
+                           data_formatada=data_formatada,
+                           turno_atual=turno_atual,
                            turno_central=turno_central_desc,
                            turno_ecin=turno_ecin_desc,
                            turno_inem=turno_inem_desc,
+                           chefe_servico=chefe_servico,
+                           posto_chefe=posto_chefe,
                            comando=comando,
                            central=central,
                            ecin_chefe=ecin_chefe,
                            ecin_motorista=ecin_motorista,
                            ecin_guarnicao=ecin_guarnicao,
                            eips=eips,
+                           eip_activo=eip_activo,
                            inem_um=inem_um,
                            motoristas_turno=motoristas_turno,
+                           socorristas_turno=socorristas_turno,
                            todos_eip=todos_eip,
+                           todos_escalados=todos_escalados,
                            viaturas_vfci=viaturas_vfci,
                            viaturas_absc=viaturas_absc,
                            viaturas_vcot=viaturas_vcot,
@@ -8774,30 +8805,69 @@ def salvar_quadro_operacional():
         quadro = QuadroOperacional(data=hoje, criado_por=current_user.id)
         db.session.add(quadro)
 
-    # Viaturas
+    # ========== VIATURAS ==========
     quadro.viatura_ecin_id = data.get('viatura_ecin') or None
     quadro.viatura_eip_id = data.get('viatura_eip') or None
     quadro.viatura_inem_id = data.get('viatura_inem') or None
     quadro.viatura_reserva_id = data.get('viatura_reserva') or None
     quadro.viatura_comando_id = data.get('viatura_comando') or None
 
-    # Motorista INEM
+    # ========== MOTORISTA INEM ==========
     quadro.motorista_inem_id = data.get('motorista_inem_id') or None
     quadro.motorista_inem_numero = data.get('motorista_inem_numero') or None
     quadro.motorista_inem_mec = data.get('motorista_inem_mec') or None
 
-    # Reserva 1
-    quadro.reserva_1_id = data.get('reserva_1_id') or data.get('eip_reserva_1_id') or None
-    quadro.reserva_1_numero = data.get('reserva_1_numero') or data.get('eip_reserva_1_numero') or None
-    quadro.reserva_1_mec = data.get('reserva_1_mec') or data.get('eip_reserva_1_mec') or None
+    # ========== RESERVA EIP ==========
+    quadro.reserva_1_id = data.get('reserva_1_id') or None
+    quadro.reserva_1_numero = data.get('reserva_1_numero') or None
+    quadro.reserva_1_mec = data.get('reserva_1_mec') or None
 
-    # Reserva 2
-    quadro.reserva_2_id = data.get('reserva_2_id') or data.get('eip_reserva_2_id') or None
-    quadro.reserva_2_numero = data.get('reserva_2_numero') or data.get('eip_reserva_2_numero') or None
-    quadro.reserva_2_mec = data.get('reserva_2_mec') or data.get('eip_reserva_2_mec') or None
+    quadro.reserva_2_id = data.get('reserva_2_id') or None
+    quadro.reserva_2_numero = data.get('reserva_2_numero') or None
+    quadro.reserva_2_mec = data.get('reserva_2_mec') or None
+
+    # ========== ACIDENTE VIAÇÃO - ABSC 1 ==========
+    quadro.absc1_socorrista_id = data.get('absc1_socorrista_id') or None
+    quadro.absc1_socorrista_numero = data.get('absc1_socorrista_numero') or None
+    quadro.absc1_socorrista_mec = data.get('absc1_socorrista_mec') or None
+
+    quadro.absc1_motorista_id = data.get('absc1_motorista_id') or None
+    quadro.absc1_motorista_numero = data.get('absc1_motorista_numero') or None
+    quadro.absc1_motorista_mec = data.get('absc1_motorista_mec') or None
+
+    quadro.viatura_absc1_id = data.get('viatura_absc1_id') or None
+
+    # ========== ACIDENTE VIAÇÃO - ABSC 2 ==========
+    quadro.absc2_socorrista_id = data.get('absc2_socorrista_id') or None
+    quadro.absc2_socorrista_numero = data.get('absc2_socorrista_numero') or None
+    quadro.absc2_socorrista_mec = data.get('absc2_socorrista_mec') or None
+
+    quadro.absc2_motorista_id = data.get('absc2_motorista_id') or None
+    quadro.absc2_motorista_numero = data.get('absc2_motorista_numero') or None
+    quadro.absc2_motorista_mec = data.get('absc2_motorista_mec') or None
+
+    quadro.viatura_absc2_id = data.get('viatura_absc2_id') or None
 
     db.session.commit()
+
     return jsonify({'success': True})
+
+
+def calcular_chefe_servico(bombeiros_escalados):
+    """Calcula o Chefe de Serviço baseado na ordem hierárquica definida"""
+    ordem_hierarquica = [
+        'Mota Pais', 'José Soldado', 'José Fernandes', 'João Mateus',
+        'Flávio Belo', 'Paulo Branquinho', 'João Maurício', 'Tiago Bizarro',
+        'José Seco', 'Sabrina Fernandes', 'Mário Polido', 'Jorge Pereira',
+        'João Carita', 'Vânia Sila', 'José Rodrigues', 'Ana Marzia',
+        'Mariana Charrinho', 'João Silva'
+    ]
+
+    for nome in ordem_hierarquica:
+        for bombeiro in bombeiros_escalados:
+            if bombeiro.nome == nome:
+                return bombeiro, bombeiro.posto
+    return None, None
 
 
 @app.route('/api/exportar-quadro-operacional', methods=['POST'])
