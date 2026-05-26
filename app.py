@@ -2419,11 +2419,18 @@ def trocas():
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
-        data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
         turno_origem = request.form.get('turno_origem', '')
-        turno_destino = request.form.get('turno_destino', '')
         motivo = request.form.get('motivo', '')
         tipo_pedido = request.form.get('tipo_pedido', 'assalariado')
+        trocar_turno = request.form.get('trocar_turno', '1')  # '1' = sim, '0' = não
+
+        # Processar data_destino apenas se for uma troca com turno (trocar_turno == '1')
+        data_destino = None
+        turno_destino = None
+
+        if trocar_turno == '1' and request.form.get('data_destino'):
+            data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
+            turno_destino = request.form.get('turno_destino', '')
 
         # Voluntários só podem criar trocas ECIN
         if is_voluntario and tipo_pedido == 'assalariado':
@@ -2442,19 +2449,25 @@ def trocas():
                 flash('Não está escalado em ECIN/ELAC para esse dia.', 'danger')
                 return redirect(url_for('trocas', tipo='ecin'))
 
+        # Criar a troca
         nova = TrocaServico(
             bombeiro_origem_id=current_user.id,
             bombeiro_destino_id=destino_id,
             data_origem=data_origem,
-            data_destino=data_destino,
+            data_destino=data_destino,  # Pode ser None se for troca sem retorno
             turno_origem=turno_origem,
-            turno_destino=turno_destino,
+            turno_destino=turno_destino,  # Pode ser None se for troca sem retorno
             motivo=motivo,
             estado='pendente_colega'
         )
         db.session.add(nova)
         db.session.commit()
-        flash('Pedido de troca enviado.', 'success')
+
+        if trocar_turno == '1':
+            flash('Pedido de troca enviado.', 'success')
+        else:
+            flash('Pedido de cedência de turno enviado.', 'success')
+
         return redirect(url_for('trocas', tipo=tipo_pedido))
 
     # --- GET: construir a query base ---

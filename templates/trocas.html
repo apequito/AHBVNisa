@@ -440,11 +440,11 @@ function selecionarColegaTurno(dia, escalas) {
     verificarHabilitarBotao();
 }
 
-// ========== VERIFICAR SE PODE ENVIAR ==========
+// Atualizar a função verificarHabilitarBotao
 function verificarHabilitarBotao() {
     const btn = document.getElementById('btnEnviarTroca');
     const checkbox = document.getElementById('trocarTurnoCheckbox');
-    
+
     if (tipoAtual === 'assalariado') {
         if (meuTurnoSelecionado && colegaTurnoSelecionado && colegaIdSelecionado) {
             btn.disabled = false;
@@ -452,14 +452,17 @@ function verificarHabilitarBotao() {
             btn.disabled = true;
         }
     } else {
+        // ECIN/ELAC
         if (meuTurnoSelecionado && colegaIdSelecionado) {
             if (checkbox.checked) {
+                // Troca com retorno - precisa selecionar turno do colega
                 if (colegaTurnoSelecionado) {
                     btn.disabled = false;
                 } else {
                     btn.disabled = true;
                 }
             } else {
+                // Cedência sem retorno - não precisa de turno do colega
                 btn.disabled = false;
             }
         } else {
@@ -467,6 +470,16 @@ function verificarHabilitarBotao() {
         }
     }
 }
+
+// Adicionar campo hidden para trocar_turno no formulário
+document.getElementById('formTroca').addEventListener('submit', function(e) {
+    const checkbox = document.getElementById('trocarTurnoCheckbox');
+    const trocarTurnoHidden = document.createElement('input');
+    trocarTurnoHidden.type = 'hidden';
+    trocarTurnoHidden.name = 'trocar_turno';
+    trocarTurnoHidden.value = checkbox.checked ? '1' : '0';
+    this.appendChild(trocarTurnoHidden);
+});
 
 // ========== CHECKBOX PARA TROCA DE TURNO (ECIN) ==========
 document.getElementById('trocarTurnoCheckbox').addEventListener('change', function() {
