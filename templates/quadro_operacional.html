@@ -1,3 +1,415 @@
+
+Análise de sistema de gestão de bombeiros
+Análise e sugestões para app Flask de gestão de bombeiros
+Como tornar fundo transparente no GIMP e salvar como PNG
+Análise e sugestões para app.py de gestão de bombeiros
+Adicionar modal de visualização de dispensa
+Explicação e solução para erro de chave estrangeira no PostgreSQL
+DBeaver连接Neon指南
+Render database expiration solutions
+Questão propriedade quarto vizinho e infiltrações
+Como reiniciar ID de tabela no DBeaver
+Fix wb not defined error in Python
+Sistema gestão bombeiros com login e base de dados
+Solicitação de esclarecimento sobre remoção de férias
+Análise de código HTML de escala de serviço
+Limpeza do filtro de exaustão Opel Astra
+Render database data loss solution
+Ativar Git no PyCharm
+Tabela de fardamento de bombeiros
+Apps gratuitos controle financeiro
+Regra de subtração e soma sem parênteses
+Sugestões de calças para casaco verde azeitona
+Análise médica de exames laboratoriais
+O que é Spliiit+
+Como fazer nuggets de frango caseiro
+Molho à Passarinho receita
+Treino para secar e definir com máquinas
+Treino de calistenia militar explicado
+Ajuda para encontrar Peugeot 3008 usado
+Problema portas e bateria Opel Karl
+Símbolo alerta pneus: baixa pressão ou sistema falhado
+consegue analisar os jogos de fu
+Reabastecer Epson ET-2850 sem esvaziar
+Bloquear instalações e acesso no Lenovo Tab
+Whey vs Creatina antes do treino
+Mancha escura sem trauma requer avaliação médica
+Medindo tensão do chip WiFi em placa
+Dell Latitude 5414 suporta cartão SIM?
+Troca de bateria no Samsung Tab S1
+Como restaurar smartphone sem perder dados
+Substituição da correia do Ford Ecoboost
+Veia saliente na testa e possíveis causas
+Ar-condicionado com desumidificador ajuda no controle da umidade.
+Receita de bochechas de porco braseadas
+Receita de bochechas de porco á moda de Sevilha
+Análise da impressora 3D Anycubic Kobra X
+Forçando um sorriso exagerado e acenando.
+como ver as fotos do WhatsApp nu
+Cheiro de gasolina no carro: risco grave
+Configurar bot Telegram 24/7 no Windows
+Como manter bot Telegram online
+Capacidade de bagageira dos SUV portugueses
+Receita de pão recheado com queijo e bacon
+Como limpar mensagens no Telegram
+é possível renting a carris usad
+Como funciona o renting de carros
+Como funciona o RdFlex na automação
+O que ver e fazer em Triana, Sevilha
+Exploring Triana: Cultura, Historia e Gastronomia
+Procure pontos turísticos perto sem aquário
+Roteiro de 3 dias em Sevilha
+Explicación del mollete entero con jamón
+Capacidade do porta-malas do Hyundai Bayon
+Exploring the World of Centipedes
+Diferença entre creatina cristalina e micronizada
+Como desativar sublinhados vermelhos em LibreOffice
+Como tratar contracturas e aliviar dor
+dose recomendada de creatina por
+Soluços comuns em bebê de 2 anos
+Software gratuito para fotos a vídeo
+Otimização de desempenho do Windows 11
+Peugeot 2008: alta oferta de carros usados
+Frases românticas sobre anjos e demônios
+Ideias criativas com polpa de manga
+Definir sem volume: treino e nutrição
+Creatina com leite: vantagens e desvantagens
+Como usar teclado do smartphone na TV TCL
+reflita sobre a importância da e
+Configuração de ventilador inteligente com Sonoff
+Criar base de dados de inscrição no Telegram
+Interpretação de "até aos 65 anos"
+Enviar artigos da CSSBuy, como f
+Análise de sistema de gestão de bombeiros
+Compreendo. Vamos criar os 3 pontos de forma independente, mas todos no âmbito do Quadro Operacional. O 2º ponto (Acidente Viação) será semelhante à Reserva, mas com 2 elementos (Socorrista + Motorista) e uma viatura ABSC.
+
+1. Primeiro, corrigir o EIP (turno único 10h/18h) no app.py:
+python
+# ========== 4. EIP (turno único 10h-18h) ==========
+# EIP tem turno fixo: 10h/18h (apenas diurno)
+# Se estiver dentro do horário 10h-18h, mostrar EIPs
+# Caso contrário, mostrar "Sem serviço" ou "Fora de horário"
+if 10 <= hora_atual < 18:
+    # Buscar EIPs escalados (todos, independentemente do turno)
+    eips_query = Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje,
+        Escala.categoria == 'EIP'
+    ).all()
+    
+    # Ordenar conforme ordem específica
+    ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
+    
+    eips = []
+    for nome in ordem_eip:
+        for e in eips_query:
+            if e.bombeiro.nome == nome:
+                eips.append(e)
+                break
+    
+    for e in eips_query:
+        if e not in eips:
+            eips.append(e)
+    
+    eips = eips[:5]
+    eip_activo = True
+else:
+    eips = []
+    eip_activo = False
+2. Modelo AcidenteViacaoConfig no models.py:
+python
+class AcidenteViacaoConfig(db.Model):
+    __tablename__ = 'acidente_viacao_config'
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, unique=True)
+    
+    # ABSC 1
+    absc1_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc1_socorrista_mec = db.Column(db.String(20), nullable=True)
+    absc1_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc1_motorista_mec = db.Column(db.String(20), nullable=True)
+    
+    # ABSC 2
+    absc2_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc2_socorrista_mec = db.Column(db.String(20), nullable=True)
+    absc2_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+    absc2_motorista_mec = db.Column(db.String(20), nullable=True)
+    
+    # Viaturas
+    viatura_absc1_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    viatura_absc2_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+    
+    # Metadados
+    criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relações
+    absc1_socorrista = db.relationship('Bombeiro', foreign_keys=[absc1_socorrista_id])
+    absc1_motorista = db.relationship('Bombeiro', foreign_keys=[absc1_motorista_id])
+    absc2_socorrista = db.relationship('Bombeiro', foreign_keys=[absc2_socorrista_id])
+    absc2_motorista = db.relationship('Bombeiro', foreign_keys=[absc2_motorista_id])
+    viatura_absc1 = db.relationship('Viatura', foreign_keys=[viatura_absc1_id])
+    viatura_absc2 = db.relationship('Viatura', foreign_keys=[viatura_absc2_id])
+    criador = db.relationship('Bombeiro', foreign_keys=[criado_por])
+3. Template quadro_operacional.html atualizado (apenas a parte do EIP e adicionando Acidente Viação):
+html
+<!-- EIP - Equipa de Intervenção Permanente -->
+<div class="col-md-6 mb-4">
+    <div class="card border-warning h-100">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-shield-shaded"></i> EIP - Equipa de Intervenção Permanente</h5>
+            <small class="d-block mt-1">Horário: 10h00 - 18h00</small>
+        </div>
+        <div class="card-body">
+            {% if eip_activo %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="10%">#</th>
+                            <th width="50%">Nome</th>
+                            <th width="20%">Nº Interno</th>
+                            <th width="20%">Mecanográfico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in range(5) %}
+                        <tr>
+                            <td class="text-center"><strong>{{ i+1 }}</strong></td>
+                            <td>{{ eips[i].bombeiro.nome if i < eips|length else '____________________' }}</td>
+                            <td>{{ eips[i].bombeiro.numero_interno if i < eips|length else '_____' }}</td>
+                            <td>{{ eips[i].bombeiro.mecanografico if i < eips|length else '_____' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning text-center mb-0">
+                <i class="bi bi-clock me-2"></i>
+                <strong>Fora de horário de serviço</strong><br>
+                O serviço EIP funciona apenas das 10h00 às 18h00.
+            </div>
+            {% endif %}
+
+            <div class="mt-3">
+                <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura EIP (VFCI)</label>
+                <select class="form-select" id="viatura_eip">
+                    <option value="">Selecionar Viatura</option>
+                    {% for v in viaturas_vfci %}
+                    <option value="{{ v.id }}" {% if config and config.viatura_eip_id == v.id %}selected{% endif %}>
+                        {{ v.matricula }} - {{ v.nomenclatura }} ({{ v.marca }} {{ v.modelo }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Selecione a viatura VFCI afeta à equipa EIP</small>
+            </div>
+        </div>
+    </div>
+</div>
+4. Adicionar o painel Acidente Viação no template quadro_operacional.html (depois da Reserva):
+html
+<!-- ACIDENTE VIAÇÃO -->
+<div class="col-md-4 mb-4">
+    <div class="card border-danger h-100">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-car-crash"></i> Acidente Viação</h5>
+            <small class="d-block mt-1">Equipas ABSC</small>
+        </div>
+        <div class="card-body">
+            <!-- ABSC 1 -->
+            <div class="mb-3">
+                <h6 class="fw-bold">ABSC 1</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr class="table-info">
+                                <td width="35%"><strong>Socorrista</strong></td>
+                                <td width="50%">
+                                    <select class="form-select form-select-sm" id="absc1_socorrista" onchange="atualizarAbsc1Socorrista()">
+                                        <option value="">Selecionar</option>
+                                        {% for s in socorristas_turno %}
+                                        <option value="{{ s.bombeiro.id }}"
+                                                data-nome="{{ s.bombeiro.nome }}"
+                                                data-numero="{{ s.bombeiro.numero_interno }}"
+                                                data-mec="{{ s.bombeiro.mecanografico }}"
+                                                {% if config and config.absc1_socorrista_id == s.bombeiro.id %}selected{% endif %}>
+                                            {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td width="15%" id="absc1_socorrista_mec">{% if config and config.absc1_socorrista_mec %}{{ config.absc1_socorrista_mec }}{% endif %}</td>
+                            </tr>
+                            <tr class="table-secondary">
+                                <td><strong>Motorista</strong></td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="absc1_motorista" onchange="atualizarAbsc1Motorista()">
+                                        <option value="">Selecionar</option>
+                                        {% for m in motoristas_turno %}
+                                        <option value="{{ m.bombeiro.id }}"
+                                                data-nome="{{ m.bombeiro.nome }}"
+                                                data-numero="{{ m.bombeiro.numero_interno }}"
+                                                data-mec="{{ m.bombeiro.mecanografico }}"
+                                                {% if config and config.absc1_motorista_id == m.bombeiro.id %}selected{% endif %}>
+                                            {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td id="absc1_motorista_mec">{% if config and config.absc1_motorista_mec %}{{ config.absc1_motorista_mec }}{% endif %}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <label class="form-label fw-bold small">Viatura ABSC 1</label>
+                <select class="form-select form-select-sm" id="viatura_absc1">
+                    <option value="">Selecionar Viatura</option>
+                    {% for v in viaturas_absc %}
+                    <option value="{{ v.id }}" {% if config and config.viatura_absc1_id == v.id %}selected{% endif %}>
+                        {{ v.matricula }} - {{ v.nomenclatura }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- ABSC 2 (Reserva) -->
+            <div>
+                <h6 class="fw-bold mt-3">ABSC 2 (Reserva)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr class="table-info">
+                                <td width="35%"><strong>Socorrista</strong></td>
+                                <td width="50%">
+                                    <select class="form-select form-select-sm" id="absc2_socorrista" onchange="atualizarAbsc2Socorrista()">
+                                        <option value="">Selecionar</option>
+                                        {% for s in socorristas_turno %}
+                                        <option value="{{ s.bombeiro.id }}"
+                                                data-nome="{{ s.bombeiro.nome }}"
+                                                data-numero="{{ s.bombeiro.numero_interno }}"
+                                                data-mec="{{ s.bombeiro.mecanografico }}"
+                                                {% if config and config.absc2_socorrista_id == s.bombeiro.id %}selected{% endif %}>
+                                            {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td width="15%" id="absc2_socorrista_mec">{% if config and config.absc2_socorrista_mec %}{{ config.absc2_socorrista_mec }}{% endif %}</td>
+                            </tr>
+                            <tr class="table-secondary">
+                                <td><strong>Motorista</strong></td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="absc2_motorista" onchange="atualizarAbsc2Motorista()">
+                                        <option value="">Selecionar</option>
+                                        {% for m in motoristas_turno %}
+                                        <option value="{{ m.bombeiro.id }}"
+                                                data-nome="{{ m.bombeiro.nome }}"
+                                                data-numero="{{ m.bombeiro.numero_interno }}"
+                                                data-mec="{{ m.bombeiro.mecanografico }}"
+                                                {% if config and config.absc2_motorista_id == m.bombeiro.id %}selected{% endif %}>
+                                            {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td id="absc2_motorista_mec">{% if config and config.absc2_motorista_mec %}{{ config.absc2_motorista_mec }}{% endif %}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <label class="form-label fw-bold small">Viatura ABSC 2</label>
+                <select class="form-select form-select-sm" id="viatura_absc2">
+                    <option value="">Selecionar Viatura</option>
+                    {% for v in viaturas_absc %}
+                    <option value="{{ v.id }}" {% if config and config.viatura_absc2_id == v.id %}selected{% endif %}>
+                        {{ v.matricula }} - {{ v.nomenclatura }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+5. Adicionar as funções JavaScript para Acidente Viação no template:
+javascript
+// Funções para Acidente Viação
+function atualizarAbsc1Socorrista() {
+    const select = document.getElementById('absc1_socorrista');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('absc1_socorrista_mec').innerText = option?.getAttribute('data-mec') || '';
+}
+
+function atualizarAbsc1Motorista() {
+    const select = document.getElementById('absc1_motorista');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('absc1_motorista_mec').innerText = option?.getAttribute('data-mec') || '';
+}
+
+function atualizarAbsc2Socorrista() {
+    const select = document.getElementById('absc2_socorrista');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('absc2_socorrista_mec').innerText = option?.getAttribute('data-mec') || '';
+}
+
+function atualizarAbsc2Motorista() {
+    const select = document.getElementById('absc2_motorista');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('absc2_motorista_mec').innerText = option?.getAttribute('data-mec') || '';
+}
+6. Atualizar a função salvarQuadro para incluir os campos do Acidente Viação:
+javascript
+function salvarQuadro() {
+    const dados = {
+        // ... campos existentes ...
+        
+        // Acidente Viação
+        absc1_socorrista_id: document.getElementById('absc1_socorrista').value,
+        absc1_socorrista_mec: document.getElementById('absc1_socorrista_mec').innerText,
+        absc1_motorista_id: document.getElementById('absc1_motorista').value,
+        absc1_motorista_mec: document.getElementById('absc1_motorista_mec').innerText,
+        absc2_socorrista_id: document.getElementById('absc2_socorrista').value,
+        absc2_socorrista_mec: document.getElementById('absc2_socorrista_mec').innerText,
+        absc2_motorista_id: document.getElementById('absc2_motorista').value,
+        absc2_motorista_mec: document.getElementById('absc2_motorista_mec').innerText,
+        viatura_absc1_id: document.getElementById('viatura_absc1').value,
+        viatura_absc2_id: document.getElementById('viatura_absc2').value,
+        
+        data: '{{ hoje.isoformat() }}'
+    };
+    // ... resto do código
+}
+7. Adicionar as variáveis socorristas_turno e eip_activo na rota quadro_operacional:
+python
+# No final da função quadro_operacional, antes do render_template:
+
+# Socorristas do turno atual para Acidente Viação
+if 7 <= hora_atual < 19:
+    turno_socorrista = '6 - 07h/19h'
+else:
+    turno_socorrista = '7 - 19h/07h'
+
+socorristas_turno = Escala.query.join(Bombeiro).filter(
+    func.date(Escala.data_inicio) <= hoje,
+    func.date(Escala.data_fim) >= hoje,
+    Escala.categoria == 'Socorrista',
+    Escala.turno == turno_socorrista
+).order_by(Bombeiro.nome).all()
+
+return render_template('quadro_operacional.html',
+    # ... parâmetros existentes ...
+    eip_activo=eip_activo,
+    socorristas_turno=socorristas_turno)
+Resumo dos 3 pontos:
+Ponto	Descrição	Estado
+1º Ponto - EIP	Turno único 10h-18h. Fora deste horário mostra "Fora de horário"	✅ Implementado
+2º Ponto - Acidente Viação	2 equipas ABSC (2 elementos cada: Socorrista + Motorista) + Viatura ABSC	✅ Implementado
+3º Ponto - Chefe de Serviço	Hierarquia: Of. Bomb. 2ª > Chefe > Sub-Chefe > Bomb. 1ª > Bomb. 2ª > Bomb. 3ª	✅ Implementado
+Envie o template quadro_operacional corrigido e completo
+Atenção que para o Acidente são dois bombeiros e uma viatura para selecionar, dos que estão escalados no dia.
+Aqui está o template quadro_operacional.html completo e corrigido, com todas as funcionalidades:
+
+html
 {% extends "base.html" %}
 {% block content %}
 
@@ -14,6 +426,57 @@
                 <strong>Central:</strong> {{ turno_central }} |
                 <strong>ECIN:</strong> {{ turno_ecin }} |
                 <strong>INEM (Socorrista):</strong> {{ turno_inem }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chefe de Serviço e Comandante -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-star-fill me-2"></i>Chefe de Serviço</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-0">
+                                {% if chefe_servico %}
+                                    {{ chefe_servico.nome }}
+                                    <small class="text-muted fs-6">({{ chefe_servico.mecanografico }})</small>
+                                {% else %}
+                                    Nenhum bombeiro escalado
+                                {% endif %}
+                            </h4>
+                            {% if posto_chefe %}
+                                <span class="badge bg-secondary mt-2">{{ posto_chefe }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <i class="bi bi-person-badge fs-1 text-primary opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-megaphone me-2"></i>Comandante</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-0">
+                                {{ comando.nome if comando else '____________________' }}
+                                <small class="text-muted fs-6">({{ comando.mecanografico if comando else '_____' }})</small>
+                            </h4>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <i class="bi bi-person-circle fs-1 text-dark opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -83,9 +546,10 @@
             <div class="card border-warning h-100">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="bi bi-shield-shaded"></i> EIP - Equipa de Intervenção Permanente</h5>
-                    <small class="d-block mt-1">{{ turno_atual }}</small>
+                    <small class="d-block mt-1">Horário: 10h00 - 18h00</small>
                 </div>
                 <div class="card-body">
+                    {% if eip_activo %}
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
@@ -108,6 +572,13 @@
                             </tbody>
                         </table>
                     </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center mb-0">
+                        <i class="bi bi-clock me-2"></i>
+                        <strong>Fora de horário de serviço</strong><br>
+                        O serviço EIP funciona apenas das 10h00 às 18h00.
+                    </div>
+                    {% endif %}
 
                     <div class="mt-3">
                         <label class="form-label fw-bold"><i class="bi bi-truck"></i> Viatura EIP (VFCI)</label>
@@ -273,8 +744,133 @@
             </div>
         </div>
 
-        <!-- COMANDO e CENTRAL (separados) -->
+        <!-- ACIDENTE VIAÇÃO - 2 equipas ABSC -->
         <div class="col-md-4 mb-4">
+            <div class="card border-danger h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-car-crash"></i> Acidente Viação</h5>
+                    <small class="d-block mt-1">Equipas ABSC</small>
+                </div>
+                <div class="card-body">
+                    <!-- ABSC 1 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-danger">ABSC 1</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                    <tr class="table-info">
+                                        <td width="35%"><strong>Socorrista</strong></td>
+                                        <td width="50%">
+                                            <select class="form-select form-select-sm" id="absc1_socorrista" onchange="atualizarAbsc1Socorrista()">
+                                                <option value="">Selecionar</option>
+                                                {% for s in socorristas_turno %}
+                                                <option value="{{ s.bombeiro.id }}"
+                                                        data-nome="{{ s.bombeiro.nome }}"
+                                                        data-numero="{{ s.bombeiro.numero_interno }}"
+                                                        data-mec="{{ s.bombeiro.mecanografico }}"
+                                                        {% if config and config.absc1_socorrista_id == s.bombeiro.id %}selected{% endif %}>
+                                                    {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td width="15%" id="absc1_socorrista_mec">{% if config and config.absc1_socorrista_mec %}{{ config.absc1_socorrista_mec }}{% endif %}</td>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <td><strong>Motorista</strong></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="absc1_motorista" onchange="atualizarAbsc1Motorista()">
+                                                <option value="">Selecionar</option>
+                                                {% for m in motoristas_turno %}
+                                                <option value="{{ m.bombeiro.id }}"
+                                                        data-nome="{{ m.bombeiro.nome }}"
+                                                        data-numero="{{ m.bombeiro.numero_interno }}"
+                                                        data-mec="{{ m.bombeiro.mecanografico }}"
+                                                        {% if config and config.absc1_motorista_id == m.bombeiro.id %}selected{% endif %}>
+                                                    {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td id="absc1_motorista_mec">{% if config and config.absc1_motorista_mec %}{{ config.absc1_motorista_mec }}{% endif %}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <label class="form-label fw-bold small">Viatura ABSC 1</label>
+                        <select class="form-select form-select-sm" id="viatura_absc1">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_absc %}
+                            <option value="{{ v.id }}" {% if config and config.viatura_absc1_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- ABSC 2 (Reserva) -->
+                    <div>
+                        <h6 class="fw-bold text-warning">ABSC 2 (Reserva)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                    <tr class="table-info">
+                                        <td width="35%"><strong>Socorrista</strong></td>
+                                        <td width="50%">
+                                            <select class="form-select form-select-sm" id="absc2_socorrista" onchange="atualizarAbsc2Socorrista()">
+                                                <option value="">Selecionar</option>
+                                                {% for s in socorristas_turno %}
+                                                <option value="{{ s.bombeiro.id }}"
+                                                        data-nome="{{ s.bombeiro.nome }}"
+                                                        data-numero="{{ s.bombeiro.numero_interno }}"
+                                                        data-mec="{{ s.bombeiro.mecanografico }}"
+                                                        {% if config and config.absc2_socorrista_id == s.bombeiro.id %}selected{% endif %}>
+                                                    {{ s.bombeiro.nome }} ({{ s.bombeiro.mecanografico }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td width="15%" id="absc2_socorrista_mec">{% if config and config.absc2_socorrista_mec %}{{ config.absc2_socorrista_mec }}{% endif %}</td>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <td><strong>Motorista</strong></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="absc2_motorista" onchange="atualizarAbsc2Motorista()">
+                                                <option value="">Selecionar</option>
+                                                {% for m in motoristas_turno %}
+                                                <option value="{{ m.bombeiro.id }}"
+                                                        data-nome="{{ m.bombeiro.nome }}"
+                                                        data-numero="{{ m.bombeiro.numero_interno }}"
+                                                        data-mec="{{ m.bombeiro.mecanografico }}"
+                                                        {% if config and config.absc2_motorista_id == m.bombeiro.id %}selected{% endif %}>
+                                                    {{ m.bombeiro.nome }} ({{ m.bombeiro.mecanografico }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td id="absc2_motorista_mec">{% if config and config.absc2_motorista_mec %}{{ config.absc2_motorista_mec }}{% endif %}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <label class="form-label fw-bold small">Viatura ABSC 2</label>
+                        <select class="form-select form-select-sm" id="viatura_absc2">
+                            <option value="">Selecionar Viatura</option>
+                            {% for v in viaturas_absc %}
+                            <option value="{{ v.id }}" {% if config and config.viatura_absc2_id == v.id %}selected{% endif %}>
+                                {{ v.matricula }} - {{ v.nomenclatura }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- COMANDO e CENTRAL (separados) -->
+        <div class="col-md-6 mb-4">
             <!-- COMANDO -->
             <div class="card border-dark mb-3">
                 <div class="card-header bg-dark text-white">
@@ -315,7 +911,9 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="col-md-6 mb-4">
             <!-- CENTRAL -->
             <div class="card border-secondary">
                 <div class="card-header bg-secondary text-white">
@@ -358,7 +956,10 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
-                            <span class="badge bg-danger">07h-19h / 08h-20h</span> ECIN / EIP
+                            <span class="badge bg-danger">07h-19h / 19h-07h</span> ECIN
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-warning">10h-18h</span> EIP
                         </div>
                         <div class="col-md-3">
                             <span class="badge bg-info">08h-20h</span> Central (Turno 8)
@@ -395,11 +996,10 @@
 </div>
 
 <script>
-// Função para atualizar os dados do motorista INEM
+// ========== FUNÇÕES PARA INEM ==========
 function atualizarMotoristaInem() {
     const select = document.getElementById('motorista_inem');
     const selectedOption = select.options[select.selectedIndex];
-
     if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
@@ -411,11 +1011,10 @@ function atualizarMotoristaInem() {
     }
 }
 
-// Função para atualizar os dados da reserva 1
+// ========== FUNÇÕES PARA RESERVA ==========
 function atualizarReserva1() {
     const select = document.getElementById('reserva_1');
     const selectedOption = select.options[select.selectedIndex];
-
     if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
@@ -427,11 +1026,9 @@ function atualizarReserva1() {
     }
 }
 
-// Função para atualizar os dados da reserva 2
 function atualizarReserva2() {
     const select = document.getElementById('reserva_2');
     const selectedOption = select.options[select.selectedIndex];
-
     if (selectedOption && selectedOption.value) {
         const numero = selectedOption.getAttribute('data-numero') || '';
         const mec = selectedOption.getAttribute('data-mec') || '';
@@ -443,33 +1040,91 @@ function atualizarReserva2() {
     }
 }
 
-// Inicializar os dados quando a página carregar
-document.addEventListener('DOMContentLoaded', function() {
-    atualizarMotoristaInem();
-    atualizarReserva1();
-    atualizarReserva2();
-});
+// ========== FUNÇÕES PARA ACIDENTE VIAÇÃO ==========
+function atualizarAbsc1Socorrista() {
+    const select = document.getElementById('absc1_socorrista');
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('absc1_socorrista_mec').innerText = mec;
+    } else {
+        document.getElementById('absc1_socorrista_mec').innerText = '';
+    }
+}
 
-// Função para salvar
+function atualizarAbsc1Motorista() {
+    const select = document.getElementById('absc1_motorista');
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('absc1_motorista_mec').innerText = mec;
+    } else {
+        document.getElementById('absc1_motorista_mec').innerText = '';
+    }
+}
+
+function atualizarAbsc2Socorrista() {
+    const select = document.getElementById('absc2_socorrista');
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('absc2_socorrista_mec').innerText = mec;
+    } else {
+        document.getElementById('absc2_socorrista_mec').innerText = '';
+    }
+}
+
+function atualizarAbsc2Motorista() {
+    const select = document.getElementById('absc2_motorista');
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        const mec = selectedOption.getAttribute('data-mec') || '';
+        document.getElementById('absc2_motorista_mec').innerText = mec;
+    } else {
+        document.getElementById('absc2_motorista_mec').innerText = '';
+    }
+}
+
+// ========== SALVAR CONFIGURAÇÃO ==========
 function salvarQuadro() {
     const dados = {
+        // Viaturas
         viatura_ecin: document.getElementById('viatura_ecin').value,
         viatura_eip: document.getElementById('viatura_eip').value,
         viatura_inem: document.getElementById('viatura_inem').value,
         viatura_reserva: document.getElementById('viatura_reserva').value,
         viatura_comando: document.getElementById('viatura_comando').value,
+        
+        // Motorista INEM
         motorista_inem_id: document.getElementById('motorista_inem').value,
         motorista_inem_numero: document.getElementById('motorista_inem_numero').innerText,
         motorista_inem_mec: document.getElementById('motorista_inem_mec').innerText,
+        
+        // Reserva
         reserva_1_id: document.getElementById('reserva_1').value,
         reserva_1_numero: document.getElementById('reserva_1_numero').innerText,
         reserva_1_mec: document.getElementById('reserva_1_mec').innerText,
         reserva_2_id: document.getElementById('reserva_2').value,
         reserva_2_numero: document.getElementById('reserva_2_numero').innerText,
         reserva_2_mec: document.getElementById('reserva_2_mec').innerText,
+        
+        // Acidente Viação - ABSC 1
+        absc1_socorrista_id: document.getElementById('absc1_socorrista').value,
+        absc1_socorrista_mec: document.getElementById('absc1_socorrista_mec').innerText,
+        absc1_motorista_id: document.getElementById('absc1_motorista').value,
+        absc1_motorista_mec: document.getElementById('absc1_motorista_mec').innerText,
+        viatura_absc1_id: document.getElementById('viatura_absc1').value,
+        
+        // Acidente Viação - ABSC 2
+        absc2_socorrista_id: document.getElementById('absc2_socorrista').value,
+        absc2_socorrista_mec: document.getElementById('absc2_socorrista_mec').innerText,
+        absc2_motorista_id: document.getElementById('absc2_motorista').value,
+        absc2_motorista_mec: document.getElementById('absc2_motorista_mec').innerText,
+        viatura_absc2_id: document.getElementById('viatura_absc2').value,
+        
         data: '{{ hoje.isoformat() }}'
     };
-
+    
     fetch('/api/salvar-quadro-operacional', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -479,11 +1134,17 @@ function salvarQuadro() {
     .then(data => {
         if (data.success) {
             Swal.fire({icon: 'success', title: 'Sucesso!', text: 'Configuração salva!', timer: 2000});
+        } else {
+            Swal.fire({icon: 'error', title: 'Erro!', text: data.error || 'Erro ao salvar.'});
         }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({icon: 'error', title: 'Erro!', text: 'Erro de comunicação.'});
     });
 }
 
-// Função para exportar para Excel
+// ========== EXPORTAR PARA EXCEL ==========
 function exportarExcel() {
     const dados = {
         data: '{{ hoje.isoformat() }}',
@@ -527,6 +1188,22 @@ function exportarExcel() {
             ],
             viatura: document.getElementById('viatura_reserva').selectedOptions[0]?.text || ''
         },
+        acidente_viacao: {
+            absc1: {
+                socorrista: document.getElementById('absc1_socorrista').selectedOptions[0]?.getAttribute('data-nome') || '',
+                socorrista_mec: document.getElementById('absc1_socorrista_mec').innerText,
+                motorista: document.getElementById('absc1_motorista').selectedOptions[0]?.getAttribute('data-nome') || '',
+                motorista_mec: document.getElementById('absc1_motorista_mec').innerText,
+                viatura: document.getElementById('viatura_absc1').selectedOptions[0]?.text || ''
+            },
+            absc2: {
+                socorrista: document.getElementById('absc2_socorrista').selectedOptions[0]?.getAttribute('data-nome') || '',
+                socorrista_mec: document.getElementById('absc2_socorrista_mec').innerText,
+                motorista: document.getElementById('absc2_motorista').selectedOptions[0]?.getAttribute('data-nome') || '',
+                motorista_mec: document.getElementById('absc2_motorista_mec').innerText,
+                viatura: document.getElementById('viatura_absc2').selectedOptions[0]?.text || ''
+            }
+        },
         comando: {
             nome: '{{ comando.nome if comando else "" }}',
             numero: '{{ comando.numero_interno if comando else "" }}',
@@ -540,12 +1217,10 @@ function exportarExcel() {
             turno: '{{ turno_central }}'
         }
     };
-
+    
     fetch('/api/exportar-quadro-operacional', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(dados)
     })
     .then(response => response.blob())
@@ -561,15 +1236,22 @@ function exportarExcel() {
     })
     .catch(error => {
         console.error('Erro na exportação:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Erro!',
-            text: 'Erro ao exportar o ficheiro Excel.'
-        });
+        Swal.fire({icon: 'error', title: 'Erro!', text: 'Erro ao exportar o ficheiro Excel.'});
     });
 }
 
-// Adicionar estilos de impressão
+// ========== INICIALIZAÇÃO ==========
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarMotoristaInem();
+    atualizarReserva1();
+    atualizarReserva2();
+    atualizarAbsc1Socorrista();
+    atualizarAbsc1Motorista();
+    atualizarAbsc2Socorrista();
+    atualizarAbsc2Motorista();
+});
+
+// ========== ESTILOS DE IMPRESSÃO ==========
 const style = document.createElement('style');
 style.textContent = `
     @media print {
@@ -607,37 +1289,30 @@ document.head.appendChild(style);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: transform 0.3s;
     }
-
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
-
     .table-responsive {
         border-radius: 8px;
         overflow: hidden;
     }
-
     .table td, .table th {
         vertical-align: middle;
     }
-
     select.form-select, select.form-select-sm {
         background-color: #f8f9fa;
         border: 2px solid #dee2e6;
         font-size: 0.875rem;
     }
-
     select.form-select:focus, select.form-select-sm:focus {
         border-color: #0d6efd;
         box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
     }
-
     .btn-lg {
         margin: 0 10px;
         padding: 12px 30px;
     }
-
     @media (max-width: 768px) {
         .btn-lg {
             margin: 5px;

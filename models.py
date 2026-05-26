@@ -572,3 +572,37 @@ class QuadroOperacional(db.Model):
     # Metadados
     criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+
+    class AcidenteViacaoConfig(db.Model):
+        __tablename__ = 'acidente_viacao_config'
+        id = db.Column(db.Integer, primary_key=True)
+        data = db.Column(db.Date, nullable=False, unique=True)
+
+        # ABSC 1
+        absc1_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+        absc1_socorrista_mec = db.Column(db.String(20), nullable=True)
+        absc1_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+        absc1_motorista_mec = db.Column(db.String(20), nullable=True)
+
+        # ABSC 2
+        absc2_socorrista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+        absc2_socorrista_mec = db.Column(db.String(20), nullable=True)
+        absc2_motorista_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
+        absc2_motorista_mec = db.Column(db.String(20), nullable=True)
+
+        # Viaturas
+        viatura_absc1_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+        viatura_absc2_id = db.Column(db.Integer, db.ForeignKey('viaturas.id'), nullable=True)
+
+        # Metadados
+        criado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'))
+        data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+
+        # Relações
+        absc1_socorrista = db.relationship('Bombeiro', foreign_keys=[absc1_socorrista_id])
+        absc1_motorista = db.relationship('Bombeiro', foreign_keys=[absc1_motorista_id])
+        absc2_socorrista = db.relationship('Bombeiro', foreign_keys=[absc2_socorrista_id])
+        absc2_motorista = db.relationship('Bombeiro', foreign_keys=[absc2_motorista_id])
+        viatura_absc1 = db.relationship('Viatura', foreign_keys=[viatura_absc1_id])
+        viatura_absc2 = db.relationship('Viatura', foreign_keys=[viatura_absc2_id])
+        criador = db.relationship('Bombeiro', foreign_keys=[criado_por])

@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy import func
+import pytz  # Adicionar esta linha (instalar com: pip install pytz)
 
 from models import db, Bombeiro, Viatura, Avaria, Escala, TrocaServico, Dispensa, Checklist, Fardamento, Disponibilidade, CreditoDispensa, Oficina, GestaoFrota, StockFardamento, Ecin, StockFarmacia, FarmaciaCentral, StockAmbulancia, ChecklistAmbulancia, CategoriaFarmacia, ChecklistAmbulanciaItem, Nota, MensagemCorreio, FardamentoAtribuido, Reuniao, NotaComando, Deslocacao, TipoFardaMaterial, Ferias, Mobilidade, Monitor, StockFardamentoArmazem, PontoAgua, QuadroOperacional
 
@@ -33,6 +34,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
 # Inicializar a extensão com a aplicação
 db.init_app(app)
+
+# Definir o fuso horário de Portugal
+PORTUGAL_TZ = pytz.timezone('Europe/Lisbon')
 
 # Adicionar após db.init_app(app) e antes das rotas
 with app.app_context():
@@ -8558,10 +8562,28 @@ def apagar_correio_massa():
 @login_required
 def quadro_operacional():
     hoje = date.today()
-    hora_atual = datetime.now().hour
-    minuto_atual = datetime.now().minute
 
-    print(f"DEBUG - Hora atual: {hora_atual}:{minuto_atual}", file=sys.stderr)
+    # Obter hora atual em Portugal (Europe/Lisbon)
+    try:
+        import pytz
+        portugal_tz = pytz.timezone('Europe/Lisbon')
+        agora_portugal = datetime.now(portugal_tz)
+        hora_atual = agora_portugal.hour
+        minuto_atual = agora_portugal.minute
+        print(f"DEBUG - Hora em Portugal: {hora_atual}:{minuto_atual}", file=sys.stderr)
+    except ImportError:
+        # Fallback se pytz não estiver instalado
+        utc_now = datetime.utcnow()
+        # Aproximação: horário de verão (UTC+1) entre março e outubro
+        mes = utc_now.month
+        if 3 <= mes <= 10:
+            hora_atual = utc_now.hour + 1
+            if hora_atual >= 24:
+                hora_atual -= 24
+        else:
+            hora_atual = utc_now.hour
+        minuto_atual = utc_now.minute
+        print(f"DEBUG - Hora aproximada (sem pytz): {hora_atual}:{minuto_atual}", file=sys.stderr)
 
     # Verificar permissões
     is_escalado_hoje = Escala.query.filter(
@@ -8580,7 +8602,7 @@ def quadro_operacional():
         Bombeiro.ativo == True
     ).first()
 
-    # ========== 2. CENTRAL (muda às 20h) ==========
+    # ========== 2. CENTRAL (muda às 20h em Portugal) ==========
     if 8 <= hora_atual < 20:
         turno_central = '8 - 08h/20h'
         turno_central_desc = "Turno Diurno (08h-20h)"
@@ -8595,8 +8617,7 @@ def quadro_operacional():
         Escala.turno == turno_central
     ).first()
 
-    # ========== 3. ECIN (muda às 19h) ==========
-    # ECIN: Turno diurno: 07h/19h | Turno noturno: 19h/07h
+    # ========== 3. ECIN (muda às 19h em Portugal) ==========
     if 7 <= hora_atual < 19:
         turno_ecin = '07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
@@ -8606,7 +8627,7 @@ def quadro_operacional():
 
     print(f"DEBUG - Turno ECIN selecionado: '{turno_ecin}'", file=sys.stderr)
 
-    # Buscar ECINs da tabela Ecin com o turno correto
+    # Buscar ECINs
     ecins = Ecin.query.filter(
         Ecin.data == hoje,
         Ecin.categoria == 'ECIN',
@@ -8615,10 +8636,6 @@ def quadro_operacional():
     ).all()
 
     print(f"DEBUG - ECINs encontrados: {len(ecins)}", file=sys.stderr)
-    for ec in ecins:
-        print(
-            f"DEBUG - ECIN: turno='{ec.turno}', funcao='{ec.funcao}', bombeiro={ec.bombeiro.nome if ec.bombeiro else 'None'}",
-            file=sys.stderr)
 
     # Organizar ECIN por função
     ecin_chefe = None
@@ -8633,32 +8650,40 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== 4. EIP (ordenação específica) ==========
-    ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
+    # ========== 4. EIP ==========
+    # ========== 4. EIP (turno único 10h-18h) ==========
+    # EIP tem turno fixo: 10h/18h (apenas diurno)
+    # Se estiver dentro do horário 10h-18h, mostrar EIPs
+    # Caso contrário, mostrar "Sem serviço" ou "Fora de horário"
+    if 10 <= hora_atual < 18:
+        # Buscar EIPs escalados (todos, independentemente do turno)
+        eips_query = Escala.query.filter(
+            func.date(Escala.data_inicio) <= hoje,
+            func.date(Escala.data_fim) >= hoje,
+            Escala.categoria == 'EIP'
+        ).all()
 
-    eips_query = Escala.query.filter(
-        func.date(Escala.data_inicio) <= hoje,
-        func.date(Escala.data_fim) >= hoje,
-        Escala.categoria == 'EIP'
-    ).all()
+        # Ordenar conforme ordem específica
+        ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
 
-    # Ordenar conforme a ordem definida
-    eips = []
-    for nome in ordem_eip:
+        eips = []
+        for nome in ordem_eip:
+            for e in eips_query:
+                if e.bombeiro.nome == nome:
+                    eips.append(e)
+                    break
+
         for e in eips_query:
-            if e.bombeiro.nome == nome:
+            if e not in eips:
                 eips.append(e)
-                break
 
-    # Adicionar os restantes
-    for e in eips_query:
-        if e not in eips:
-            eips.append(e)
+        eips = eips[:5]
+        eip_activo = True
+    else:
+        eips = []
+        eip_activo = False
 
-    eips = eips[:5]
-
-    # ========== 5. INEM (Socorrista - muda às 19h) ==========
-    # INEM: Turno 6: 07h-19h | Turno 7: 19h-07h
+    # ========== 5. INEM (Socorrista - muda às 19h em Portugal) ==========
     if 7 <= hora_atual < 19:
         turno_inem = '6 - 07h/19h'
         turno_inem_desc = "Turno Diurno (07h-19h)"
@@ -8673,8 +8698,7 @@ def quadro_operacional():
         Escala.turno == turno_inem
     ).first()
 
-    # ========== 6. MOTORISTAS PARA INEM ==========
-    # Motoristas podem ser de qualquer turno (seleção manual)
+    # ========== 6. MOTORISTAS ==========
     motoristas_turno = Escala.query.join(Bombeiro).filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
@@ -8688,7 +8712,7 @@ def quadro_operacional():
         Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== 8. BUSCAR CONFIGURAÇÃO SALVA ==========
+    # ========== 8. CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
 
     # ========== 9. VIATURAS ==========

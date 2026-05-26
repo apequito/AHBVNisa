@@ -8,3 +8,4 @@ psycopg[binary]==3.3.4
 email-validator==2.1.0
 Pillow==11.2.1
 geopy==2.4.0
+pytz==2024.1
