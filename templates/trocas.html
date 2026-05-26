@@ -9,12 +9,6 @@
 {% set is_central = (current_user.resp_departamento == 'Central') and current_user.tipo_user != 'Admin' %}
 {% set is_voluntario = (current_user.tipo_bombeiro == 'Voluntário') and current_user.tipo_user != 'Admin' %}
 
-{% if is_central %}
-<div class="alert alert-info mb-3">
-    <i class="bi bi-eye me-2"></i> A Central pode visualizar todas as trocas e criar as suas próprias, mas não pode aprovar pedidos.
-</div>
-{% endif %}
-
 {% if is_voluntario %}
 <div class="alert alert-info mb-3">
     <i class="bi bi-info-circle me-2"></i> Bombeiros voluntários podem apenas visualizar e criar trocas ECIN/ELAC.

@@ -2412,9 +2412,6 @@ def trocas():
 
     is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
-    if request.method == 'POST' and is_central:
-        flash('A Central não pode criar pedidos de troca.', 'danger')
-        return redirect(url_for('trocas'))
 
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
