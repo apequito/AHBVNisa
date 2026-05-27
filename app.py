@@ -2434,18 +2434,6 @@ def trocas():
             data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
             turno_destino = request.form.get('turno_destino', '')
 
-        # Voluntários só podem criar trocas ECIN/ELAC - verificação correta
-        if is_voluntario:
-            # Se o tipo_pedido veio como 'assalariado', bloqueia e redireciona
-            if tipo_pedido == 'assalariado':
-                flash('Bombeiros voluntários só podem criar trocas ECIN/ELAC.', 'danger')
-                return redirect(url_for('trocas', tipo='ecin'))
-            # Se veio como 'ecin', está correto - deixa passar
-            elif tipo_pedido == 'ecin':
-                pass  # OK
-            else:
-                # Se veio outro valor, força 'ecin'
-                tipo_pedido = 'ecin'
 
         # Validação extra para ECINs
         if tipo_pedido == 'ecin':
