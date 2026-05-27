@@ -59,7 +59,8 @@
                         <th>Posto</th>
                         <th>Início</th>
                         <th>Fim</th>
-                        <th>Dias</th>
+                        <th>Dias Solicitados</th>
+                        <th>Dias Aprovados</th>
                         <th>Estado</th>
                         <th>Data Pedido</th>
                         <th>Ações</th>
@@ -68,16 +69,22 @@
                 <tbody>
                     {% for p in pedidos %}
                     <tr>
-                        <td>{{ p.bombeiro.nome }} ({{
-                            p.bombeiro.mecanografico }})</td>
+                        <td>{{ p.bombeiro.nome }} ({{ p.bombeiro.mecanografico }})</td>
                         <td>{{ p.bombeiro.posto }}</td>
                         <td>{{ p.data_inicio.strftime('%d/%m/%Y') }}</td>
                         <td>{{ p.data_fim.strftime('%d/%m/%Y') }}</td>
                         <td>
                             {% if p.bombeiro.posto == 'Motorista' or p.bombeiro.resp_departamento == 'Motorista' %}
-                                <span class="badge bg-info">{{ p.dias_uteis }} dias úteis</span>
+                                <span class="badge bg-info">{{ p.dias_solicitados }} dias úteis</span>
                             {% else %}
-                                <span class="badge bg-secondary">{{ p.dias_calendario }} dias corridos</span>
+                                <span class="badge bg-secondary">{{ p.dias_solicitados }} dias corridos</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.dias_aprovados > 0 %}
+                                <span class="badge bg-success">{{ p.dias_aprovados }} dias úteis</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
@@ -105,9 +112,11 @@
                                 {% endif %}
                             {% endif %}
                         </td>
-                     </tr>
+                    </tr>
                     {% else %}
-                     <tr><td colspan="8" class="text-center text-muted py-3">Nenhum pedido de férias.</td></tr>
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-3">Nenhum pedido de férias.</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -115,7 +124,7 @@
     </div>
 </div>
 
-<!-- Modal Novo Pedido -->
+<!-- Modal Novo Pedido (mantido igual) -->
 <div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="POST" id="formFerias">
@@ -130,7 +139,7 @@
                         {% if current_user.posto == 'Motorista' or current_user.resp_departamento == 'Motorista' %}
                             <strong>Motorista:</strong> Apenas dias úteis (segunda a sexta, excluindo feriados) contam como férias.
                         {% else %}
-                            <strong>Socorrista/Centralista:</strong> Todos os dias (incluindo fins de semana e feriados) contam como férias.
+                            <strong>Socorrista/Centralista/Farmácia:</strong> O pedido será feito em dias corridos. O responsável definirá os dias úteis na aprovação.
                         {% endif %}
                     </div>
                     <div class="row">
@@ -166,10 +175,10 @@
                 <div class="modal-body">
                     <input type="hidden" name="ferias_id" id="ferias_id">
                     <div id="infoFerias"></div>
-                    <div class="mt-3" id="diasAjuste" style="display: none;">
-                        <label class="form-label">Número de dias a aprovar:</label>
-                        <input type="number" name="dias_aprovados" id="dias_aprovados" class="form-control" step="1" min="1">
-                        <small class="text-muted">Ajuste o número de dias para férias (dias corridos).</small>
+                    <div class="mt-3" id="diasAjuste">
+                        <label class="form-label">Número de dias úteis a aprovar:</label>
+                        <input type="number" name="dias_aprovados" id="dias_aprovados" class="form-control" step="1" min="1" required>
+                        <small class="text-muted">Indique quantos dias úteis de férias o bombeiro terá direito.</small>
                     </div>
                     <div class="mt-3">
                         <label class="form-label">Observação (opcional):</label>
@@ -186,37 +195,16 @@
 </div>
 
 <script>
-// Forçar abertura do modal
-document.addEventListener('DOMContentLoaded', function() {
-    const btnNovo = document.querySelector('[data-bs-target="#modalNovoPedido"]');
-    if (btnNovo) {
-        btnNovo.addEventListener('click', function(e) {
-            e.preventDefault();
-            const modalEl = document.getElementById('modalNovoPedido');
-            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            modal.show();
-        });
-    }
-});
-
-// Calendário
+// Calendário (mantido igual, com ajustes)
 let mesAtual = new Date().getMonth() + 1;
 let anoAtual = new Date().getFullYear();
 let selectedDates = new Set();
 const isMotorista = {{ 'true' if current_user.posto == 'Motorista' or current_user.resp_departamento == 'Motorista' else 'false' }};
 
-// Feriados fixos para Portugal
 const feriadosFixos = [
-    { mes: 1, dia: 1 },   // Ano Novo
-    { mes: 4, dia: 25 },  // Dia da Liberdade
-    { mes: 5, dia: 1 },   // Dia do Trabalhador
-    { mes: 6, dia: 10 },  // Dia de Portugal
-    { mes: 8, dia: 15 },  // Assunção
-    { mes: 10, dia: 5 },  // Implantação da República
-    { mes: 11, dia: 1 },  // Todos os Santos
-    { mes: 12, dia: 1 },  // Restauração
-    { mes: 12, dia: 8 },  // Imaculada Conceição
-    { mes: 12, dia: 25 }  // Natal
+    { mes: 1, dia: 1 }, { mes: 4, dia: 25 }, { mes: 5, dia: 1 },
+    { mes: 6, dia: 10 }, { mes: 8, dia: 15 }, { mes: 10, dia: 5 },
+    { mes: 11, dia: 1 }, { mes: 12, dia: 1 }, { mes: 12, dia: 8 }, { mes: 12, dia: 25 }
 ];
 
 function isFeriado(ano, mes, dia) {
@@ -225,10 +213,8 @@ function isFeriado(ano, mes, dia) {
 
 function isDiaUtil(ano, mes, dia) {
     const data = new Date(ano, mes-1, dia);
-    const diaSemana = data.getDay(); // 0=domingo, 6=sábado
-    // Verificar se é fim de semana
+    const diaSemana = data.getDay();
     if (diaSemana === 0 || diaSemana === 6) return false;
-    // Verificar se é feriado
     if (isFeriado(ano, mes, dia)) return false;
     return true;
 }
@@ -263,20 +249,15 @@ function carregarCalendario() {
                 const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
                 const selecionado = selectedDates.has(dataStr);
                 let classes = [];
-                let title = '';
 
                 if (isMotorista) {
                     const util = isDiaUtil(anoAtual, mesAtual, dia);
-                    if (!util) {
-                        classes.push('bg-light text-muted');
-                        title = 'Dia não útil (não conta como férias para Motoristas)';
-                    }
+                    if (!util) classes.push('bg-light text-muted');
                 }
-
                 if (selecionado) classes.push('bg-primary text-white');
                 if (dataAtual < hoje) classes.push('opacity-50');
 
-                html += `<td class="${classes.join(' ')}" style="cursor:pointer;" data-date="${dataStr}" title="${title}">${dia}</td>`;
+                html += `<td class="${classes.join(' ')}" style="cursor:pointer;" data-date="${dataStr}">${dia}</td>`;
                 dia++;
             }
         }
@@ -286,7 +267,7 @@ function carregarCalendario() {
     html += '</tbody></table>';
     container.innerHTML = html;
 
-    Array.from(container.querySelectorAll('td[data-date]')).forEach(td => {
+    document.querySelectorAll('#calendarioFerias td[data-date]').forEach(td => {
         td.addEventListener('click', function() {
             const dataStr = this.getAttribute('data-date');
             const data = new Date(dataStr);
@@ -301,7 +282,7 @@ function carregarCalendario() {
             if (isMotorista) {
                 const [ano, mes, dia] = dataStr.split('-').map(Number);
                 if (!isDiaUtil(ano, mes, dia)) {
-                    alert('Motoristas só podem selecionar dias úteis (segunda a sexta, excluindo feriados).');
+                    alert('Motoristas só podem selecionar dias úteis.');
                     return;
                 }
             }
@@ -328,10 +309,7 @@ function mudarMes(delta) {
 function atualizarLista() {
     const lista = document.getElementById('listaDiasSelecionados');
     const datas = Array.from(selectedDates).sort();
-    lista.innerHTML = datas.map(d => {
-        const [ano, mes, dia] = d.split('-');
-        return `<li>${dia}/${mes}/${ano}</li>`;
-    }).join('');
+    lista.innerHTML = datas.map(d => `<li>${d.split('-').reverse().join('/')}</li>`).join('');
     document.getElementById('datasSelecionadas').value = datas.join(',');
     document.getElementById('totalDias').textContent = datas.length;
 }
@@ -357,18 +335,24 @@ function abrirAprovacao(feriasId) {
         .then(response => response.json())
         .then(data => {
             document.getElementById('ferias_id').value = feriasId;
-            document.getElementById('dias_aprovados').value = data.dias_calendario || data.dias_uteis;
 
             const infoHtml = `
-                <p><strong>Bombeiro:</strong> ${data.bombeiro} (${data.posto})</p>
+                <p><strong>Bombeiro:</strong> ${data.bombeiro} (${data.mecanografico})</p>
+                <p><strong>Posto:</strong> ${data.posto}</p>
                 <p><strong>Período:</strong> ${data.data_inicio} a ${data.data_fim}</p>
-                <p><strong>Dias solicitados:</strong> ${data.dias_solicitados}</p>
+                <p><strong>Dias solicitados:</strong> ${data.dias_solicitados} ${data.is_motorista ? 'dias úteis' : 'dias corridos'}</p>
             `;
             document.getElementById('infoFerias').innerHTML = infoHtml;
 
-            // Mostrar campo de ajuste apenas para Socorristas/Centralistas
-            const mostrarAjuste = (data.posto === 'Socorrista' || data.posto === 'Centralista');
-            document.getElementById('diasAjuste').style.display = mostrarAjuste ? 'block' : 'none';
+            // Pré-preencher dias aprovados
+            const diasAprovados = document.getElementById('dias_aprovados');
+            if (data.is_motorista) {
+                diasAprovados.value = data.dias_solicitados;
+                diasAprovados.readOnly = true;
+            } else {
+                diasAprovados.value = '';
+                diasAprovados.readOnly = false;
+            }
 
             const modal = new bootstrap.Modal(document.getElementById('modalAprovarFerias'));
             modal.show();

@@ -160,12 +160,12 @@ class Ferias(db.Model):
     bombeiro_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
     data_inicio = db.Column(db.Date, nullable=False)
     data_fim = db.Column(db.Date, nullable=False)
-    dias_uteis = db.Column(db.Integer, default=0)  # Número de dias úteis (para Motoristas)
-    dias_calendario = db.Column(db.Integer, default=0)  # Número de dias corridos (para Socorristas/Centralistas)
+    dias_solicitados = db.Column(db.Integer, default=0)  # Dias solicitados (para motoristas = úteis, outros = corridos)
+    dias_aprovados = db.Column(db.Integer, default=0)    # Dias aprovados (preenchido pelo responsável)
     estado = db.Column(db.String(20), default='Pendente')
     aprovado_por = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=True)
     data_pedido = db.Column(db.DateTime, default=datetime.utcnow)
-    observacao = db.Column(db.Text, nullable=True)  # Observação do aprovador
+    observacao = db.Column(db.Text, nullable=True)
 
     bombeiro = db.relationship('Bombeiro', foreign_keys=[bombeiro_id], back_populates='ferias')
     aprovador = db.relationship('Bombeiro', foreign_keys=[aprovado_por], back_populates='ferias_aprovadas')

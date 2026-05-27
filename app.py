@@ -1708,18 +1708,15 @@ def ferias():
 
         # Verificar se o bombeiro é Motorista
         is_motorista = (current_user.posto == 'Motorista' or
-                        current_user.tipo_bombeiro == 'Profissional' and
                         current_user.resp_departamento == 'Motorista')
 
-        # Calcular dias conforme categoria
+        # Calcular dias solicitados conforme categoria
         if is_motorista:
-            dias_uteis = calcular_dias_uteis(data_inicio, data_fim)
-            dias_calendario = 0
-            mensagem_dias = f"{dias_uteis} dias úteis"
+            dias_solicitados = calcular_dias_uteis(data_inicio, data_fim)
+            tipo_dias = "dias úteis"
         else:
-            dias_uteis = 0
-            dias_calendario = calcular_dias_calendario(data_inicio, data_fim)
-            mensagem_dias = f"{dias_calendario} dias corridos"
+            dias_solicitados = calcular_dias_corridos(data_inicio, data_fim)
+            tipo_dias = "dias corridos"
 
         # Verificar sobreposição
         existente = Ferias.query.filter(
@@ -1736,14 +1733,13 @@ def ferias():
             bombeiro_id=current_user.id,
             data_inicio=data_inicio,
             data_fim=data_fim,
-            dias_uteis=dias_uteis,
-            dias_calendario=dias_calendario,
+            dias_solicitados=dias_solicitados,
             estado='Pendente'
         )
         db.session.add(nova)
         db.session.commit()
 
-        flash(f'Pedido de férias enviado ({mensagem_dias}).', 'success')
+        flash(f'Pedido de férias enviado ({dias_solicitados} {tipo_dias}).', 'success')
         return redirect(url_for('ferias'))
 
     # GET – filtros
@@ -1752,7 +1748,6 @@ def ferias():
     bombeiro_id = request.args.get('bombeiro_id', type=int)
     estado_filtro = request.args.get('estado', '')
 
-    # Verificar se o utilizador é responsável
     is_responsavel = (current_user.tipo_user == 'Admin' or
                       current_user.resp_departamento in ['Comando', 'Secretaria'])
 
@@ -1789,28 +1784,37 @@ def aprovar_ferias(id):
         flash('Acesso restrito.', 'danger')
         return redirect(url_for('ferias'))
 
-    f = Ferias.query.get_or_404(id)
+    ferias = Ferias.query.get_or_404(id)
 
     if request.method == 'POST':
-        # Para Socorristas/Centralistas, permitir ajustar os dias
-        if f.bombeiro.posto in ['Socorrista',
-                                'Centralista'] or f.bombeiro.tipo_bombeiro == 'Profissional' and f.bombeiro.resp_departamento in [
-            'Socorrista', 'Centralista']:
-            dias_aprovados = request.form.get('dias_aprovados', type=int)
-            observacao = request.form.get('observacao', '')
-            if dias_aprovados and dias_aprovados > 0:
-                f.dias_calendario = dias_aprovados
-            if observacao:
-                f.observacao = observacao
+        # Verificar se precisa definir dias manualmente
+        is_motorista = (ferias.bombeiro.posto == 'Motorista' or
+                        ferias.bombeiro.resp_departamento == 'Motorista')
 
-        f.estado = 'Aprovado'
-        f.aprovado_por = current_user.id
+        if is_motorista:
+            # Motorista: usar os dias solicitados (já são dias úteis)
+            ferias.dias_aprovados = ferias.dias_solicitados
+        else:
+            # Socorrista/Centralista/Farmácia: o responsável define os dias úteis
+            dias_aprovados = request.form.get('dias_aprovados', type=int)
+            if dias_aprovados and dias_aprovados > 0:
+                ferias.dias_aprovados = dias_aprovados
+            else:
+                flash('Por favor, indique o número de dias úteis a aprovar.', 'warning')
+                return redirect(url_for('ferias'))
+
+        observacao = request.form.get('observacao', '')
+        if observacao:
+            ferias.observacao = observacao
+
+        ferias.estado = 'Aprovado'
+        ferias.aprovado_por = current_user.id
 
         # Criar registos na escala para cada dia de férias
-        dia_atual = f.data_inicio
-        while dia_atual <= f.data_fim:
+        dia_atual = ferias.data_inicio
+        while dia_atual <= ferias.data_fim:
             nova_escala = Escala(
-                bombeiro_id=f.bombeiro_id,
+                bombeiro_id=ferias.bombeiro_id,
                 data_inicio=datetime.combine(dia_atual, datetime.min.time()),
                 data_fim=datetime.combine(dia_atual, datetime.max.time()),
                 turno='Férias',
@@ -1821,11 +1825,16 @@ def aprovar_ferias(id):
             dia_atual += timedelta(days=1)
 
         db.session.commit()
-        flash('Férias aprovadas e registadas na escala.', 'success')
+        flash(f'Férias aprovadas. Dias aprovados: {ferias.dias_aprovados} dias úteis.', 'success')
         return redirect(url_for('ferias'))
 
-    # GET - mostrar modal de confirmação com ajuste de dias
-    return render_template('aprovar_ferias.html', ferias=f)
+    # GET - mostrar modal de aprovação
+    is_motorista = (ferias.bombeiro.posto == 'Motorista' or
+                    ferias.bombeiro.resp_departamento == 'Motorista')
+
+    return render_template('aprovar_ferias_modal.html',
+                           ferias=ferias,
+                           is_motorista=is_motorista)
 
 
 @app.route('/ferias/rejeitar/<int:id>')
@@ -1897,31 +1906,17 @@ def calcular_dias_uteis(data_inicio, data_fim):
     dias_uteis = 0
     dia_atual = data_inicio
     while dia_atual <= data_fim:
-        # Verificar se é fim de semana (sábado=5, domingo=6)
         if dia_atual.weekday() < 5:  # 0=Segunda, 4=Sexta
-            # Verificar se é feriado
             is_feriado = (dia_atual.month, dia_atual.day) in feriados_fixos
-            # Verificar Carnaval (47 dias antes da Páscoa - aproximado)
-            ano = dia_atual.year
-            # Cálculo aproximado da Páscoa (algoritmo de Gauss)
-            a = ano % 19
-            b = ano % 4
-            c = ano % 7
-            d = (19 * a + 24) % 30
-            e = (2 * b + 4 * c + 6 * d + 5) % 7
-            dia_pascoa = 22 + d + e
-            if dia_pascoa > 31:
-                mes_pascoa = 4
-                dia_pascoa = dia_pascoa - 31
-            else:
-                mes_pascoa = 3
-            # Carnaval é 47 dias antes da Páscoa
-            data_carnaval = date(ano, mes_pascoa, dia_pascoa) - timedelta(days=47)
-
-            if not is_feriado and not (dia_atual.month == data_carnaval.month and dia_atual.day == data_carnaval.day):
+            if not is_feriado:
                 dias_uteis += 1
         dia_atual += timedelta(days=1)
     return dias_uteis
+
+
+def calcular_dias_corridos(data_inicio, data_fim):
+    """Calcula o número total de dias corridos entre duas datas"""
+    return (data_fim - data_inicio).days + 1
 
 
 @app.route('/ferias/detalhes/<int:id>')
@@ -1938,19 +1933,17 @@ def ferias_detalhes(id):
         'bombeiro': ferias.bombeiro.nome,
         'mecanografico': ferias.bombeiro.mecanografico,
         'posto': ferias.bombeiro.posto,
+        'resp_departamento': ferias.bombeiro.resp_departamento,
         'data_inicio': ferias.data_inicio.strftime('%d/%m/%Y'),
         'data_fim': ferias.data_fim.strftime('%d/%m/%Y'),
-        'dias_solicitados': ferias.dias_uteis if is_motorista else ferias.dias_calendario,
-        'dias_uteis': ferias.dias_uteis,
-        'dias_calendario': ferias.dias_calendario,
+        'dias_solicitados': ferias.dias_solicitados,
+        'dias_aprovados': ferias.dias_aprovados,
+        'is_motorista': is_motorista,
         'estado': ferias.estado
     })
 
 
 
-def calcular_dias_calendario(data_inicio, data_fim):
-    """Calcula o número total de dias corridos entre duas datas (incluindo fins de semana)"""
-    return (data_fim - data_inicio).days + 1
 
 from datetime import date
 from sqlalchemy import func
