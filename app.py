@@ -2405,8 +2405,6 @@ def exportar_escala():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 # ---------- Trocas de Serviço ----------
-
-# ---------- Trocas de Serviço ----------
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
@@ -7819,6 +7817,8 @@ def atualizar_valor_ecin():
                             bombeiro_id_ecin=bombeiro))
 
 
+# ========== MOBILIDADE ==========
+
 @app.route('/administrativo/mobilidade/criar', methods=['POST'])
 @login_required
 def criar_mobilidade():
@@ -7829,26 +7829,40 @@ def criar_mobilidade():
     bombeiro_substituto_id = request.form.get('bombeiro_id', type=int)
     horas = request.form.get('horas', type=float)
 
+    # Validações
     if not ecin_id or not bombeiro_substituto_id or not horas:
         return jsonify({'erro': 'Parâmetros inválidos'}), 400
 
+    if horas <= 0:
+        return jsonify({'erro': 'Horas devem ser maiores que zero'}), 400
+
+    # Buscar o ECIN original
     original = Ecin.query.get_or_404(ecin_id)
+
+    # Verificar se é ECIN/ELAC
     if original.categoria not in ['ECIN', 'ELAC']:
         return jsonify({'erro': 'Registo não é ECIN/ELAC'}), 400
 
-    # Verificar se já existe mobilidade
-    if Mobilidade.query.filter_by(ecin_original_id=original.id).first():
-        return jsonify({'erro': 'Este registo já possui uma mobilidade.'}), 400
-
-    # Verificar se o original já foi escalado
+    # Verificar se o original já está escalado
     if original.estado in ['Pendente', 'Não Escalado']:
         return jsonify({'erro': 'O registo original não está escalado.'}), 400
 
+    # Verificar se já existe mobilidade
+    mobilidade_existente = Mobilidade.query.filter_by(ecin_original_id=original.id).first()
+    if mobilidade_existente:
+        return jsonify({'erro': 'Este registo já possui uma mobilidade.'}), 400
+
+    # Calcular valores
     valor_substituto = 3.50 * horas
     valor_base = original.valor if original.valor is not None else 42.0
     novo_valor_original = max(0, valor_base - valor_substituto)
 
-    # Criar registo para o substituto
+    # Buscar o bombeiro substituto
+    substituto = Bombeiro.query.get(bombeiro_substituto_id)
+    if not substituto:
+        return jsonify({'erro': 'Bombeiro substituto não encontrado'}), 404
+
+    # Criar registo para o substituto (Mobilizado)
     novo_ecin = Ecin(
         bombeiro_id=bombeiro_substituto_id,
         data=original.data,
@@ -7859,7 +7873,7 @@ def criar_mobilidade():
         valor=valor_substituto
     )
     db.session.add(novo_ecin)
-    db.session.flush()
+    db.session.flush()  # Para obter o ID do novo registo
 
     # Criar registo de mobilidade
     mobilidade = Mobilidade(
@@ -7875,7 +7889,6 @@ def criar_mobilidade():
 
     db.session.commit()
 
-    substituto = Bombeiro.query.get(bombeiro_substituto_id)
     return jsonify({
         'sucesso': True,
         'substituto_nome': substituto.nome,
@@ -7905,7 +7918,10 @@ def apagar_mobilidade(ecin_id):
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Secretaria':
         return jsonify({'erro': 'Acesso restrito'}), 403
 
+    # Buscar o ECIN original
     original = Ecin.query.get_or_404(ecin_id)
+
+    # Buscar a mobilidade associada
     mobilidade = Mobilidade.query.filter_by(ecin_original_id=original.id).first()
     if not mobilidade:
         return jsonify({'erro': 'Mobilidade não encontrada'}), 404
@@ -7917,6 +7933,7 @@ def apagar_mobilidade(ecin_id):
         turno=original.turno,
         categoria=original.categoria
     ).first()
+
     if substituto_ecin:
         db.session.delete(substituto_ecin)
 

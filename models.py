@@ -502,7 +502,6 @@ class Deslocacao(db.Model):
 
 class Mobilidade(db.Model):
     __tablename__ = 'mobilidades'
-
     id = db.Column(db.Integer, primary_key=True)
     ecin_original_id = db.Column(db.Integer, db.ForeignKey('ecins.id', ondelete='CASCADE'), nullable=False)
     bombeiro_substituto_id = db.Column(db.Integer, db.ForeignKey('bombeiros.id'), nullable=False)
@@ -510,8 +509,8 @@ class Mobilidade(db.Model):
     valor_pago = db.Column(db.Numeric(10,2), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relações – ambas com back_populates
-    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], back_populates='mobilidades')
+    # Relações
+    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], backref='mobilidades')
     bombeiro_substituto = db.relationship('Bombeiro', foreign_keys=[bombeiro_substituto_id])
 
 class Monitor(db.Model):
