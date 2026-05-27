@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-
-<h2>
-    <i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço
+<i class="bi bi-arrow-left-right me-2"></i>Trocas de Serviço
     {% if current_user.resp_departamento == 'Central' and pendencias.trocas_pendentes is defined and pendencias.trocas_pendentes > 0 %}
     <span class="badge bg-danger ms-2">{{ pendencias.trocas_pendentes }} pendente(s)</span>
     {% endif %}
@@ -61,72 +59,70 @@
         <!-- Tabela de trocas -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Data Pedido</th>
-                                <th>Requerente</th>
-                                <th>Data Origem</th>
-                                <th>Turno Origem</th>
-                                <th>Aceitante</th>
-                                <th>Data Destino</th>
-                                <th>Turno Destino</th>
-                                <th>Estado</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in pedidos %}
-                            <tr>
-                                <td>{{ t.id }}</td>
-                                <td>{{ t.data_pedido.strftime('%d/%m/%Y %H:%M') if t.data_pedido else '' }}</td>
-                                <td>{{ t.bombeiro_origem.nome if t.bombeiro_origem else '-' }} ({{ t.bombeiro_origem.mecanografico if t.bombeiro_origem else '-' }})</td>
-                                <td>{{ t.data_origem.strftime('%d/%m/%Y') if t.data_origem else '' }}</td>
-                                <td>{{ t.turno_origem or '-' }}</td>
-                                <td>{{ t.bombeiro_destino.nome if t.bombeiro_destino else '-' }} ({{ t.bombeiro_destino.mecanografico if t.bombeiro_destino else '-' }})</td>
-                                <td>{{ t.data_destino.strftime('%d/%m/%Y') if t.data_destino else '' }}</td>
-                                <td>{{ t.turno_destino or '-' }}</td>
-                                <td class="text-center">
-                                    {% if t.estado == 'pendente_colega' %}
-                                        <span class="badge bg-warning text-dark">Aguardar Colega</span>
-                                    {% elif t.estado == 'aceite_colega' %}
-                                        <span class="badge bg-info">Aceite - Aguarda Comando</span>
-                                    {% elif t.estado == 'aprovada' %}
-                                        <span class="badge bg-success">Aprovada</span>
-                                    {% elif t.estado == 'recusada' %}
-                                        <span class="badge bg-danger">Recusada</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ t.estado }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    {% if current_user.id == t.bombeiro_destino_id and t.estado == 'pendente_colega' %}
-                                        <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">
-                                            <i class="bi bi-check-lg"></i>
-                                        </a>
-                                        <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
-                                            <i class="bi bi-x-lg"></i>
-                                        </a>
-                                    {% elif (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and t.estado == 'aceite_colega' %}
-                                        <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">
-                                            <i class="bi bi-check2-circle"></i>
-                                        </a>
-                                        <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
-                                            <i class="bi bi-x-lg"></i>
-                                        </a>
-                                    {% endif %}
-                                    <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
-                                        <i class="bi bi-printer"></i>
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Data Pedido</th>
+                            <th>Requerente</th>
+                            <th>Data Origem</th>
+                            <th>Turno Origem</th>
+                            <th>Aceitante</th>
+                            <th>Data Destino</th>
+                            <th>Turno Destino</th>
+                            <th>Estado</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in pedidos %}
+                        <tr>
+                            <td>{{ t.id }}</td>
+                            <td>{{ t.data_pedido.strftime('%d/%m/%Y %H:%M') if t.data_pedido else '' }}</td>
+                            <td>{{ t.bombeiro_origem.nome if t.bombeiro_origem else '-' }} ({{ t.bombeiro_origem.mecanografico if t.bombeiro_origem else '-' }})</td>
+                            <td>{{ t.data_origem.strftime('%d/%m/%Y') if t.data_origem else '' }}</td>
+                            <td>{{ t.turno_origem or '-' }}</td>
+                            <td>{{ t.bombeiro_destino.nome if t.bombeiro_destino else '-' }} ({{ t.bombeiro_destino.mecanografico if t.bombeiro_destino else '-' }})</td>
+                            <td>{{ t.data_destino.strftime('%d/%m/%Y') if t.data_destino else '' }}</td>
+                            <td>{{ t.turno_destino or '-' }}</td>
+                            <td class="text-center">
+                                {% if t.estado == 'pendente_colega' %}
+                                    <span class="badge bg-warning text-dark">Aguardar Colega</span>
+                                {% elif t.estado == 'aceite_colega' %}
+                                    <span class="badge bg-info">Aceite - Aguarda Comando</span>
+                                {% elif t.estado == 'aprovada' %}
+                                    <span class="badge bg-success">Aprovada</span>
+                                {% elif t.estado == 'recusada' %}
+                                    <span class="badge bg-danger">Recusada</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ t.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if current_user.id == t.bombeiro_destino_id and t.estado == 'pendente_colega' %}
+                                    <a href="{{ url_for('aceitar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aceitar">
+                                        <i class="bi bi-check-lg"></i>
                                     </a>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.{% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
+                                        <i class="bi bi-x-lg"></i>
+                                    </a>
+                                {% elif (current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando') and t.estado == 'aceite_colega' %}
+                                    <a href="{{ url_for('aprovar_troca', id=t.id) }}" class="btn btn-sm btn-success" title="Aprovar">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </a>
+                                    <a href="{{ url_for('recusar_troca', id=t.id) }}" class="btn btn-sm btn-danger" title="Recusar">
+                                        <i class="bi bi-x-lg"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('imprimir_troca', id=t.id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="10" class="text-center text-muted py-3">Nenhuma troca encontrada.{% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -144,7 +140,7 @@
                                 {% if not is_voluntario %}
                                 <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
                                 {% endif %}
-                                <option value="ecin" {% if is_voluntario %}selected{% endif %}>ECIN / ELAC</option>
+                                <option value="ecin">ECIN / ELAC</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -236,8 +232,7 @@ function carregarMeuCalendario() {
 
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
-    let tipo = tipoAtual;
-    if (isVoluntario) tipo = 'ecin';
+    const tipo = tipoAtual;
 
     fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
@@ -258,8 +253,7 @@ function carregarColegaCalendario(colegaId) {
 
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
-    let tipo = tipoAtual;
-    if (isVoluntario) tipo = 'ecin';
+    const tipo = tipoAtual;
 
     fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
@@ -291,12 +285,11 @@ function criarCalendario(containerId, dados, isMeu) {
         <div class="d-flex justify-content-between align-items-center mb-2">
             <strong>${meses[mes - 1]} ${ano}</strong>
         </div>
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm text-center">
-                <thead class="table-light">
-                    <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
-                </thead>
-                <tbody>`;
+        <table class="table table-bordered table-sm text-center">
+            <thead class="table-light">
+                <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
+            </thead>
+            <tbody>`;
 
     let dia = 1;
     for (let semana = 0; semana < 6; semana++) {
@@ -318,14 +311,14 @@ function criarCalendario(containerId, dados, isMeu) {
                                style="cursor:pointer;"
                                data-dia="${dia}"
                                data-is-meu="${isMeu}"
-                               title="${escalasHtml}">${dia}<tr>`;
+                               title="${escalasHtml}">${dia}</td>`;
                 dia++;
             }
         }
         html += '</tr>';
         if (dia > totalDias) break;
     }
-    html += '</tbody></table></div>';
+    html += '</tbody></table>';
     container.innerHTML = html;
 
     // Adicionar eventos de clique nos dias com escala
@@ -387,7 +380,7 @@ function selecionarMeuTurno(dia, escalas) {
 
     if (tipoAtual === 'ecin') {
         const checkbox = document.getElementById('trocarTurnoCheckbox');
-        if (checkbox && !checkbox.checked) {
+        if (!checkbox.checked) {
             colegaTurnoSelecionado = null;
             document.getElementById('data_destino_hidden').value = '';
             document.getElementById('turno_destino_hidden').value = '';
@@ -441,7 +434,7 @@ function selecionarColegaTurno(dia, escalas) {
     verificarHabilitarBotao();
 }
 
-// ========== VERIFICAR SE PODE ENVIAR ==========
+// Atualizar a função verificarHabilitarBotao
 function verificarHabilitarBotao() {
     const btn = document.getElementById('btnEnviarTroca');
     const checkbox = document.getElementById('trocarTurnoCheckbox');
@@ -455,13 +448,15 @@ function verificarHabilitarBotao() {
     } else {
         // ECIN/ELAC
         if (meuTurnoSelecionado && colegaIdSelecionado) {
-            if (checkbox && checkbox.checked) {
+            if (checkbox.checked) {
+                // Troca com retorno - precisa selecionar turno do colega
                 if (colegaTurnoSelecionado) {
                     btn.disabled = false;
                 } else {
                     btn.disabled = true;
                 }
             } else {
+                // Cedência sem retorno - não precisa de turno do colega
                 btn.disabled = false;
             }
         } else {
@@ -470,54 +465,49 @@ function verificarHabilitarBotao() {
     }
 }
 
+// Adicionar campo hidden para trocar_turno no formulário
+document.getElementById('formTroca').addEventListener('submit', function(e) {
+    const checkbox = document.getElementById('trocarTurnoCheckbox');
+    const trocarTurnoHidden = document.createElement('input');
+    trocarTurnoHidden.type = 'hidden';
+    trocarTurnoHidden.name = 'trocar_turno';
+    trocarTurnoHidden.value = checkbox.checked ? '1' : '0';
+    this.appendChild(trocarTurnoHidden);
+});
+
 // ========== CHECKBOX PARA TROCA DE TURNO (ECIN) ==========
-const checkbox = document.getElementById('trocarTurnoCheckbox');
-if (checkbox) {
-    checkbox.addEventListener('change', function() {
-        if (this.checked) {
-            if (colegaTurnoSelecionado) {
-                document.getElementById('trocar_turno_hidden').value = '1';
-            } else {
-                document.getElementById('btnEnviarTroca').disabled = true;
-                alert('Selecione um turno do colega para a troca.');
-            }
+document.getElementById('trocarTurnoCheckbox').addEventListener('change', function() {
+    if (this.checked) {
+        if (colegaTurnoSelecionado) {
+            document.getElementById('trocar_turno_hidden').value = '1';
         } else {
-            document.getElementById('trocar_turno_hidden').value = '0';
-            colegaTurnoSelecionado = null;
-            document.getElementById('data_destino_hidden').value = '';
-            document.getElementById('turno_destino_hidden').value = '';
-            document.getElementById('categoria_destino_hidden').value = '';
-            document.getElementById('funcao_destino_hidden').value = '';
-            document.getElementById('colegaTurnoInfo').style.display = 'none';
-            const colegaCalendario = document.getElementById('colegaCalendario');
-            if (colegaCalendario) {
-                colegaCalendario.querySelectorAll('.escala-dia.selected').forEach(td => {
-                    td.classList.remove('selected');
-                });
-            }
-            verificarHabilitarBotao();
+            document.getElementById('btnEnviarTroca').disabled = true;
+            alert('Selecione um turno do colega para a troca.');
         }
-    });
-}
+    } else {
+        document.getElementById('trocar_turno_hidden').value = '0';
+        colegaTurnoSelecionado = null;
+        document.getElementById('data_destino_hidden').value = '';
+        document.getElementById('turno_destino_hidden').value = '';
+        document.getElementById('categoria_destino_hidden').value = '';
+        document.getElementById('funcao_destino_hidden').value = '';
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
+        document.getElementById('colegaCalendario').querySelectorAll('.escala-dia.selected').forEach(td => {
+            td.classList.remove('selected');
+        });
+        verificarHabilitarBotao();
+    }
+});
 
 // ========== ATUALIZAR LISTA DE COLEGAS ==========
 function atualizarListaColegas() {
-    const tipoSelect = document.getElementById('tipo_pedido_select');
-    if (!tipoSelect) return;
-
-    const tipo = tipoSelect.value;
+    const tipo = document.getElementById('tipo_pedido_select').value;
     tipoAtual = tipo;
     const selectDestino = document.getElementById('destino_id_select');
-    if (!selectDestino) return;
 
     selectDestino.innerHTML = '<option value="">Carregando...</option>';
 
-    let apiTipo = tipo;
-    if (isVoluntario) {
-        apiTipo = 'ecin';
-    }
-
-    fetch(`/api/colegas_para_troca?tipo=${apiTipo}`)
+    fetch(`/api/colegas_para_troca?tipo=${tipo}`)
         .then(response => response.json())
         .then(data => {
             selectDestino.innerHTML = '<option value="">-- Selecione um colega --</option>';
@@ -536,24 +526,15 @@ function atualizarListaColegas() {
     colegaIdSelecionado = null;
     colegaTurnoSelecionado = null;
     meuTurnoSelecionado = null;
-    const colegaCalendario = document.getElementById('colegaCalendario');
-    if (colegaCalendario) {
-        colegaCalendario.innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
-    }
-    const colegaTurnoInfo = document.getElementById('colegaTurnoInfo');
-    if (colegaTurnoInfo) colegaTurnoInfo.style.display = 'none';
-    const meuTurnoInfo = document.getElementById('meuTurnoInfo');
-    if (meuTurnoInfo) meuTurnoInfo.style.display = 'none';
-
-    const opcoesEcin = document.getElementById('opcoesEcin');
-    if (opcoesEcin) {
-        opcoesEcin.style.display = (tipo === 'ecin') ? 'block' : 'none';
-    }
+    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    document.getElementById('colegaTurnoInfo').style.display = 'none';
+    document.getElementById('meuTurnoInfo').style.display = 'none';
+    document.getElementById('opcoesEcin').style.display = tipo === 'ecin' ? 'block' : 'none';
 
     carregarMeuCalendario();
 
-    if (tipo === 'ecin' && checkbox) {
-        checkbox.checked = false;
+    if (tipo === 'ecin') {
+        document.getElementById('trocarTurnoCheckbox').checked = false;
         document.getElementById('trocar_turno_hidden').value = '0';
     }
 
@@ -561,60 +542,32 @@ function atualizarListaColegas() {
 }
 
 // ========== COLEGA SELECIONADO ==========
-const destinoSelect = document.getElementById('destino_id_select');
-if (destinoSelect) {
-    destinoSelect.addEventListener('change', function() {
-        const colegaId = this.value;
-        if (colegaId) {
-            colegaIdSelecionado = parseInt(colegaId);
-            colegaTurnoSelecionado = null;
-            const colegaTurnoInfo = document.getElementById('colegaTurnoInfo');
-            if (colegaTurnoInfo) colegaTurnoInfo.style.display = 'none';
-            carregarColegaCalendario(colegaId);
-        } else {
-            colegaIdSelecionado = null;
-            const colegaCalendario = document.getElementById('colegaCalendario');
-            if (colegaCalendario) {
-                colegaCalendario.innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
-            }
-            const colegaTurnoInfo = document.getElementById('colegaTurnoInfo');
-            if (colegaTurnoInfo) colegaTurnoInfo.style.display = 'none';
-        }
-        verificarHabilitarBotao();
-    });
-}
+document.getElementById('destino_id_select').addEventListener('change', function() {
+    const colegaId = this.value;
+    if (colegaId) {
+        colegaIdSelecionado = parseInt(colegaId);
+        colegaTurnoSelecionado = null;
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
+        carregarColegaCalendario(colegaId);
+    } else {
+        colegaIdSelecionado = null;
+        document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
+    }
+    verificarHabilitarBotao();
+});
 
 // ========== MUDANÇA DE TIPO ==========
-const tipoSelect = document.getElementById('tipo_pedido_select');
-if (tipoSelect) {
-    tipoSelect.addEventListener('change', function() {
-        atualizarListaColegas();
-        const btn = document.getElementById('btnEnviarTroca');
-        if (btn) btn.disabled = true;
-    });
-}
-
-// ========== SUBMIT DO FORMULÁRIO ==========
-const formTroca = document.getElementById('formTroca');
-if (formTroca) {
-    formTroca.addEventListener('submit', function(e) {
-        const checkbox = document.getElementById('trocarTurnoCheckbox');
-        if (checkbox) {
-            const trocarTurnoHidden = document.createElement('input');
-            trocarTurnoHidden.type = 'hidden';
-            trocarTurnoHidden.name = 'trocar_turno';
-            trocarTurnoHidden.value = checkbox.checked ? '1' : '0';
-            this.appendChild(trocarTurnoHidden);
-        }
-    });
-}
+document.getElementById('tipo_pedido_select').addEventListener('change', function() {
+    atualizarListaColegas();
+    document.getElementById('btnEnviarTroca').disabled = true;
+});
 
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', function() {
-    // Se for voluntário, o tipo já está definido como 'ecin'
+    // Se for voluntário, o tipo já está definido como 'ecin' e não pode mudar
     if (isVoluntario) {
-        const tipoSelect = document.getElementById('tipo_pedido_select');
-        if (tipoSelect) tipoSelect.disabled = true;
+        document.getElementById('tipo_pedido_select').disabled = true;
     }
     carregarMeuCalendario();
     atualizarListaColegas();
@@ -640,9 +593,6 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 12px;
     border-radius: 8px;
     margin-top: 10px;
-}
-.table-responsive {
-    overflow-x: auto;
 }
 </style>
 {% endblock %}
