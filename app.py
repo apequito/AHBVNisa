@@ -7744,22 +7744,59 @@ def administrativo():
         query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
 
     ecins = query_ecin.order_by(Ecin.data.desc()).all()
-    total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
 
-    # Contagem de turnos (apenas os que aparecem na lista)
-    turnos_ecin = sum(1 for ec in ecins if ec.categoria == 'ECIN')
-    turnos_elac = sum(1 for ec in ecins if ec.categoria == 'ELAC')
+    # CORRIGIDO: Total de turnos ECIN = contar apenas ECIN (excluindo Mobilizado)
+    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN', Ecin.estado != 'Mobilizado').count()
+    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC', Ecin.estado != 'Mobilizado').count()
 
-    # Contagem de mobilidades
+    # Total de mobilidades (turnos de substituição)
+    turnos_mobilidade = query_ecin.filter(Ecin.estado == 'Mobilizado').count()
+
+    # Total de valor ECIN (apenas originais, excluindo mobilidades)
+    total_valor_ecin = sum(ec.valor for ec in ecins if ec.estado != 'Mobilizado' and ec.valor)
+
+    # Total de valor das mobilidades
+    total_valor_mobilidade = sum(ec.valor for ec in ecins if ec.estado == 'Mobilizado' and ec.valor)
+
+    # Buscar mobilidades para exibir no template
     from sqlalchemy import text
-    result = db.session.execute(text("""
-                                     SELECT COUNT(*)
-                                     FROM mobilidades m
-                                              JOIN ecins e ON m.ecin_original_id = e.id
-                                     WHERE EXTRACT(MONTH FROM e.data) = :mes
-                                       AND EXTRACT(YEAR FROM e.data) = :ano
-                                     """), {'mes': mes_ecin, 'ano': ano_ecin})
-    mobilidades_count = result.scalar() or 0
+    mobilidades_result = db.session.execute(text("""
+                                                 SELECT m.id,
+                                                        m.ecin_original_id,
+                                                        m.bombeiro_substituto_id,
+                                                        m.horas,
+                                                        m.valor_pago,
+                                                        e.data               as original_data,
+                                                        e.turno              as original_turno,
+                                                        b_orig.nome          as original_nome,
+                                                        b_orig.mecanografico as original_mec,
+                                                        b_sub.nome           as substituto_nome,
+                                                        b_sub.mecanografico  as substituto_mec
+                                                 FROM mobilidades m
+                                                          JOIN ecins e ON m.ecin_original_id = e.id
+                                                          JOIN bombeiros b_orig ON e.bombeiro_id = b_orig.id
+                                                          JOIN bombeiros b_sub ON m.bombeiro_substituto_id = b_sub.id
+                                                 WHERE EXTRACT(MONTH FROM e.data) = :mes
+                                                   AND EXTRACT(YEAR FROM e.data) = :ano
+                                                 """), {'mes': mes_ecin, 'ano': ano_ecin})
+
+    mobilidades_lista = []
+    for row in mobilidades_result:
+        mobilidades_lista.append({
+            'id': row[0],
+            'ecin_original_id': row[1],
+            'bombeiro_substituto_id': row[2],
+            'horas': float(row[3]),
+            'valor_pago': float(row[4]),
+            'original_data': row[5],
+            'original_turno': row[6],
+            'original_nome': row[7],
+            'original_mec': row[8],
+            'substituto_nome': row[9],
+            'substituto_mec': row[10]
+        })
+
+    mobilidades_count = len(mobilidades_lista)
 
     # Lista de bombeiros que aparecem nos ECINs filtrados
     bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
@@ -7771,7 +7808,7 @@ def administrativo():
 
     # Garantir valores (42€ para quem não tem)
     for ec in ecins:
-        if ec.valor is None:
+        if ec.valor is None and ec.estado != 'Mobilizado':
             ec.valor = 42.0
     db.session.commit()
 
@@ -7780,9 +7817,12 @@ def administrativo():
                            total_valor_desl=total_valor_desl,
                            ecins=ecins,
                            total_valor_ecin=total_valor_ecin,
+                           total_valor_mobilidade=total_valor_mobilidade,
                            turnos_ecin=turnos_ecin,
                            turnos_elac=turnos_elac,
+                           turnos_mobilidade=turnos_mobilidade,
                            mobilidades_count=mobilidades_count,
+                           mobilidades_lista=mobilidades_lista,
                            bombeiros_ativos=bombeiros_ativos,
                            bombeiros_ativos_ecin=bombeiros_ativos_ecin,
                            data_inicio=data_inicio,
@@ -7925,13 +7965,20 @@ def apagar_mobilidade(ecin_id):
     original = Ecin.query.get_or_404(ecin_id)
 
     # Buscar a mobilidade associada
-    mobilidade = Mobilidade.query.filter_by(ecin_original_id=original.id).first()
+    from sqlalchemy import text
+    result = db.session.execute(text("""
+                                     SELECT id, bombeiro_substituto_id, valor_pago
+                                     FROM mobilidades
+                                     WHERE ecin_original_id = :id
+                                     """), {'id': ecin_id})
+    mobilidade = result.first()
+
     if not mobilidade:
         return jsonify({'erro': 'Mobilidade não encontrada'}), 404
 
     # Encontrar e remover o registo do substituto
     substituto_ecin = Ecin.query.filter_by(
-        bombeiro_id=mobilidade.bombeiro_substituto_id,
+        bombeiro_id=mobilidade[1],
         data=original.data,
         turno=original.turno,
         categoria=original.categoria
@@ -7940,10 +7987,11 @@ def apagar_mobilidade(ecin_id):
     if substituto_ecin:
         db.session.delete(substituto_ecin)
 
-    # Restaurar valor original
-    original.valor = (original.valor or 0) + float(mobilidade.valor_pago)
+    # Restaurar valor original (somar o valor pago de volta)
+    original.valor = (original.valor or 0) + float(mobilidade[2])
 
-    db.session.delete(mobilidade)
+    # Apagar a mobilidade
+    db.session.execute(text("DELETE FROM mobilidades WHERE ecin_original_id = :id"), {'id': ecin_id})
     db.session.commit()
 
     return jsonify({

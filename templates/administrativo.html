@@ -137,32 +137,41 @@
              id="ecins" role="tabpanel">
 
             <!-- Cartões resumo -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="card text-white bg-warning shadow-sm">
-                        <div class="card-body text-center py-3">
-                            <h4 class="mb-0">{{ turnos_ecin }}</h4>
-                            <small>Turnos ECIN (mês)</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card text-white bg-secondary shadow-sm">
-                        <div class="card-body text-center py-3">
-                            <h4 class="mb-0">{{ turnos_elac }}</h4>
-                            <small>Turnos ELAC (mês)</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card text-white bg-info shadow-sm">
-                        <div class="card-body text-center py-3">
-                            <h5 class="mb-0">Total Mobilidades</h5>
-                            <small>{{ mobilidades_count }}</small>
-                        </div>
-                    </div>
-                </div>
+            <!-- Cartões resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-warning shadow-sm">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ turnos_ecin }}</h4>
+                <small>Turnos ECIN</small>
             </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary shadow-sm">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ turnos_elac }}</h4>
+                <small>Turnos ELAC</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info shadow-sm">
+            <div class="card-body text-center py-3">
+                <h4 class="mb-0">{{ turnos_mobilidade }}</h4>
+                <small>Turnos Mobilidade</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success shadow-sm">
+            <div class="card-body text-center py-3">
+                <h5 class="mb-0">Total: {{ "%.2f"|format(total_valor_ecin + total_valor_mobilidade) }} €</h5>
+                <small>Valor Acumulado</small>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Filtros ECINs -->
             <form method="GET" class="row g-2 align-items-end mb-3">
