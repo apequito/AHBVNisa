@@ -430,12 +430,48 @@ function apagarMobilidade(ecinId) {
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {
-                location.reload();
+                // Remover linha do substituto
+                document.querySelectorAll(`tr.ecin-row[data-ecin-id="${ecinId}"]`).forEach(el => el.remove());
+                // Atualizar valor do original
+                const linhaOriginal = document.querySelector(`tr.ecin-row[data-ecin-id="${data.original_id}"]`);
+                if (linhaOriginal) {
+                    const valorCell = linhaOriginal.querySelector('.valor-cell');
+                    if (valorCell) {
+                        valorCell.innerHTML = data.novo_valor_original.toFixed(2) + ' €';
+                    }
+                    // Remover botão de apagar da linha original
+                    const mobilidadeCell = linhaOriginal.querySelector('.mobilidade-cell');
+                    if (mobilidadeCell) {
+                        mobilidadeCell.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <span class="text-muted">-</span>
+                                <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
+                                        data-ecin-id="${data.original_id}" title="Criar mobilidade">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+                // Reatribuir eventos
+                atribuirEventosMobilidade();
+                // Recalcular total
+                recalcularTotal();
             } else {
                 alert('Erro: ' + (data.erro || 'Falha ao apagar'));
             }
         })
         .catch(err => alert('Erro de comunicação'));
+}
+
+// Recalcular total dos valores
+function recalcularTotal() {
+    let total = 0;
+    document.querySelectorAll('.valor-cell').forEach(cell => {
+        let valor = parseFloat(cell.innerText.replace('€', '').trim());
+        if (!isNaN(valor)) total += valor;
+    });
+    document.getElementById('total-valor-ecin').innerText = total.toFixed(2) + ' €';
 }
 
 // Abrir modal

@@ -7685,16 +7685,17 @@ def administrativo():
     total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
-    # ---------- Filtros ECIN/ELAC ----------
+    # ---------- Filtros ECIN/ELAC (APENAS ESCALADOS) ----------
     mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
     ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
     cat_ecin = request.args.get('cat_ecin', 'todas')
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
-    tipo_ecin = request.args.get('tipo_ecin', 'todas')  # original, substituto, todas
 
+    # Query base: EXCLUI Pendente e Não Escalado
     query_ecin = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin
+        db.extract('year', Ecin.data) == ano_ecin,
+        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])  # ← EXCLUI
     )
 
     # Filtrar por categoria (ECIN/ELAC)
@@ -7707,44 +7708,30 @@ def administrativo():
     if bombeiro_id_ecin:
         query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
 
-    # Filtrar por tipo (original vs substituto)
-    if tipo_ecin == 'original':
-        query_ecin = query_ecin.filter(~Ecin.estado.in_(['Mobilizado']))
-    elif tipo_ecin == 'substituto':
-        query_ecin = query_ecin.filter(Ecin.estado == 'Mobilizado')
-
     ecins = query_ecin.order_by(Ecin.data.desc()).all()
     total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
 
-    # Contagem de turnos (apenas ECIN e ELAC não pendentes/não escalados)
-    query_turnos = Ecin.query.filter(
-        db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin,
-        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
-    )
-    turnos_ecin = query_turnos.filter(Ecin.categoria == 'ECIN').count()
-    turnos_elac = query_turnos.filter(Ecin.categoria == 'ELAC').count()
+    # Contagem de turnos (apenas os escalados)
+    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN').count()
+    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC').count()
 
-    # Contagem de mobilidades
-    mobilidades_count = Mobilidade.query.filter(
-        db.extract('month', Mobilidade.data_criacao) == mes_ecin,
-        db.extract('year', Mobilidade.data_criacao) == ano_ecin
-    ).count()
+    # Contagem de mobilidades (apenas as que estão em ecins escalados)
+    mobilidades_count = sum(1 for ec in ecins if ec.mobilidades and len(ec.mobilidades) > 0)
 
     # Lista de bombeiros que aparecem nos ECINs filtrados
     bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
         Ecin.bombeiro_id == Bombeiro.id,
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin
+        db.extract('year', Ecin.data) == ano_ecin,
+        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
     ).distinct().order_by(Bombeiro.nome).all()
 
-    # Atribuir 42.00 € automaticamente a todos os ECINs do filtro que ainda não têm valor
-    ecins_sem_valor = [ec for ec in ecins if ec.valor is None]
-    if ecins_sem_valor:
-        for ec in ecins_sem_valor:
+    # Garantir valores (42.00 € por turno para quem não tem)
+    for ec in ecins:
+        if ec.valor is None:
             ec.valor = 42.0
+    if any(ec.valor is None for ec in ecins):
         db.session.commit()
-        # Recarregar para refletir os novos valores
         ecins = query_ecin.order_by(Ecin.data.desc()).all()
         total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
 
@@ -7765,7 +7752,6 @@ def administrativo():
                            ano_ecin=ano_ecin,
                            cat_ecin=cat_ecin,
                            bombeiro_id_ecin=bombeiro_id_ecin,
-                           tipo_ecin=tipo_ecin,
                            now=date.today())
 
 
@@ -7794,7 +7780,6 @@ def atualizar_valor_ecin():
                             bombeiro_id_ecin=bombeiro))
 
 
-
 @app.route('/administrativo/mobilidade/criar', methods=['POST'])
 @login_required
 def criar_mobilidade():
@@ -7812,13 +7797,19 @@ def criar_mobilidade():
     if original.categoria not in ['ECIN', 'ELAC']:
         return jsonify({'erro': 'Registo não é ECIN/ELAC'}), 400
 
+    # Verificar se já existe mobilidade
     if Mobilidade.query.filter_by(ecin_original_id=original.id).first():
         return jsonify({'erro': 'Este registo já possui uma mobilidade.'}), 400
+
+    # Verificar se o original já foi escalado
+    if original.estado in ['Pendente', 'Não Escalado']:
+        return jsonify({'erro': 'O registo original não está escalado.'}), 400
 
     valor_substituto = 3.50 * horas
     valor_base = original.valor if original.valor is not None else 42.0
     novo_valor_original = max(0, valor_base - valor_substituto)
 
+    # Criar registo para o substituto
     novo_ecin = Ecin(
         bombeiro_id=bombeiro_substituto_id,
         data=original.data,
@@ -7831,6 +7822,7 @@ def criar_mobilidade():
     db.session.add(novo_ecin)
     db.session.flush()
 
+    # Criar registo de mobilidade
     mobilidade = Mobilidade(
         ecin_original_id=original.id,
         bombeiro_substituto_id=bombeiro_substituto_id,
@@ -7838,14 +7830,20 @@ def criar_mobilidade():
         valor_pago=valor_substituto
     )
     db.session.add(mobilidade)
+
+    # Atualizar valor do original
     original.valor = novo_valor_original
+
     db.session.commit()
 
     substituto = Bombeiro.query.get(bombeiro_substituto_id)
     return jsonify({
         'sucesso': True,
         'substituto_nome': substituto.nome,
+        'substituto_mec': substituto.mecanografico,
+        'substituto_numero': substituto.numero_interno,
         'original_nome': original.bombeiro.nome,
+        'original_id': original.id,
         'novo_valor_original': novo_valor_original,
         'novo_registo': {
             'id': novo_ecin.id,
@@ -7853,6 +7851,8 @@ def criar_mobilidade():
             'turno': novo_ecin.turno,
             'categoria': novo_ecin.categoria,
             'bombeiro': substituto.nome,
+            'mecanografico': substituto.mecanografico,
+            'numero_interno': substituto.numero_interno,
             'funcao': novo_ecin.funcao or '-',
             'estado': novo_ecin.estado,
             'valor': novo_ecin.valor
@@ -7871,6 +7871,7 @@ def apagar_mobilidade(ecin_id):
     if not mobilidade:
         return jsonify({'erro': 'Mobilidade não encontrada'}), 404
 
+    # Encontrar e remover o registo do substituto
     substituto_ecin = Ecin.query.filter_by(
         bombeiro_id=mobilidade.bombeiro_substituto_id,
         data=original.data,
@@ -7880,11 +7881,17 @@ def apagar_mobilidade(ecin_id):
     if substituto_ecin:
         db.session.delete(substituto_ecin)
 
+    # Restaurar valor original
     original.valor = (original.valor or 0) + float(mobilidade.valor_pago)
+
     db.session.delete(mobilidade)
     db.session.commit()
 
-    return jsonify({'sucesso': True, 'novo_valor_original': float(original.valor)})
+    return jsonify({
+        'sucesso': True,
+        'novo_valor_original': float(original.valor),
+        'original_id': original.id
+    })
 
 
 @app.route('/ecins/imprimir-turno-diario')
