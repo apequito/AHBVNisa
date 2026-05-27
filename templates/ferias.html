@@ -17,7 +17,7 @@
             {% endfor %}
         </select>
     </div>
-    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+    {% if is_responsavel %}
     <div class="col-auto">
         <label class="form-label">Bombeiro</label>
         <select name="bombeiro_id" class="form-select form-select-sm">
@@ -51,67 +51,88 @@
 <!-- Tabela de pedidos -->
 <div class="card shadow-sm">
     <div class="card-body p-0">
-        <table class="table table-hover table-bordered mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Bombeiro</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th>Dias</th>
-                    <th>Estado</th>
-                    <th>Data Pedido</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in pedidos %}
-                <tr>
-                    <td>{{ p.bombeiro.nome }}</td>
-                    <td>{{ p.data_inicio.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ p.data_fim.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ (p.data_fim - p.data_inicio).days + 1 }}</td>
-                    <td>
-                        {% if p.estado == 'Pendente' %}
-                            <span class="badge bg-warning text-dark">Pendente</span>
-                        {% elif p.estado == 'Aprovado' %}
-                            <span class="badge bg-success">Aprovado</span>
-                        {% elif p.estado == 'Rejeitado' %}
-                            <span class="badge bg-danger">Rejeitado</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ p.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
-                    <td>
-                        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bombeiro</th>
+                        <th>Posto</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Dias</th>
+                        <th>Estado</th>
+                        <th>Data Pedido</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pedidos %}
+                    <tr>
+                        <td>{{ p.bombeiro.nome }} ({{
+                            p.bombeiro.mecanografico }})</td>
+                        <td>{{ p.bombeiro.posto }}</td>
+                        <td>{{ p.data_inicio.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ p.data_fim.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if p.bombeiro.posto == 'Motorista' or p.bombeiro.resp_departamento == 'Motorista' %}
+                                <span class="badge bg-info">{{ p.dias_uteis }} dias úteis</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ p.dias_calendario }} dias corridos</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if p.estado == 'Pendente' %}
-                                <a href="{{ url_for('aprovar_ferias', id=p.id) }}" class="btn btn-sm btn-success">Aprovar</a>
-                                <a href="{{ url_for('rejeitar_ferias', id=p.id) }}" class="btn btn-sm btn-warning">Rejeitar</a>
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                            {% elif p.estado == 'Aprovado' %}
+                                <span class="badge bg-success">Aprovado</span>
+                            {% elif p.estado == 'Rejeitado' %}
+                                <span class="badge bg-danger">Rejeitado</span>
                             {% endif %}
-                        {% endif %}
-                        {% if current_user.id == p.bombeiro_id or current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-                            {% if p.estado != 'Aprovado' %}
-                                <a href="{{ url_for('apagar_ferias', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar este pedido?')">🗑️</a>
+                        </td>
+                        <td>{{ p.data_pedido.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if is_responsavel %}
+                                {% if p.estado == 'Pendente' %}
+                                    <button type="button" class="btn btn-sm btn-success" onclick="abrirAprovacao({{ p.id }})">Aprovar</button>
+                                    <a href="{{ url_for('rejeitar_ferias', id=p.id) }}" class="btn btn-sm btn-warning" onclick="return confirm('Rejeitar este pedido?')">Rejeitar</a>
+                                {% endif %}
                             {% endif %}
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-3">Nenhum pedido de férias.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            {% if current_user.id == p.bombeiro_id or is_responsavel %}
+                                {% if p.estado != 'Aprovado' %}
+                                    <a href="{{ url_for('apagar_ferias', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar este pedido?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                     </tr>
+                    {% else %}
+                     <tr><td colspan="8" class="text-center text-muted py-3">Nenhum pedido de férias.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- Modal Novo Pedido (corrigido) -->
+<!-- Modal Novo Pedido -->
 <div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="POST" id="formFerias">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5><i class="bi bi-plus-circle me-1"></i> Novo Pedido de Férias</h5>
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-1"></i> Novo Pedido de Férias</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        {% if current_user.posto == 'Motorista' or current_user.resp_departamento == 'Motorista' %}
+                            <strong>Motorista:</strong> Apenas dias úteis (segunda a sexta, excluindo feriados) contam como férias.
+                        {% else %}
+                            <strong>Socorrista/Centralista:</strong> Todos os dias (incluindo fins de semana e feriados) contam como férias.
+                        {% endif %}
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             <label>Selecione os dias (clique para marcar/desmarcar):</label>
@@ -120,6 +141,7 @@
                         <div class="col-md-6">
                             <p><strong>Dias selecionados:</strong></p>
                             <ul id="listaDiasSelecionados" class="list-unstyled"></ul>
+                            <p><strong>Total de dias:</strong> <span id="totalDias">0</span></p>
                             <input type="hidden" name="datas" id="datasSelecionadas">
                         </div>
                     </div>
@@ -132,8 +154,39 @@
     </div>
 </div>
 
+<!-- Modal para Aprovação com Ajuste de Dias -->
+<div class="modal fade" id="modalAprovarFerias" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" id="formAprovarFerias">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Aprovar Férias</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="ferias_id" id="ferias_id">
+                    <div id="infoFerias"></div>
+                    <div class="mt-3" id="diasAjuste" style="display: none;">
+                        <label class="form-label">Número de dias a aprovar:</label>
+                        <input type="number" name="dias_aprovados" id="dias_aprovados" class="form-control" step="1" min="1">
+                        <small class="text-muted">Ajuste o número de dias para férias (dias corridos).</small>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Observação (opcional):</label>
+                        <textarea name="observacao" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Aprovação</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-// Forçar abertura do modal (evita fecho imediato)
+// Forçar abertura do modal
 document.addEventListener('DOMContentLoaded', function() {
     const btnNovo = document.querySelector('[data-bs-target="#modalNovoPedido"]');
     if (btnNovo) {
@@ -150,6 +203,35 @@ document.addEventListener('DOMContentLoaded', function() {
 let mesAtual = new Date().getMonth() + 1;
 let anoAtual = new Date().getFullYear();
 let selectedDates = new Set();
+const isMotorista = {{ 'true' if current_user.posto == 'Motorista' or current_user.resp_departamento == 'Motorista' else 'false' }};
+
+// Feriados fixos para Portugal
+const feriadosFixos = [
+    { mes: 1, dia: 1 },   // Ano Novo
+    { mes: 4, dia: 25 },  // Dia da Liberdade
+    { mes: 5, dia: 1 },   // Dia do Trabalhador
+    { mes: 6, dia: 10 },  // Dia de Portugal
+    { mes: 8, dia: 15 },  // Assunção
+    { mes: 10, dia: 5 },  // Implantação da República
+    { mes: 11, dia: 1 },  // Todos os Santos
+    { mes: 12, dia: 1 },  // Restauração
+    { mes: 12, dia: 8 },  // Imaculada Conceição
+    { mes: 12, dia: 25 }  // Natal
+];
+
+function isFeriado(ano, mes, dia) {
+    return feriadosFixos.some(f => f.mes === mes && f.dia === dia);
+}
+
+function isDiaUtil(ano, mes, dia) {
+    const data = new Date(ano, mes-1, dia);
+    const diaSemana = data.getDay(); // 0=domingo, 6=sábado
+    // Verificar se é fim de semana
+    if (diaSemana === 0 || diaSemana === 6) return false;
+    // Verificar se é feriado
+    if (isFeriado(ano, mes, dia)) return false;
+    return true;
+}
 
 function carregarCalendario() {
     const container = document.getElementById('calendarioFerias');
@@ -157,6 +239,8 @@ function carregarCalendario() {
     const ultimoDia = new Date(anoAtual, mesAtual, 0);
     const totalDias = ultimoDia.getDate();
     const diaSemanaInicio = primeiroDia.getDay();
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
 
     let html = `
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -173,11 +257,26 @@ function carregarCalendario() {
         html += '<tr>';
         for (let d = 0; d < 7; d++) {
             if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
-                html += '<td></td>';
+                html += '<td class="text-muted bg-light">&nbsp;</td>';
             } else {
+                const dataAtual = new Date(anoAtual, mesAtual-1, dia);
                 const dataStr = `${anoAtual}-${String(mesAtual).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
                 const selecionado = selectedDates.has(dataStr);
-                html += `<td class="${selecionado ? 'bg-primary text-white' : ''}" style="cursor:pointer;" data-date="${dataStr}">${dia}</td>`;
+                let classes = [];
+                let title = '';
+
+                if (isMotorista) {
+                    const util = isDiaUtil(anoAtual, mesAtual, dia);
+                    if (!util) {
+                        classes.push('bg-light text-muted');
+                        title = 'Dia não útil (não conta como férias para Motoristas)';
+                    }
+                }
+
+                if (selecionado) classes.push('bg-primary text-white');
+                if (dataAtual < hoje) classes.push('opacity-50');
+
+                html += `<td class="${classes.join(' ')}" style="cursor:pointer;" data-date="${dataStr}" title="${title}">${dia}</td>`;
                 dia++;
             }
         }
@@ -190,6 +289,23 @@ function carregarCalendario() {
     Array.from(container.querySelectorAll('td[data-date]')).forEach(td => {
         td.addEventListener('click', function() {
             const dataStr = this.getAttribute('data-date');
+            const data = new Date(dataStr);
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+
+            if (data < hoje) {
+                alert('Não pode selecionar dias passados.');
+                return;
+            }
+
+            if (isMotorista) {
+                const [ano, mes, dia] = dataStr.split('-').map(Number);
+                if (!isDiaUtil(ano, mes, dia)) {
+                    alert('Motoristas só podem selecionar dias úteis (segunda a sexta, excluindo feriados).');
+                    return;
+                }
+            }
+
             if (selectedDates.has(dataStr)) {
                 selectedDates.delete(dataStr);
                 this.classList.remove('bg-primary', 'text-white');
@@ -212,8 +328,12 @@ function mudarMes(delta) {
 function atualizarLista() {
     const lista = document.getElementById('listaDiasSelecionados');
     const datas = Array.from(selectedDates).sort();
-    lista.innerHTML = datas.map(d => `<li>${d.split('-').reverse().join('/')}</li>`).join('');
+    lista.innerHTML = datas.map(d => {
+        const [ano, mes, dia] = d.split('-');
+        return `<li>${dia}/${mes}/${ano}</li>`;
+    }).join('');
     document.getElementById('datasSelecionadas').value = datas.join(',');
+    document.getElementById('totalDias').textContent = datas.length;
 }
 
 document.getElementById('formFerias').addEventListener('submit', function(e) {
@@ -229,6 +349,35 @@ document.getElementById('modalNovoPedido').addEventListener('show.bs.modal', fun
     selectedDates.clear();
     carregarCalendario();
     atualizarLista();
+});
+
+// Função para abrir modal de aprovação
+function abrirAprovacao(feriasId) {
+    fetch(`/ferias/detalhes/${feriasId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('ferias_id').value = feriasId;
+            document.getElementById('dias_aprovados').value = data.dias_calendario || data.dias_uteis;
+
+            const infoHtml = `
+                <p><strong>Bombeiro:</strong> ${data.bombeiro} (${data.posto})</p>
+                <p><strong>Período:</strong> ${data.data_inicio} a ${data.data_fim}</p>
+                <p><strong>Dias solicitados:</strong> ${data.dias_solicitados}</p>
+            `;
+            document.getElementById('infoFerias').innerHTML = infoHtml;
+
+            // Mostrar campo de ajuste apenas para Socorristas/Centralistas
+            const mostrarAjuste = (data.posto === 'Socorrista' || data.posto === 'Centralista');
+            document.getElementById('diasAjuste').style.display = mostrarAjuste ? 'block' : 'none';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalAprovarFerias'));
+            modal.show();
+        });
+}
+
+document.getElementById('formAprovarFerias').addEventListener('submit', function(e) {
+    const feriasId = document.getElementById('ferias_id').value;
+    this.action = `/ferias/aprovar/${feriasId}`;
 });
 </script>
 {% endblock %}
