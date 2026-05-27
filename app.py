@@ -2538,13 +2538,11 @@ def api_colegas_para_troca():
     tipo = request.args.get('tipo', 'assalariado')
     is_voluntario = (current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin')
 
-    # Voluntários: para ECIN ou ELAC, mostrar todos os colegas ativos
-    if is_voluntario and tipo in ['ecin', 'elac']:
-        colegas = Bombeiro.query.filter(
-            Bombeiro.id != current_user.id,
-            Bombeiro.ativo == True
-        ).order_by(Bombeiro.nome.asc()).all()
-    elif tipo == 'assalariado':
+    # Voluntários só podem ver colegas para ECIN
+    if is_voluntario and tipo == 'assalariado':
+        tipo = 'ecin'
+
+    if tipo == 'assalariado':
         # Apenas profissionais com escalas nas categorias certas
         colegas = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
             .filter(
@@ -2554,7 +2552,7 @@ def api_colegas_para_troca():
             Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
         ).distinct().order_by(Bombeiro.nome.asc()).all()
     else:
-        # ECIN/ELAC: todos os bombeiros ativos
+        # ECIN/ELAC: todos os bombeiros ativos (voluntários e profissionais)
         colegas = Bombeiro.query.filter(
             Bombeiro.id != current_user.id,
             Bombeiro.ativo == True
@@ -2694,27 +2692,29 @@ def imprimir_escala():
 # ---------- Aceitar/Recusar pelo colega (destino) ----------
 def determinar_tipo_troca(troca):
     """Retorna 'assalariado', 'ecin' ou 'elac' conforme a origem da troca."""
-    bombeiro = Bombeiro.query.get(troca.bombeiro_origem_id)
-    if bombeiro and bombeiro.tipo_bombeiro == 'Profissional':
-        # Verifica se tem escala nas categorias de assalariado nesse dia
-        escala = Escala.query.filter(
-            Escala.bombeiro_id == troca.bombeiro_origem_id,
-            func.date(Escala.data_inicio) == troca.data_origem,
-            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
-        ).first()
-        if escala:
-            return 'assalariado'
-    # Se não for assalariado, verifica se é ECIN ou ELAC
-    ecin = Ecin.query.filter(
+    # Verificar se é ECIN/ELAC
+    ecin_origem = Ecin.query.filter(
         Ecin.bombeiro_id == troca.bombeiro_origem_id,
         Ecin.data == troca.data_origem,
         Ecin.turno == troca.turno_origem
     ).first()
-    if ecin:
-        if ecin.categoria == 'ECIN':
+
+    if ecin_origem:
+        if ecin_origem.categoria == 'ECIN':
             return 'ecin'
-        elif ecin.categoria == 'ELAC':
+        elif ecin_origem.categoria == 'ELAC':
             return 'elac'
+
+    # Verificar escala assalariado
+    escala = Escala.query.filter(
+        Escala.bombeiro_id == troca.bombeiro_origem_id,
+        func.date(Escala.data_inicio) == troca.data_origem,
+        Escala.turno == troca.turno_origem
+    ).first()
+
+    if escala and escala.categoria in ['Motorista', 'Socorrista', 'Centralista']:
+        return 'assalariado'
+
     return 'assalariado'  # fallback
 
 
@@ -2780,7 +2780,7 @@ def aprovar_troca(id):
 
     tipo = determinar_tipo_troca(troca)
 
-    # ========== ATUALIZAR ESCALAS ==========
+    # ========== 1. ATUALIZAR ESCALAS ==========
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
         func.date(Escala.data_inicio) == troca.data_origem,
@@ -2798,15 +2798,16 @@ def aprovar_troca(id):
     for escala in escalas_destino:
         escala.bombeiro_id = troca.bombeiro_origem_id
 
-    # ========== ATUALIZAR ECINs (TROCA DE TURNO) ==========
+    # ========== 2. ATUALIZAR ECINs (se for troca ECIN/ELAC) ==========
     if tipo in ['ecin', 'elac']:
-        # Trocar os ECINs entre os bombeiros
+        # Buscar ECINs do bombeiro origem na data/turno de origem
         ecins_origem = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_origem_id,
             Ecin.data == troca.data_origem,
             Ecin.turno == troca.turno_origem
         ).all()
 
+        # Buscar ECINs do bombeiro destino na data/turno de destino
         ecins_destino = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_destino_id,
             Ecin.data == troca.data_destino,
@@ -2815,11 +2816,9 @@ def aprovar_troca(id):
 
         # Trocar os bombeiros nos ECINs
         for ec in ecins_origem:
-            # Guardar o estado anterior para manter consistência
-            estado_anterior = ec.estado
             ec.bombeiro_id = troca.bombeiro_destino_id
-            # Atualizar estado para refletir a troca
-            if estado_anterior not in ['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN']:
+            # Garantir que o estado fique escalado
+            if ec.estado in ['Pendente', 'Não Escalado']:
                 if ec.categoria == 'ECIN':
                     if ec.funcao == 'Motorista':
                         ec.estado = 'Motorista ECIN'
@@ -2827,16 +2826,19 @@ def aprovar_troca(id):
                         ec.estado = 'Chefe ECIN'
                     elif ec.funcao == 'Guarnição':
                         ec.estado = 'Guarnição ECIN'
+                    else:
+                        ec.estado = 'Motorista ECIN'  # fallback
                 elif ec.categoria == 'ELAC':
                     if ec.funcao == 'Motorista':
                         ec.estado = 'Motorista ELAC'
                     elif ec.funcao == 'Chefe':
                         ec.estado = 'Chefe ELAC'
+                    else:
+                        ec.estado = 'Motorista ELAC'  # fallback
 
         for ec in ecins_destino:
-            estado_anterior = ec.estado
             ec.bombeiro_id = troca.bombeiro_origem_id
-            if estado_anterior not in ['Motorista ECIN', 'Chefe ECIN', 'Guarnição ECIN']:
+            if ec.estado in ['Pendente', 'Não Escalado']:
                 if ec.categoria == 'ECIN':
                     if ec.funcao == 'Motorista':
                         ec.estado = 'Motorista ECIN'
@@ -2844,12 +2846,17 @@ def aprovar_troca(id):
                         ec.estado = 'Chefe ECIN'
                     elif ec.funcao == 'Guarnição':
                         ec.estado = 'Guarnição ECIN'
+                    else:
+                        ec.estado = 'Motorista ECIN'
                 elif ec.categoria == 'ELAC':
                     if ec.funcao == 'Motorista':
                         ec.estado = 'Motorista ELAC'
                     elif ec.funcao == 'Chefe':
                         ec.estado = 'Chefe ELAC'
+                    else:
+                        ec.estado = 'Motorista ELAC'
 
+    # ========== 3. ATUALIZAR ESTADO DA TROCA ==========
     troca.estado = 'aprovada'
     db.session.commit()
 
@@ -2857,21 +2864,7 @@ def aprovar_troca(id):
     return redirect(url_for('trocas', tipo=tipo))
 
 
-@app.route('/api/verificar-trocas-ecin')
-@login_required
-def verificar_trocas_ecin():
-    # Verificar se há trocas recentes que afetam ECINs
-    ultima_troca = TrocaServico.query.filter(
-        TrocaServico.estado == 'aprovada',
-        TrocaServico.data_pedido > datetime.utcnow() - timedelta(hours=24)
-    ).order_by(TrocaServico.data_pedido.desc()).first()
 
-    if ultima_troca:
-        tipo = determinar_tipo_troca(ultima_troca)
-        if tipo in ['ecin', 'elac']:
-            return jsonify({'alteradas': True, 'ultima_troca_id': ultima_troca.id})
-
-    return jsonify({'alteradas': False})
 
 # ---------- Dispensas ----------
 @app.route('/dispensas', methods=['GET', 'POST'])
@@ -3859,45 +3852,6 @@ def escalar_ecin(id):
     flash(f'{ecin.bombeiro.nome} escalado como {dados["estado"]}.', 'success')
     return redirect(url_for('listar_ecins'))
 
-
-@app.route('/ecins/atualizar-troca/<int:troca_id>', methods=['POST'])
-@login_required
-def atualizar_ecins_troca(troca_id):
-    if current_user.tipo_user != 'Admin' and current_user.resp_departamento != 'Comando':
-        return jsonify({'error': 'Acesso restrito'}), 403
-
-    troca = TrocaServico.query.get_or_404(troca_id)
-    if troca.estado != 'aprovada':
-        return jsonify({'error': 'Troca não aprovada'}), 400
-
-    tipo = determinar_tipo_troca(troca)
-
-    if tipo in ['ecin', 'elac']:
-        # Trocar ECINs entre os bombeiros
-        ecins_origem = Ecin.query.filter(
-            Ecin.bombeiro_id == troca.bombeiro_origem_id,
-            Ecin.data == troca.data_origem,
-            Ecin.turno == troca.turno_origem
-        ).all()
-
-        ecins_destino = Ecin.query.filter(
-            Ecin.bombeiro_id == troca.bombeiro_destino_id,
-            Ecin.data == troca.data_destino,
-            Ecin.turno == troca.turno_destino
-        ).all()
-
-        for ec in ecins_origem:
-            ec.bombeiro_id = troca.bombeiro_destino_id
-        for ec in ecins_destino:
-            ec.bombeiro_id = troca.bombeiro_origem_id
-
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'ECINs atualizados com sucesso'})
-
-    return jsonify({'error': 'Tipo de troca não suportada'}), 400
-
-
-
 @app.route('/ecins/escalar_ajax/<int:id>', methods=['GET'])
 @login_required
 def escalar_ecin_ajax(id):
@@ -3908,12 +3862,12 @@ def escalar_ecin_ajax(id):
     funcao_cod = request.args.get('funcao', 'X')
 
     mapeamento = {
-        'M': {'funcao': 'Motorista', 'categoria': 'ECIN', 'estado': 'Motorista ECIN'},
-        'C': {'funcao': 'Chefe', 'categoria': 'ECIN', 'estado': 'Chefe ECIN'},
-        'G': {'funcao': 'Guarnição', 'categoria': 'ECIN', 'estado': 'Guarnição ECIN'},
+        'M':  {'funcao': 'Motorista', 'categoria': 'ECIN', 'estado': 'Motorista ECIN'},
+        'C':  {'funcao': 'Chefe',     'categoria': 'ECIN', 'estado': 'Chefe ECIN'},
+        'G':  {'funcao': 'Guarnição', 'categoria': 'ECIN', 'estado': 'Guarnição ECIN'},
         'Me': {'funcao': 'Motorista', 'categoria': 'ELAC', 'estado': 'Motorista ELAC'},
-        'Ce': {'funcao': 'Chefe', 'categoria': 'ELAC', 'estado': 'Chefe ELAC'},
-        'X': {'estado': 'Não Escalado'}
+        'Ce': {'funcao': 'Chefe',     'categoria': 'ELAC', 'estado': 'Chefe ELAC'},
+        'X':  {'estado': 'Não Escalado'}
     }
 
     if funcao_cod not in mapeamento:
@@ -3922,6 +3876,7 @@ def escalar_ecin_ajax(id):
     dados = mapeamento[funcao_cod]
 
     # Remover escala antiga se existir
+    from sqlalchemy import func
     if ecin.categoria and ecin.funcao:
         escalas = Escala.query.filter(
             Escala.bombeiro_id == ecin.bombeiro_id,
@@ -3940,12 +3895,9 @@ def escalar_ecin_ajax(id):
     else:
         # Criar nova escala
         try:
-            partes = ecin.turno.split('-')[1].strip().split('/') if ' - ' in ecin.turno else ecin.turno.split('/')
-            if len(partes) == 2:
-                inicio_str = partes[0].replace('h', ':00')
-                fim_str = partes[1].replace('h', ':00')
-            else:
-                inicio_str, fim_str = '08:00', '20:00'
+            partes = ecin.turno.split('-')[1].strip().split('/')
+            inicio_str = partes[0].replace('h', ':00')
+            fim_str = partes[1].replace('h', ':00')
         except Exception:
             inicio_str, fim_str = '08:00', '20:00'
 
@@ -3971,12 +3923,9 @@ def escalar_ecin_ajax(id):
         ecin.categoria = dados['categoria']
         ecin.estado = dados['estado']
 
-        # Definir valor padrão (42€ para ECIN/ELAC)
-        if ecin.valor is None:
-            ecin.valor = 42.0
-
     db.session.commit()
 
+    # Preparar resposta com o novo estado
     return jsonify({
         'success': True,
         'novo_estado': ecin.estado,
