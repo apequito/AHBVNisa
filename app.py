@@ -2405,6 +2405,8 @@ def exportar_escala():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 # ---------- Trocas de Serviço ----------
+
+# ---------- Trocas de Serviço ----------
 @app.route('/trocas', methods=['GET', 'POST'])
 @login_required
 def trocas():
@@ -2416,14 +2418,13 @@ def trocas():
 
     is_central = (current_user.resp_departamento == 'Central' and current_user.tipo_user != 'Admin')
 
-
     if request.method == 'POST':
         destino_id = request.form.get('destino_id', type=int)
         data_origem = datetime.strptime(request.form['data_origem'], '%Y-%m-%d').date()
         turno_origem = request.form.get('turno_origem', '')
         motivo = request.form.get('motivo', '')
         tipo_pedido = request.form.get('tipo_pedido', 'assalariado')
-        trocar_turno = request.form.get('trocar_turno', '1')  # '1' = sim, '0' = não
+        trocar_turno = request.form.get('trocar_turno', '1')
 
         # Processar data_destino apenas se for uma troca com turno (trocar_turno == '1')
         data_destino = None
@@ -2433,8 +2434,8 @@ def trocas():
             data_destino = datetime.strptime(request.form['data_destino'], '%Y-%m-%d').date()
             turno_destino = request.form.get('turno_destino', '')
 
-        # Voluntários só podem criar trocas ECIN
-        if is_voluntario and tipo_pedido == 'assalariado':
+        # Voluntários só podem criar trocas ECIN/ELAC
+        if is_voluntario and tipo_pedido != 'ecin':
             flash('Bombeiros voluntários só podem criar trocas ECIN/ELAC.', 'danger')
             return redirect(url_for('trocas', tipo='ecin'))
 
@@ -2455,9 +2456,9 @@ def trocas():
             bombeiro_origem_id=current_user.id,
             bombeiro_destino_id=destino_id,
             data_origem=data_origem,
-            data_destino=data_destino,  # Pode ser None se for troca sem retorno
+            data_destino=data_destino,
             turno_origem=turno_origem,
-            turno_destino=turno_destino,  # Pode ser None se for troca sem retorno
+            turno_destino=turno_destino,
             motivo=motivo,
             estado='pendente_colega'
         )
@@ -2565,129 +2566,6 @@ def api_colegas_para_troca():
         'tipo_bombeiro': b.tipo_bombeiro
     } for b in colegas])
 
-
-@app.route('/trocas/imprimir-ecin')
-@login_required
-def imprimir_troca_ecin():
-    # Se quiser passar dados de uma troca específica, pode usar parâmetros
-    return render_template('imprimir_troca_ecin.html')
-
-@app.route('/trocas/imprimir-elac')
-@login_required
-def imprimir_troca_elac():
-    # Se quiser passar dados de uma troca específica, pode usar parâmetros
-    return render_template('imprimir_troca_elac.html')
-
-
-@app.route('/trocas/imprimir/<int:id>')
-@login_required
-def imprimir_troca(id):
-    troca = TrocaServico.query.get_or_404(id)
-    tipo = determinar_tipo_troca(troca)
-    if tipo == 'ecin':
-        return render_template('imprimir_troca_ecin.html', troca=troca)
-    elif tipo == 'elac':
-        return render_template('imprimir_troca_elac.html', troca=troca)
-    else:
-        return render_template('imprimir_troca.html', troca=troca)
-
-
-@app.route('/api/escala_usuario/<int:user_id>')
-@login_required
-def api_escala_usuario(user_id):
-    ano = request.args.get('ano', type=int)
-    mes = request.args.get('mes', type=int)
-    tipo_filtro = request.args.get('tipo', 'todas')  # 'assalariado', 'ecin', 'todas'
-
-    if not ano or not mes:
-        return jsonify({'erro': 'Parâmetros ano e mes obrigatórios'}), 400
-
-    # Query base
-    query = Escala.query.filter(
-        Escala.bombeiro_id == user_id,
-        db.extract('year', Escala.data_inicio) == ano,
-        db.extract('month', Escala.data_inicio) == mes
-    )
-
-    # Aplicar filtro por tipo
-    if tipo_filtro == 'assalariado':
-        query = query.filter(Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista']))
-    elif tipo_filtro == 'ecin':
-        query = query.filter(Escala.categoria.in_(['ECIN', 'ELAC']))
-    # se for 'todas', não aplica filtro
-
-    escalas = query.order_by(Escala.data_inicio.asc()).all()
-
-    result = {}
-    for e in escalas:
-        dia = e.data_inicio.day
-        if dia not in result:
-            result[dia] = []
-        result[dia].append({
-            'turno': e.turno,
-            'categoria': e.categoria,
-            'funcao': e.funcao or ''
-        })
-
-    # Garantir que todos os dias do mês estão representados
-    import calendar
-    ultimo_dia = calendar.monthrange(ano, mes)[1]
-    for dia in range(1, ultimo_dia + 1):
-        if dia not in result:
-            result[dia] = []
-
-    return jsonify(result)
-
-@app.route('/escala/imprimir')
-@login_required
-def imprimir_escala():
-    mes = request.args.get('mes', type=int)
-    ano = request.args.get('ano', type=int, default=datetime.now().year)
-    categoria = request.args.get('categoria', '')
-    mecanografico = request.args.get('mecanografico', '')
-
-    query = Escala.query.join(Bombeiro)
-
-    if mes:
-        query = query.filter(db.extract('month', Escala.data_inicio) == mes)
-        query = query.filter(db.extract('year', Escala.data_inicio) == ano)
-    if categoria:
-        query = query.filter(Escala.categoria == categoria)
-    if mecanografico:
-        query = query.filter(Bombeiro.mecanografico == mecanografico)
-
-    if current_user.tipo_user != 'Admin':
-        query = query.filter(Escala.bombeiro_id == current_user.id)
-
-    escalas = query.order_by(Escala.data_inicio.asc()).all()
-
-    # Determinar nome e mecanográfico
-    nome_bombeiro = None
-    mecanografico_bombeiro = None
-    if mecanografico:
-        bombeiro = Bombeiro.query.filter_by(mecanografico=mecanografico).first()
-        if bombeiro:
-            nome_bombeiro = bombeiro.nome
-            mecanografico_bombeiro = bombeiro.mecanografico
-    elif current_user.tipo_user != 'Admin':
-        nome_bombeiro = current_user.nome
-        mecanografico_bombeiro = current_user.mecanografico
-
-    # Agrupar por categoria (ordem fixa)
-    ordem_categorias = ['Motorista', 'Socorrista', 'Centralista', 'EIP', 'ECIN', 'ELAC', 'Piquete', 'Bombeiro']
-    categorias_agrupadas = {}
-    for cat in ordem_categorias:
-        cats = [e for e in escalas if e.categoria == cat]
-        if cats:
-            categorias_agrupadas[cat] = cats
-
-    return render_template('imprimir_escala.html',
-                           categorias_agrupadas=categorias_agrupadas,
-                           nome_bombeiro=nome_bombeiro,
-                           mecanografico_bombeiro=mecanografico_bombeiro,
-                           mes=mes,
-                           ano=ano,
-                           now=datetime.now())
 
 # ---------- Aceitar/Recusar pelo colega (destino) ----------
 def determinar_tipo_troca(troca):
@@ -2853,6 +2731,133 @@ def aprovar_troca(id):
 
     flash('Troca aprovada, escalas e ECINs atualizados.', 'success')
     return redirect(url_for('trocas', tipo=tipo))
+
+
+
+@app.route('/trocas/imprimir-ecin')
+@login_required
+def imprimir_troca_ecin():
+    # Se quiser passar dados de uma troca específica, pode usar parâmetros
+    return render_template('imprimir_troca_ecin.html')
+
+@app.route('/trocas/imprimir-elac')
+@login_required
+def imprimir_troca_elac():
+    # Se quiser passar dados de uma troca específica, pode usar parâmetros
+    return render_template('imprimir_troca_elac.html')
+
+
+@app.route('/trocas/imprimir/<int:id>')
+@login_required
+def imprimir_troca(id):
+    troca = TrocaServico.query.get_or_404(id)
+    tipo = determinar_tipo_troca(troca)
+    if tipo == 'ecin':
+        return render_template('imprimir_troca_ecin.html', troca=troca)
+    elif tipo == 'elac':
+        return render_template('imprimir_troca_elac.html', troca=troca)
+    else:
+        return render_template('imprimir_troca.html', troca=troca)
+
+
+@app.route('/api/escala_usuario/<int:user_id>')
+@login_required
+def api_escala_usuario(user_id):
+    ano = request.args.get('ano', type=int)
+    mes = request.args.get('mes', type=int)
+    tipo_filtro = request.args.get('tipo', 'todas')  # 'assalariado', 'ecin', 'todas'
+
+    if not ano or not mes:
+        return jsonify({'erro': 'Parâmetros ano e mes obrigatórios'}), 400
+
+    # Query base
+    query = Escala.query.filter(
+        Escala.bombeiro_id == user_id,
+        db.extract('year', Escala.data_inicio) == ano,
+        db.extract('month', Escala.data_inicio) == mes
+    )
+
+    # Aplicar filtro por tipo
+    if tipo_filtro == 'assalariado':
+        query = query.filter(Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista']))
+    elif tipo_filtro == 'ecin':
+        query = query.filter(Escala.categoria.in_(['ECIN', 'ELAC']))
+    # se for 'todas', não aplica filtro
+
+    escalas = query.order_by(Escala.data_inicio.asc()).all()
+
+    result = {}
+    for e in escalas:
+        dia = e.data_inicio.day
+        if dia not in result:
+            result[dia] = []
+        result[dia].append({
+            'turno': e.turno,
+            'categoria': e.categoria,
+            'funcao': e.funcao or ''
+        })
+
+    # Garantir que todos os dias do mês estão representados
+    import calendar
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    for dia in range(1, ultimo_dia + 1):
+        if dia not in result:
+            result[dia] = []
+
+    return jsonify(result)
+
+@app.route('/escala/imprimir')
+@login_required
+def imprimir_escala():
+    mes = request.args.get('mes', type=int)
+    ano = request.args.get('ano', type=int, default=datetime.now().year)
+    categoria = request.args.get('categoria', '')
+    mecanografico = request.args.get('mecanografico', '')
+
+    query = Escala.query.join(Bombeiro)
+
+    if mes:
+        query = query.filter(db.extract('month', Escala.data_inicio) == mes)
+        query = query.filter(db.extract('year', Escala.data_inicio) == ano)
+    if categoria:
+        query = query.filter(Escala.categoria == categoria)
+    if mecanografico:
+        query = query.filter(Bombeiro.mecanografico == mecanografico)
+
+    if current_user.tipo_user != 'Admin':
+        query = query.filter(Escala.bombeiro_id == current_user.id)
+
+    escalas = query.order_by(Escala.data_inicio.asc()).all()
+
+    # Determinar nome e mecanográfico
+    nome_bombeiro = None
+    mecanografico_bombeiro = None
+    if mecanografico:
+        bombeiro = Bombeiro.query.filter_by(mecanografico=mecanografico).first()
+        if bombeiro:
+            nome_bombeiro = bombeiro.nome
+            mecanografico_bombeiro = bombeiro.mecanografico
+    elif current_user.tipo_user != 'Admin':
+        nome_bombeiro = current_user.nome
+        mecanografico_bombeiro = current_user.mecanografico
+
+    # Agrupar por categoria (ordem fixa)
+    ordem_categorias = ['Motorista', 'Socorrista', 'Centralista', 'EIP', 'ECIN', 'ELAC', 'Piquete', 'Bombeiro']
+    categorias_agrupadas = {}
+    for cat in ordem_categorias:
+        cats = [e for e in escalas if e.categoria == cat]
+        if cats:
+            categorias_agrupadas[cat] = cats
+
+    return render_template('imprimir_escala.html',
+                           categorias_agrupadas=categorias_agrupadas,
+                           nome_bombeiro=nome_bombeiro,
+                           mecanografico_bombeiro=mecanografico_bombeiro,
+                           mes=mes,
+                           ano=ano,
+                           now=datetime.now())
+
+
 
 
 
