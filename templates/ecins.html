@@ -37,7 +37,7 @@
     </form>
 </div>
 
-<!-- Filtros (mantidos) -->
+<!-- Filtros (com novo filtro de mês para disponibilidades) -->
 <div class="card mb-3">
     <div class="card-header bg-light">Filtros</div>
     <div class="card-body">
@@ -74,112 +74,145 @@
                     <option value="19h/07h" {% if turno_filtro == '19h/07h' %}selected{% endif %}>19h/07h</option>
                 </select>
             </div>
+            <!-- NOVO FILTRO: Mês para disponibilidades aceites -->
+            <div class="col-auto">
+                <label class="form-label">Mês (Disponibilidades)</label>
+                <select name="mes_disponibilidade" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for i in range(1,13) %}
+                    <option value="{{ i }}" {% if mes_disponibilidade_filtro == i %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Ano (Disponibilidades)</label>
+                <input type="number" name="ano_disponibilidade" class="form-control form-control-sm" value="{{ ano_disponibilidade_filtro or agora.year }}" min="2020" max="2030">
+            </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
                 <a href="{{ url_for('listar_ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
             </div>
             <div class="col-auto ms-auto">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoEcin">+ Novo Registo</button>
-                <!-- Botão "Atualizar Página" será inserido aqui dinamicamente via JS -->
             </div>
         </form>
     </div>
 </div>
 
 <!-- Tabela de registos ECINS -->
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Bombeiro</th>
-            <th>Data</th>
-            <th>Turno</th>
-            <th>Estado</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in registos %}
-        <tr id="ecin-row-{{ r.id }}">
-            <td>{{ r.id }}</td>
-            <td>{{ r.bombeiro.mecanografico }} - {{ r.bombeiro.nome }}</td>
-            <td>{{ r.data.strftime('%d/%m/%Y') }}</td>
-            <td>{{ r.turno }}</td>
-            <td class="estado-cell">
-                {% if r.estado == 'Pendente' %}
-                    <span class="badge bg-warning text-dark">Pendente</span>
-                {% elif r.estado == 'Não Escalado' %}
-                    <span class="badge bg-danger">Não Escalado</span>
-                {% else %}
-                    <span class="badge bg-success">{{ r.estado }}</span>
-                {% endif %}
-            </td>
-            <td class="acoes-ecin">
-                {% if r.estado == 'Pendente' %}
-                <div class="btn-group action-buttons" role="group">
-                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="M" title="Motorista ECIN">M</button>
-                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="C" title="Chefe ECIN">C</button>
-                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnição">G</button>
-                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista ELAC">Me</button>
-                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe ELAC">Ce</button>
-                    <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
-                </div>
-                {% else %}
-                <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Bombeiro</th>
+                <th>Data</th>
+                <th>Turno</th>
+                <th>Categoria</th>
+                <th>Estado</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in registos %}
+            <tr id="ecin-row-{{ r.id }}">
+                <td>{{ r.id }}</td>
+                <td>{{ r.bombeiro.mecanografico }} - {{ r.bombeiro.nome }}</td>
+                <td>{{ r.data.strftime('%d/%m/%Y') }}</td>
+                <td>{{ r.turno }}</td>
+                <td>{{ r.categoria or 'ECIN' }}</td>
+                <td class="estado-cell">
+                    {% if r.estado == 'Pendente' %}
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                    {% elif r.estado == 'Não Escalado' %}
+                        <span class="badge bg-danger">Não Escalado</span>
+                    {% else %}
+                        <span class="badge bg-success">{{ r.estado }}</span>
+                    {% endif %}
+                </td>
+                <td class="acoes-ecin">
+                    {% if r.estado == 'Pendente' %}
+                    <div class="btn-group action-buttons" role="group">
+                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="M" title="Motorista ECIN">M</button>
+                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="C" title="Chefe ECIN">C</button>
+                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnição">G</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista ELAC">Me</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe ELAC">Ce</button>
+                        <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted">Nenhum registo encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <!-- Modal Novo Registo (mantido) -->
 <div class="modal fade" id="modalNovoEcin" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('adicionar_ecin') }}">
             <div class="modal-content">
-                <div class="modal-header"><h5>Novo Registo</h5></div>
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Registo ECIN/ELAC</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
-                    <label>Bombeiro</label>
+                    <label class="form-label">Bombeiro</label>
                     <select name="bombeiro_id" class="form-select mb-2" required>
                         <option value="">Selecione...</option>
                         {% for b in bombeiros_ativos %}
                         <option value="{{ b.id }}">{{ b.mecanografico }} - {{ b.nome }}</option>
                         {% endfor %}
                     </select>
-                    <label>Data</label>
+                    <label class="form-label">Data</label>
                     <input type="date" name="data" class="form-control mb-2" required>
-                    <label>Categoria</label>
+                    <label class="form-label">Categoria</label>
                     <select name="categoria" class="form-select mb-2" required>
                         <option value="ECIN">ECIN</option>
                         <option value="ELAC">ELAC</option>
                     </select>
-                    <label>Turno</label>
+                    <label class="form-label">Turno</label>
                     <select name="turno" class="form-select mb-2" required>
                         <option value="07h/19h">07h/19h</option>
                         <option value="19h/07h">19h/07h</option>
                     </select>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-success">Criar</button></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Criar</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-// Funções de impressão (mantidas)
+// Funções de impressão
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
 }
+
 function imprimirEscalaELAC() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
 }
 
-// Contador de alterações realizadas (sem refresh)
+function imprimirTurnoDiario() {
+    const data = new Date().toISOString().slice(0,10);
+    window.open('/ecins/imprimir-turno-diario?data=' + data, '_blank');
+}
+
+// Contador de alterações realizadas
 let alteracoesPendentes = 0;
 
 // Função que adiciona / remove o botão "Atualizar Página"
@@ -195,22 +228,8 @@ function atualizarBotaoAtualizar() {
         btn.onclick = function() { location.reload(); };
         container.appendChild(btn);
     }
-    if (alteracoesPendentes > 0) {
-        btn.style.display = 'inline-block';
-    } else {
-        btn.style.display = 'none';
-    }
+    btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
-
-
-function imprimirTurnoDiario() {
-    // Opcional: pode permitir escolher a data, mas por defeito usa hoje
-    const data = new Date().toISOString().slice(0,10);
-    window.open('/ecins/imprimir-turno-diario?data=' + data, '_blank');
-}
-
-
-
 
 // Submeter ação AJAX
 async function executarAcao(id, funcao, btnElement) {
@@ -219,7 +238,6 @@ async function executarAcao(id, funcao, btnElement) {
     const acoesDiv = row.querySelector('.acoes-ecin');
     const estadoSpan = row.querySelector('.estado-cell .badge');
 
-    // Desabilitar o botão temporariamente
     btnElement.disabled = true;
     const originalText = btnElement.innerHTML;
     btnElement.innerHTML = '...';
@@ -229,23 +247,18 @@ async function executarAcao(id, funcao, btnElement) {
         const data = await response.json();
 
         if (data.success) {
-            // Atualizar o estado visual
             estadoSpan.className = `badge ${data.estado_class}`;
             estadoSpan.textContent = data.estado_texto;
 
-            // Substituir os botões de ação pelo botão "Modificar" se o estado já não for Pendente
             if (!data.mostrar_botoes) {
-                // CORREÇÃO: usar URL direta em vez de url_for (que é executado no servidor)
                 acoesDiv.innerHTML = `<a href="/ecins/modificar/${id}" class="btn btn-sm btn-secondary">Modificar</a>`;
             } else {
-                // Se voltar a Pendente (improvável), recarregar a página para recuperar os botões
                 location.reload();
             }
             alteracoesPendentes++;
             atualizarBotaoAtualizar();
         } else {
             alert('Erro: ' + (data.error || 'Falha na operação'));
-            // Reabilitar o botão e restaurar texto
             btnElement.disabled = false;
             btnElement.innerHTML = originalText;
         }
@@ -267,7 +280,20 @@ document.querySelectorAll('.action-btn').forEach(btn => {
     });
 });
 
-// Inicializar estado do botão Atualizar (sem alterações)
+// Inicializar
 atualizarBotaoAtualizar();
 </script>
+
+<style>
+    .action-buttons .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .badge {
+        font-size: 0.8rem;
+    }
+</style>
 {% endblock %}

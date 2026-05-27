@@ -3633,21 +3633,25 @@ def listar_ecins():
 
     ordem = request.args.get('ordem', 'data')
     mec = request.args.get('mec', '').strip()
-    nome_filtro = request.args.get('nome', '')      # novo: bombeiro ID
-    data_filtro = request.args.get('data', '')      # novo: data específica (YYYY-MM-DD)
-    turno_filtro = request.args.get('turno', '')    # novo: '07h/19h' ou '19h/07h'
+    nome_filtro = request.args.get('nome', '')
+    data_filtro = request.args.get('data', '')
+    turno_filtro = request.args.get('turno', '')
+
+    # NOVOS FILTROS: Mês e Ano para disponibilidades
+    mes_disponibilidade = request.args.get('mes_disponibilidade', type=int)
+    ano_disponibilidade = request.args.get('ano_disponibilidade', type=int)
 
     query = Ecin.query
 
-    # Filtro por mecanográfico (pesquisa)
+    # Filtro por mecanográfico
     if mec:
         query = query.join(Bombeiro).filter(Bombeiro.mecanografico.ilike(f'%{mec}%'))
 
-    # Filtro por nome (bombeiro específico)
+    # Filtro por nome
     if nome_filtro and nome_filtro.isdigit():
         query = query.filter(Ecin.bombeiro_id == int(nome_filtro))
 
-    # Filtro por data (dia exato)
+    # Filtro por data
     if data_filtro:
         try:
             data_obj = datetime.strptime(data_filtro, '%Y-%m-%d').date()
@@ -3659,6 +3663,15 @@ def listar_ecins():
     if turno_filtro:
         query = query.filter(Ecin.turno == turno_filtro)
 
+    # NOVO: Filtro por mês/ano disponibilidades (apenas registos com estado diferente de Pendente)
+    if mes_disponibilidade:
+        query = query.filter(
+            db.extract('month', Ecin.data) == mes_disponibilidade,
+            ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
+        )
+    if ano_disponibilidade:
+        query = query.filter(db.extract('year', Ecin.data) == ano_disponibilidade)
+
     # Ordenação
     if ordem == 'nome':
         query = query.join(Bombeiro).order_by(Bombeiro.nome.asc(), Ecin.data.asc())
@@ -3667,10 +3680,8 @@ def listar_ecins():
 
     registos = query.all()
 
-    # Lista de bombeiros que têm registos ECIN/ELAC (para o combobox)
+    # Listas para comboboxes
     bombeiros_com_registos = db.session.query(Bombeiro).join(Ecin).distinct().order_by(Bombeiro.nome).all()
-
-    # Para o modal "Novo Registo" – todos os bombeiros ativos
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
     return render_template('ecins.html',
@@ -3682,7 +3693,9 @@ def listar_ecins():
                            mec_pesquisa=mec,
                            nome_filtro=nome_filtro,
                            data_filtro=data_filtro,
-                           turno_filtro=turno_filtro)
+                           turno_filtro=turno_filtro,
+                           mes_disponibilidade_filtro=mes_disponibilidade,
+                           ano_disponibilidade_filtro=ano_disponibilidade)
 
 # ---------- Adicionar Ecins ----------
 @app.route('/ecins/adicionar', methods=['POST'])
