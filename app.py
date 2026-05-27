@@ -7722,55 +7722,61 @@ def administrativo():
     total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
-    # ---------- Filtros ECIN/ELAC (APENAS ESCALADOS) ----------
+    # ---------- Filtros ECIN/ELAC ----------
     mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
     ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
     cat_ecin = request.args.get('cat_ecin', 'todas')
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
+    tipo_ecin = request.args.get('tipo_ecin', 'todas')
 
-    # Query base: EXCLUI Pendente e Não Escalado
     query_ecin = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin,
-        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])  # ← EXCLUI
+        db.extract('year', Ecin.data) == ano_ecin
     )
 
-    # Filtrar por categoria (ECIN/ELAC)
     if cat_ecin == 'ECIN':
         query_ecin = query_ecin.filter(Ecin.categoria == 'ECIN')
     elif cat_ecin == 'ELAC':
         query_ecin = query_ecin.filter(Ecin.categoria == 'ELAC')
 
-    # Filtrar por bombeiro
     if bombeiro_id_ecin:
         query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
+
+    if tipo_ecin == 'original':
+        query_ecin = query_ecin.filter(~Ecin.estado.in_(['Mobilizado']))
+    elif tipo_ecin == 'substituto':
+        query_ecin = query_ecin.filter(Ecin.estado == 'Mobilizado')
 
     ecins = query_ecin.order_by(Ecin.data.desc()).all()
     total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
 
-    # Contagem de turnos (apenas os escalados)
-    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN').count()
-    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC').count()
+    # CORRIGIDO: Calcular turnos sem usar ec.mobilidades
+    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN', ~Ecin.estado.in_(['Pendente', 'Não Escalado'])).count()
+    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC', ~Ecin.estado.in_(['Pendente', 'Não Escalado'])).count()
 
-    # Contagem de mobilidades (apenas as que estão em ecins escalados)
-    mobilidades_count = sum(1 for ec in ecins if ec.mobilidades and len(ec.mobilidades) > 0)
+    # CORRIGIDO: Calcular mobilidades_count usando a tabela Mobilidade diretamente
+    from sqlalchemy import text
+    result = db.session.execute(text("""
+                                     SELECT COUNT(*)
+                                     FROM mobilidades m
+                                              JOIN ecins e ON m.ecin_original_id = e.id
+                                     WHERE EXTRACT(MONTH FROM e.data) = :mes
+                                       AND EXTRACT(YEAR FROM e.data) = :ano
+                                     """), {'mes': mes_ecin, 'ano': ano_ecin})
+    mobilidades_count = result.scalar() or 0
 
     # Lista de bombeiros que aparecem nos ECINs filtrados
     bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
         Ecin.bombeiro_id == Bombeiro.id,
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin,
-        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
+        db.extract('year', Ecin.data) == ano_ecin
     ).distinct().order_by(Bombeiro.nome).all()
 
-    # Garantir valores (42.00 € por turno para quem não tem)
+    # Garantir valores
     for ec in ecins:
         if ec.valor is None:
             ec.valor = 42.0
-    if any(ec.valor is None for ec in ecins):
-        db.session.commit()
-        ecins = query_ecin.order_by(Ecin.data.desc()).all()
-        total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
+    db.session.commit()
 
     return render_template('administrativo.html',
                            deslocacoes=deslocacoes,
@@ -7789,6 +7795,7 @@ def administrativo():
                            ano_ecin=ano_ecin,
                            cat_ecin=cat_ecin,
                            bombeiro_id_ecin=bombeiro_id_ecin,
+                           tipo_ecin=tipo_ecin,
                            now=date.today())
 
 
