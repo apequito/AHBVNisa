@@ -228,6 +228,56 @@ function atualizarBotaoAtualizar() {
     btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
 
+// Função para recarregar a tabela de ECINs
+function recarregarECINs() {
+    const params = new URLSearchParams(window.location.search);
+    fetch(window.location.pathname + '?' + params.toString())
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const novaTabela = doc.querySelector('.table-responsive');
+            const tabelaAtual = document.querySelector('.table-responsive');
+            if (novaTabela && tabelaAtual) {
+                tabelaAtual.innerHTML = novaTabela.innerHTML;
+            }
+            // Reatribuir eventos aos botões
+            atribuirEventosECINs();
+        })
+        .catch(err => console.error('Erro ao recarregar ECINs:', err));
+}
+
+// Verificar se houve trocas pendentes e recarregar
+function verificarAtualizacaoECINs() {
+    fetch('/api/verificar-trocas-ecin')
+        .then(response => response.json())
+        .then(data => {
+            if (data.alteradas) {
+                recarregarECINs();
+            }
+        })
+        .catch(err => console.error('Erro ao verificar:', err));
+}
+
+// Atribuir eventos aos botões da tabela ECINs
+function atribuirEventosECINs() {
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.removeEventListener('click', handlerAction);
+        btn.addEventListener('click', handlerAction);
+    });
+}
+
+function handlerAction(e) {
+    e.preventDefault();
+    const id = this.getAttribute('data-id');
+    const funcao = this.getAttribute('data-funcao');
+    executarAcao(id, funcao, this);
+}
+
+// Verificar a cada 30 segundos se houve alterações
+setInterval(verificarAtualizacaoECINs, 30000);
+
+
 async function executarAcao(id, funcao, btnElement) {
     const row = document.getElementById(`ecin-row-${id}`);
     if (!row) return;
