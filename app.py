@@ -2692,29 +2692,27 @@ def imprimir_escala():
 # ---------- Aceitar/Recusar pelo colega (destino) ----------
 def determinar_tipo_troca(troca):
     """Retorna 'assalariado', 'ecin' ou 'elac' conforme a origem da troca."""
-    # Verificar se é ECIN/ELAC
-    ecin_origem = Ecin.query.filter(
+    bombeiro = Bombeiro.query.get(troca.bombeiro_origem_id)
+    if bombeiro and bombeiro.tipo_bombeiro == 'Profissional':
+        # Verifica se tem escala nas categorias de assalariado nesse dia
+        escala = Escala.query.filter(
+            Escala.bombeiro_id == troca.bombeiro_origem_id,
+            func.date(Escala.data_inicio) == troca.data_origem,
+            Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
+        ).first()
+        if escala:
+            return 'assalariado'
+    # Se não for assalariado, verifica se é ECIN ou ELAC
+    ecin = Ecin.query.filter(
         Ecin.bombeiro_id == troca.bombeiro_origem_id,
         Ecin.data == troca.data_origem,
         Ecin.turno == troca.turno_origem
     ).first()
-
-    if ecin_origem:
-        if ecin_origem.categoria == 'ECIN':
+    if ecin:
+        if ecin.categoria == 'ECIN':
             return 'ecin'
-        elif ecin_origem.categoria == 'ELAC':
+        elif ecin.categoria == 'ELAC':
             return 'elac'
-
-    # Verificar escala assalariado
-    escala = Escala.query.filter(
-        Escala.bombeiro_id == troca.bombeiro_origem_id,
-        func.date(Escala.data_inicio) == troca.data_origem,
-        Escala.turno == troca.turno_origem
-    ).first()
-
-    if escala and escala.categoria in ['Motorista', 'Socorrista', 'Centralista']:
-        return 'assalariado'
-
     return 'assalariado'  # fallback
 
 
@@ -2780,7 +2778,6 @@ def aprovar_troca(id):
 
     tipo = determinar_tipo_troca(troca)
 
-    # ========== 1. ATUALIZAR ESCALAS ==========
     escalas_origem = Escala.query.filter(
         Escala.bombeiro_id == troca.bombeiro_origem_id,
         func.date(Escala.data_inicio) == troca.data_origem,
@@ -2798,69 +2795,25 @@ def aprovar_troca(id):
     for escala in escalas_destino:
         escala.bombeiro_id = troca.bombeiro_origem_id
 
-    # ========== 2. ATUALIZAR ECINs (se for troca ECIN/ELAC) ==========
-    if tipo in ['ecin', 'elac']:
-        # Buscar ECINs do bombeiro origem na data/turno de origem
+    if tipo == 'ecin':
         ecins_origem = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_origem_id,
             Ecin.data == troca.data_origem,
             Ecin.turno == troca.turno_origem
         ).all()
-
-        # Buscar ECINs do bombeiro destino na data/turno de destino
         ecins_destino = Ecin.query.filter(
             Ecin.bombeiro_id == troca.bombeiro_destino_id,
             Ecin.data == troca.data_destino,
             Ecin.turno == troca.turno_destino
         ).all()
-
-        # Trocar os bombeiros nos ECINs
         for ec in ecins_origem:
             ec.bombeiro_id = troca.bombeiro_destino_id
-            # Garantir que o estado fique escalado
-            if ec.estado in ['Pendente', 'Não Escalado']:
-                if ec.categoria == 'ECIN':
-                    if ec.funcao == 'Motorista':
-                        ec.estado = 'Motorista ECIN'
-                    elif ec.funcao == 'Chefe':
-                        ec.estado = 'Chefe ECIN'
-                    elif ec.funcao == 'Guarnição':
-                        ec.estado = 'Guarnição ECIN'
-                    else:
-                        ec.estado = 'Motorista ECIN'  # fallback
-                elif ec.categoria == 'ELAC':
-                    if ec.funcao == 'Motorista':
-                        ec.estado = 'Motorista ELAC'
-                    elif ec.funcao == 'Chefe':
-                        ec.estado = 'Chefe ELAC'
-                    else:
-                        ec.estado = 'Motorista ELAC'  # fallback
-
         for ec in ecins_destino:
             ec.bombeiro_id = troca.bombeiro_origem_id
-            if ec.estado in ['Pendente', 'Não Escalado']:
-                if ec.categoria == 'ECIN':
-                    if ec.funcao == 'Motorista':
-                        ec.estado = 'Motorista ECIN'
-                    elif ec.funcao == 'Chefe':
-                        ec.estado = 'Chefe ECIN'
-                    elif ec.funcao == 'Guarnição':
-                        ec.estado = 'Guarnição ECIN'
-                    else:
-                        ec.estado = 'Motorista ECIN'
-                elif ec.categoria == 'ELAC':
-                    if ec.funcao == 'Motorista':
-                        ec.estado = 'Motorista ELAC'
-                    elif ec.funcao == 'Chefe':
-                        ec.estado = 'Chefe ELAC'
-                    else:
-                        ec.estado = 'Motorista ELAC'
 
-    # ========== 3. ATUALIZAR ESTADO DA TROCA ==========
     troca.estado = 'aprovada'
     db.session.commit()
-
-    flash('Troca aprovada, escalas e ECINs atualizados.', 'success')
+    flash('Troca aprovada e escalas atualizadas.', 'success')
     return redirect(url_for('trocas', tipo=tipo))
 
 
