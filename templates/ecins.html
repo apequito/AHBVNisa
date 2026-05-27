@@ -26,7 +26,6 @@
         <div class="col-auto">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaELAC()">🖨️ Imprimir Escala ELAC</button>
         </div>
-        <!-- Botão para impressão do turno diário ECIN -->
         {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN', 'Central'] %}
             <div class="col-auto">
                 <button type="button" class="btn btn-sm btn-outline-info" onclick="imprimirTurnoDiario()">
@@ -37,7 +36,7 @@
     </form>
 </div>
 
-<!-- Filtros (com novo filtro de mês para disponibilidades) -->
+<!-- Filtros -->
 <div class="card mb-3">
     <div class="card-header bg-light">Filtros</div>
     <div class="card-body">
@@ -74,7 +73,7 @@
                     <option value="19h/07h" {% if turno_filtro == '19h/07h' %}selected{% endif %}>19h/07h</option>
                 </select>
             </div>
-            <!-- NOVO FILTRO: Mês para disponibilidades aceites -->
+            <!-- Filtro por Mês para disponibilidades (mostra TODAS) -->
             <div class="col-auto">
                 <label class="form-label">Mês (Disponibilidades)</label>
                 <select name="mes_disponibilidade" class="form-select form-select-sm">
@@ -154,7 +153,7 @@
     </table>
 </div>
 
-<!-- Modal Novo Registo (mantido) -->
+<!-- Modal Novo Registo -->
 <div class="modal fade" id="modalNovoEcin" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="{{ url_for('adicionar_ecin') }}">
@@ -212,10 +211,8 @@ function imprimirTurnoDiario() {
     window.open('/ecins/imprimir-turno-diario?data=' + data, '_blank');
 }
 
-// Contador de alterações realizadas
 let alteracoesPendentes = 0;
 
-// Função que adiciona / remove o botão "Atualizar Página"
 function atualizarBotaoAtualizar() {
     let btn = document.getElementById('btnAtualizarPagina');
     const container = document.querySelector('.col-auto.ms-auto');
@@ -231,7 +228,6 @@ function atualizarBotaoAtualizar() {
     btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
 
-// Submeter ação AJAX
 async function executarAcao(id, funcao, btnElement) {
     const row = document.getElementById(`ecin-row-${id}`);
     if (!row) return;
@@ -270,7 +266,6 @@ async function executarAcao(id, funcao, btnElement) {
     }
 }
 
-// Adicionar event listeners aos botões de ação
 document.querySelectorAll('.action-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -280,7 +275,6 @@ document.querySelectorAll('.action-btn').forEach(btn => {
     });
 });
 
-// Inicializar
 atualizarBotaoAtualizar();
 </script>
 

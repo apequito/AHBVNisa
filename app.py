@@ -3637,7 +3637,7 @@ def listar_ecins():
     data_filtro = request.args.get('data', '')
     turno_filtro = request.args.get('turno', '')
 
-    # NOVOS FILTROS: Mês e Ano para disponibilidades
+    # Filtros de mês/ano para disponibilidades (mostra TODOS os estados)
     mes_disponibilidade = request.args.get('mes_disponibilidade', type=int)
     ano_disponibilidade = request.args.get('ano_disponibilidade', type=int)
 
@@ -3663,12 +3663,9 @@ def listar_ecins():
     if turno_filtro:
         query = query.filter(Ecin.turno == turno_filtro)
 
-    # NOVO: Filtro por mês/ano disponibilidades (apenas registos com estado diferente de Pendente)
+    # NOVO: Filtro por mês/ano - mostra TODOS os registos (sem excluir estados)
     if mes_disponibilidade:
-        query = query.filter(
-            db.extract('month', Ecin.data) == mes_disponibilidade,
-            ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
-        )
+        query = query.filter(db.extract('month', Ecin.data) == mes_disponibilidade)
     if ano_disponibilidade:
         query = query.filter(db.extract('year', Ecin.data) == ano_disponibilidade)
 
