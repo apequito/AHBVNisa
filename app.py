@@ -8718,6 +8718,7 @@ def quadro_operacional():
         portugal_tz = pytz.timezone('Europe/Lisbon')
         agora_portugal = datetime.now(portugal_tz)
         hora_atual = agora_portugal.hour
+        minuto_atual = agora_portugal.minute
     except:
         utc_now = datetime.utcnow()
         mes = utc_now.month
@@ -8727,6 +8728,7 @@ def quadro_operacional():
                 hora_atual -= 24
         else:
             hora_atual = utc_now.hour
+        minuto_atual = utc_now.minute
 
     # Verificar permissões
     is_escalado_hoje = Escala.query.filter(
@@ -8746,15 +8748,11 @@ def quadro_operacional():
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
         turno_inem = '6 - 07h/19h'
         turno_inem_desc = "Turno Diurno (07h-19h)"
-        turno_atual = "Turno Diurno (07h00 - 19h00)"
-        turno_atual_chefe = 'Dia'  # Para identificar o turno do chefe
     else:
         turno_ecin = '19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
         turno_inem = '7 - 19h/07h'
         turno_inem_desc = "Turno Noturno (19h-07h)"
-        turno_atual = "Turno Noturno (19h00 - 07h00)"
-        turno_atual_chefe = 'Noite'
 
     # CENTRAL: 08h-20h ou 20h-08h
     if 8 <= hora_atual < 20:
@@ -8764,19 +8762,104 @@ def quadro_operacional():
         turno_central = '9 - 20h/08h'
         turno_central_desc = "Turno Noturno (20h-08h)"
 
+    # ========== EIP ATIVO? (10h-18h) ==========
+    eip_activo = (10 <= hora_atual < 18)
+
     # ========== BUSCAR ESCALADOS DO TURNO ATUAL ==========
-    # Buscar apenas bombeiros escalados no turno atual
+    # Buscar escalas do turno atual (ECIN/INEM/Central)
     escalados_turno = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.turno.in_([turno_ecin, turno_inem, turno_central])
     ).all()
 
-    # Filtrar bombeiros únicos escalados neste turno
+    # Adicionar EIPs se estiverem ativos (após as 10h)
+    if eip_activo:
+        eips_escalados = Escala.query.filter(
+            func.date(Escala.data_inicio) <= hoje,
+            func.date(Escala.data_fim) >= hoje,
+            Escala.categoria == 'EIP'
+        ).all()
+        escalados_turno.extend(eips_escalados)
+
+    # Filtrar bombeiros únicos escalados
     bombeiros_escalados_turno = list(set([e.bombeiro for e in escalados_turno]))
 
-    # ========== CALCULAR CHEFE DE SERVIÇO (apenas do turno atual) ==========
-    chefe_servico, posto_chefe = calcular_chefe_servico(bombeiros_escalados_turno)
+    # ========== CALCULAR CHEFE DE SERVIÇO ==========
+    # Hierarquia: Of. Bomb. 2ª, Chefe, Sub-Chefe, Bomb. 1ª, Bomb. 2ª, Bomb. 3ª
+    # Ordem específica para Sub-Chefe e Bomb. 1ª
+    ordem_subchefe = ['José Fernandes', 'João Mateus']
+    ordem_bombeiro1 = ['Flávio Belo', 'Paulo Branquinho', 'João Maurício', 'Tiago Bizarro', 'José Seco']
+
+    # Ordem completa da hierarquia (para bombeiros EIP que possam ter precedência)
+    ordem_completa = [
+        'José Fernandes', 'João Mateus', 'Flávio Belo', 'Paulo Branquinho',
+        'João Maurício', 'Tiago Bizarro', 'José Seco'
+    ]
+
+    chefe_servico = None
+    posto_chefe = None
+
+    # 1. Procurar Of. Bomb. 2ª
+    for bombeiro in bombeiros_escalados_turno:
+        if bombeiro.posto == 'Of. Bomb. 2ª':
+            chefe_servico = bombeiro
+            posto_chefe = 'Of. Bomb. 2ª'
+            break
+
+    # 2. Se não, procurar Chefe
+    if not chefe_servico:
+        for bombeiro in bombeiros_escalados_turno:
+            if bombeiro.posto == 'Chefe':
+                chefe_servico = bombeiro
+                posto_chefe = 'Chefe'
+                break
+
+    # 3. Se não, procurar Sub-Chefe pela ordem
+    if not chefe_servico:
+        for nome in ordem_subchefe:
+            for bombeiro in bombeiros_escalados_turno:
+                if bombeiro.posto == 'Sub-Chefe' and bombeiro.nome == nome:
+                    chefe_servico = bombeiro
+                    posto_chefe = 'Sub-Chefe'
+                    break
+            if chefe_servico:
+                break
+
+    # 4. Se não, procurar Bomb. 1ª pela ordem
+    if not chefe_servico:
+        for nome in ordem_bombeiro1:
+            for bombeiro in bombeiros_escalados_turno:
+                if bombeiro.posto == 'Bomb. 1ª' and bombeiro.nome == nome:
+                    chefe_servico = bombeiro
+                    posto_chefe = 'Bomb. 1ª'
+                    break
+            if chefe_servico:
+                break
+
+    # 5. Se não, qualquer Bomb. 1ª
+    if not chefe_servico:
+        for bombeiro in bombeiros_escalados_turno:
+            if bombeiro.posto == 'Bomb. 1ª':
+                chefe_servico = bombeiro
+                posto_chefe = 'Bomb. 1ª'
+                break
+
+    # 6. Se não, Bomb. 2ª
+    if not chefe_servico:
+        for bombeiro in bombeiros_escalados_turno:
+            if bombeiro.posto == 'Bomb. 2ª':
+                chefe_servico = bombeiro
+                posto_chefe = 'Bomb. 2ª'
+                break
+
+    # 7. Se não, Bomb. 3ª
+    if not chefe_servico:
+        for bombeiro in bombeiros_escalados_turno:
+            if bombeiro.posto == 'Bomb. 3ª':
+                chefe_servico = bombeiro
+                posto_chefe = 'Bomb. 3ª'
+                break
 
     # ========== COMANDO ==========
     comando = Bombeiro.query.filter(
@@ -8813,7 +8896,7 @@ def quadro_operacional():
             ecin_guarnicao.append(ec)
 
     # ========== EIP (turno único 10h-18h) ==========
-    if 10 <= hora_atual < 18:
+    if eip_activo:
         ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
         eips_query = Escala.query.filter(
             func.date(Escala.data_inicio) <= hoje,
@@ -8831,10 +8914,8 @@ def quadro_operacional():
             if e not in eips:
                 eips.append(e)
         eips = eips[:5]
-        eip_activo = True
     else:
         eips = []
-        eip_activo = False
 
     # ========== INEM ==========
     inem_um = Escala.query.filter(
@@ -8865,12 +8946,12 @@ def quadro_operacional():
         Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== LISTA DE BOMBEIROS ESCALADOS NO TURNO (para comboboxes) ==========
-    todos_escalados_turno = []
-    for e in escalados_turno:
-        if e.bombeiro not in todos_escalados_turno:
-            todos_escalados_turno.append(e.bombeiro)
-    todos_escalados_turno.sort(key=lambda x: x.nome)
+    # ========== LISTA DE BOMBEIROS ESCALADOS (para comboboxes) ==========
+    todos_escalados = list(set([e.bombeiro for e in Escala.query.filter(
+        func.date(Escala.data_inicio) <= hoje,
+        func.date(Escala.data_fim) >= hoje
+    ).all()]))
+    todos_escalados.sort(key=lambda x: x.nome)
 
     # ========== CONFIGURAÇÃO SALVA ==========
     config = QuadroOperacional.query.filter_by(data=hoje).first()
@@ -8890,6 +8971,14 @@ def quadro_operacional():
         Viatura.tipo.ilike('%VCOT%'),
         Viatura.estado == 'operacional'
     ).order_by(Viatura.matricula).all()
+
+    # Turno atual para exibição
+    if 7 <= hora_atual < 19:
+        turno_atual = f"Turno Diurno ({hora_atual:02d}:{minuto_atual:02d})"
+        turno_detalhe = "07h00 - 19h00"
+    else:
+        turno_atual = f"Turno Noturno ({hora_atual:02d}:{minuto_atual:02d})"
+        turno_detalhe = "19h00 - 07h00"
 
     # Formatar data em português
     import locale
@@ -8913,7 +9002,7 @@ def quadro_operacional():
     return render_template('quadro_operacional.html',
                            hoje=hoje,
                            data_formatada=data_formatada,
-                           turno_atual=turno_atual,
+                           turno_atual=f"{turno_atual}",
                            turno_central=turno_central_desc,
                            turno_ecin=turno_ecin_desc,
                            turno_inem=turno_inem_desc,
@@ -8930,7 +9019,7 @@ def quadro_operacional():
                            motoristas_turno=motoristas_turno,
                            socorristas_turno=socorristas_turno,
                            todos_eip=todos_eip,
-                           todos_escalados=todos_escalados_turno,
+                           todos_escalados=todos_escalados,
                            viaturas_vfci=viaturas_vfci,
                            viaturas_absc=viaturas_absc,
                            viaturas_vcot=viaturas_vcot,
