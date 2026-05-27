@@ -337,8 +337,8 @@ class Ecin(db.Model):
     valor = db.Column(db.Float, nullable=True)
 
     bombeiro = db.relationship('Bombeiro', back_populates='ecins')
-    mobilidades = db.relationship('Mobilidade', back_populates='ecin_original', cascade='all, delete-orphan')
-
+    # CORRIGIDO: usar back_populates em vez de backref
+    mobilidades_relacionadas = db.relationship('Mobilidade', back_populates='ecin_original', cascade='all, delete-orphan')
 
 class FarmaciaCentral(db.Model):
     __tablename__ = 'farmacia_central'
@@ -509,8 +509,8 @@ class Mobilidade(db.Model):
     valor_pago = db.Column(db.Numeric(10,2), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relações
-    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], backref='mobilidades')
+    # Relações - CORRIGIDO: usar back_populates em vez de backref
+    ecin_original = db.relationship('Ecin', foreign_keys=[ecin_original_id], back_populates='mobilidades_relacionadas')
     bombeiro_substituto = db.relationship('Bombeiro', foreign_keys=[bombeiro_substituto_id])
 
 class Monitor(db.Model):
