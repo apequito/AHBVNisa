@@ -7652,6 +7652,7 @@ def deslocacoes():
                            viaturas=viaturas,
                            now=date.today())
 
+
 @app.route('/administrativo')
 @login_required
 def administrativo():
@@ -7684,37 +7685,57 @@ def administrativo():
     total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
-    # ---------- Filtros ECIN/ELAC (apenas registos com estado diferente de Pendente/Não Escalado) ----------
+    # ---------- Filtros ECIN/ELAC ----------
     mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
     ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
     cat_ecin = request.args.get('cat_ecin', 'todas')
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
+    tipo_ecin = request.args.get('tipo_ecin', 'todas')  # original, substituto, todas
 
     query_ecin = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes_ecin,
         db.extract('year', Ecin.data) == ano_ecin
     )
-    # --- EXCLUIR estados Pendente e Não Escalado ---
-    query_ecin = query_ecin.filter(~Ecin.estado.in_(['Pendente', 'Não Escalado']))
 
+    # Filtrar por categoria (ECIN/ELAC)
     if cat_ecin == 'ECIN':
         query_ecin = query_ecin.filter(Ecin.categoria == 'ECIN')
     elif cat_ecin == 'ELAC':
         query_ecin = query_ecin.filter(Ecin.categoria == 'ELAC')
+
+    # Filtrar por bombeiro
     if bombeiro_id_ecin:
         query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
 
+    # Filtrar por tipo (original vs substituto)
+    if tipo_ecin == 'original':
+        query_ecin = query_ecin.filter(~Ecin.estado.in_(['Mobilizado']))
+    elif tipo_ecin == 'substituto':
+        query_ecin = query_ecin.filter(Ecin.estado == 'Mobilizado')
+
     ecins = query_ecin.order_by(Ecin.data.desc()).all()
     total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
-    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN').count()
-    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC').count()
 
-    # Lista de bombeiros que aparecem nos ECINs filtrados (para o dropdown)
-    bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
-        Ecin.bombeiro_id == Bombeiro.id,
+    # Contagem de turnos (apenas ECIN e ELAC não pendentes/não escalados)
+    query_turnos = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes_ecin,
         db.extract('year', Ecin.data) == ano_ecin,
         ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
+    )
+    turnos_ecin = query_turnos.filter(Ecin.categoria == 'ECIN').count()
+    turnos_elac = query_turnos.filter(Ecin.categoria == 'ELAC').count()
+
+    # Contagem de mobilidades
+    mobilidades_count = Mobilidade.query.filter(
+        db.extract('month', Mobilidade.data_criacao) == mes_ecin,
+        db.extract('year', Mobilidade.data_criacao) == ano_ecin
+    ).count()
+
+    # Lista de bombeiros que aparecem nos ECINs filtrados
+    bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
+        Ecin.bombeiro_id == Bombeiro.id,
+        db.extract('month', Ecin.data) == mes_ecin,
+        db.extract('year', Ecin.data) == ano_ecin
     ).distinct().order_by(Bombeiro.nome).all()
 
     # Atribuir 42.00 € automaticamente a todos os ECINs do filtro que ainda não têm valor
@@ -7734,6 +7755,7 @@ def administrativo():
                            total_valor_ecin=total_valor_ecin,
                            turnos_ecin=turnos_ecin,
                            turnos_elac=turnos_elac,
+                           mobilidades_count=mobilidades_count,
                            bombeiros_ativos=bombeiros_ativos,
                            bombeiros_ativos_ecin=bombeiros_ativos_ecin,
                            data_inicio=data_inicio,
@@ -7743,6 +7765,7 @@ def administrativo():
                            ano_ecin=ano_ecin,
                            cat_ecin=cat_ecin,
                            bombeiro_id_ecin=bombeiro_id_ecin,
+                           tipo_ecin=tipo_ecin,
                            now=date.today())
 
 

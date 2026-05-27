@@ -127,141 +127,189 @@
         </div>
     </div>
 
-    <!-- ==================== ABA ECINs / ELACs ==================== -->
-    <div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
-         id="ecins" role="tabpanel">
-        <!-- Cartões resumo -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card text-white bg-warning shadow-sm">
-                    <div class="card-body text-center py-3">
-                        <h4 class="mb-0">{{ turnos_ecin }}</h4>
-                        <small>Turnos ECIN (mês)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card text-white bg-secondary shadow-sm">
-                    <div class="card-body text-center py-3">
-                        <h4 class="mb-0">{{ turnos_elac }}</h4>
-                        <small>Turnos ELAC (mês)</small>
-                    </div>
+<!-- ==================== ABA ECINs / ELACs ==================== -->
+<div class="tab-pane fade {{ 'show active' if request.args.get('tab', 'deslocacoes') == 'ecins' }}"
+     id="ecins" role="tabpanel">
+    <!-- Cartões resumo -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-warning shadow-sm">
+                <div class="card-body text-center py-3">
+                    <h4 class="mb-0">{{ turnos_ecin }}</h4>
+                    <small>Turnos ECIN (mês)</small>
                 </div>
             </div>
         </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-secondary shadow-sm">
+                <div class="card-body text-center py-3">
+                    <h4 class="mb-0">{{ turnos_elac }}</h4>
+                    <small>Turnos ELAC (mês)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info shadow-sm">
+                <div class="card-body text-center py-3">
+                    <h5 class="mb-0">Total Mobilidades</h5>
+                    <small>{{ mobilidades_count }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Filtros ECINs -->
-        <form method="GET" class="row g-2 align-items-end mb-3">
-            <input type="hidden" name="tab" value="ecins">
-            <div class="col-auto">
-                <label class="form-label">Mês</label>
-                <select name="mes_ecin" class="form-select form-select-sm">
-                    {% for i in range(1,13) %}
-                    <option value="{{ i }}" {% if mes_ecin == i %}selected{% endif %}>
-                        {{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <label class="form-label">Ano</label>
-                <input type="number" name="ano_ecin" class="form-control form-control-sm" value="{{ ano_ecin }}" style="width:80px;">
-            </div>
-            <div class="col-auto">
-                <label class="form-label">Categoria</label>
-                <select name="cat_ecin" class="form-select form-select-sm">
-                    <option value="todas" {% if cat_ecin == 'todas' %}selected{% endif %}>Todas</option>
-                    <option value="ECIN" {% if cat_ecin == 'ECIN' %}selected{% endif %}>ECIN</option>
-                    <option value="ELAC" {% if cat_ecin == 'ELAC' %}selected{% endif %}>ELAC</option>
-                </select>
-            </div>
-            <div class="col-auto">
-                <label class="form-label">Bombeiro</label>
-                <select name="bombeiro_id_ecin" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    {% for b in bombeiros_ativos_ecin %}
-                    <option value="{{ b.id }}" {% if bombeiro_id_ecin == b.id %}selected{% endif %}>{{ b.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
-                <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
-            </div>
-            <div class="col-auto ms-auto">
-                <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin, bombeiro_id_ecin=bombeiro_id_ecin) }}"
-                   class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-download me-1"></i> Exportar Excel
+    <!-- Filtros ECINs -->
+    <form method="GET" class="row g-2 align-items-end mb-3">
+        <input type="hidden" name="tab" value="ecins">
+        <div class="col-auto">
+            <label class="form-label">Mês</label>
+            <select name="mes_ecin" class="form-select form-select-sm">
+                {% for i in range(1,13) %}
+                <option value="{{ i }}" {% if mes_ecin == i %}selected{% endif %}>
+                    {{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Ano</label>
+            <input type="number" name="ano_ecin" class="form-control form-control-sm" value="{{ ano_ecin }}" style="width:80px;">
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Categoria</label>
+            <select name="cat_ecin" class="form-select form-select-sm">
+                <option value="todas" {% if cat_ecin == 'todas' %}selected{% endif %}>Todas</option>
+                <option value="ECIN" {% if cat_ecin == 'ECIN' %}selected{% endif %}>ECIN</option>
+                <option value="ELAC" {% if cat_ecin == 'ELAC' %}selected{% endif %}>ELAC</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Bombeiro</label>
+            <select name="bombeiro_id_ecin" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for b in bombeiros_ativos_ecin %}
+                <option value="{{ b.id }}" {% if bombeiro_id_ecin == b.id %}selected{% endif %}>{{ b.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Tipo</label>
+            <select name="tipo_ecin" class="form-select form-select-sm">
+                <option value="todas" {% if tipo_ecin == 'todas' %}selected{% endif %}>Todos</option>
+                <option value="original" {% if tipo_ecin == 'original' %}selected{% endif %}>Originais</option>
+                <option value="substituto" {% if tipo_ecin == 'substituto' %}selected{% endif %}>Substitutos (Mobilidade)</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+            <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{{ url_for('exportar_ecins_administrativo', mes=mes_ecin, ano=ano_ecin, cat_ecin=cat_ecin, bombeiro_id_ecin=bombeiro_id_ecin) }}"
+               class="btn btn-sm btn-outline-success">
+                <i class="bi bi-download me-1"></i> Exportar Excel
+            </a>
+            <a href="{{ url_for('imprimir_contabilidade_ecin', mes=mes_ecin, ano=ano_ecin) }}"
+               target="_blank" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-printer me-1"></i> Contab. ECIN
+            </a>
+            <a href="{{ url_for('imprimir_contabilidade_elac', mes=mes_ecin, ano=ano_ecin) }}"
+               target="_blank" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-printer me-1"></i> Contab. ELAC
+            </a>
+            {% if cat_ecin == 'ECIN' %}
+                <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}"
+                   target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i> Imprimir ECIN
                 </a>
-                <a href="{{ url_for('imprimir_contabilidade_ecin', mes=mes_ecin, ano=ano_ecin) }}"
-                   target="_blank" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-printer me-1"></i> Contab. ECIN
+            {% elif cat_ecin == 'ELAC' %}
+                <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}"
+                   target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i> Imprimir ELAC
                 </a>
-                <a href="{{ url_for('imprimir_contabilidade_elac', mes=mes_ecin, ano=ano_ecin) }}"
-                   target="_blank" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-printer me-1"></i> Contab. ELAC
-                </a>
-                {% if cat_ecin == 'ECIN' %}
-                    <a href="{{ url_for('imprimir_escala_ecin', mes=mes_ecin, ano=ano_ecin) }}"
-                       target="_blank" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-printer me-1"></i> Imprimir ECIN
-                    </a>
-                {% elif cat_ecin == 'ELAC' %}
-                    <a href="{{ url_for('imprimir_escala_elac', mes=mes_ecin, ano=ano_ecin) }}"
-                       target="_blank" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-printer me-1"></i> Imprimir ELAC
-                    </a>
-                {% endif %}
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="enviarContagem()">
-                    <i class="bi bi-send me-1"></i> Enviar Contagem
-                </button>
-            </div>
-        </form>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="enviarContagem()">
+                <i class="bi bi-send me-1"></i> Enviar Contagem
+            </button>
+        </div>
+    </form>
 
-        <!-- Tabela ECINs / ELACs com coluna Mobilidade -->
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
+    <!-- Tabela ECINs / ELACs com coluna Mobilidade -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th>
                             <th>Função</th><th>Estado</th><th>Valor</th>
-                            <th>Mobilidade</th>
+                            <th>Tipo</th><th>Mobilidade</th>
                         </tr>
                     </thead>
                     <tbody id="ecins-tbody">
                         {% for ec in ecins %}
-                        <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
+                        <tr class="ecin-row {% if ec.estado == 'Mobilizado' %}table-info{% endif %}" data-ecin-id="{{ ec.id }}">
                             <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
                             <td>{{ ec.turno }}</td>
                             <td>{{ ec.categoria or '-' }}</td>
-                            <td>{{ ec.bombeiro.nome }}</td>
+                            <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})</td>
                             <td>{{ ec.funcao or '-' }}</td>
-                            <td>{{ ec.estado }}</td>
+                            <td>
+                                {% if ec.estado == 'Pendente' %}
+                                    <span class="badge bg-warning text-dark">Pendente</span>
+                                {% elif ec.estado == 'Não Escalado' %}
+                                    <span class="badge bg-danger">Não Escalado</span>
+                                {% elif ec.estado == 'Mobilizado' %}
+                                    <span class="badge bg-info">Mobilizado</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ ec.estado }}</span>
+                                {% endif %}
+                            </td>
                             <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €</td>
+                            <td>
+                                {% if ec.mobilidades and ec.mobilidades|length > 0 %}
+                                    <span class="badge bg-info">Substituto</span>
+                                {% elif ec.estado == 'Mobilizado' %}
+                                    <span class="badge bg-warning">Substituto</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Original</span>
+                                {% endif %}
+                            </td>
                             <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
                                 {% set mobilidade = ec.mobilidades[0] if ec.mobilidades else None %}
                                 {% if mobilidade %}
-                                    <span class="substituto-nome">{{ mobilidade.bombeiro_substituto.nome }}</span>
-                                    <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2" data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
-                                        <i class="bi bi-x-circle"></i>
-                                    </button>
+                                    <div class="d-flex align-items-center">
+                                        <span>
+                                            <i class="bi bi-arrow-left-right me-1"></i>
+                                            Substitui: {{ mobilidade.ecin_original.bombeiro.nome }}
+                                            ({{ "%.2f"|format(mobilidade.valor_pago) }} €)
+                                        </span>
+                                        <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
+                                                data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                {% elif ec.estado != 'Mobilizado' and ec.estado != 'Pendente' and ec.estado != 'Não Escalado' %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-muted">-</span>
+                                        <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
+                                                data-ecin-id="{{ ec.id }}" title="Criar mobilidade">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </div>
                                 {% else %}
-                                    <button class="btn btn-sm btn-outline-success btn-mobilidade" data-ecin-id="{{ ec.id }}">
-                                        <i class="bi bi-check-circle"></i> Mobilidade
-                                    </button>
+                                    <span class="text-muted">-</span>
                                 {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <td><td colspan="8" class="text-center text-muted">Nenhum registo encontrado.{% endfor %}
+                             </td>
+                         </tr>
+                        {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="fw-bold bg-light">
                             <td colspan="6" class="text-end">Total:</td>
                             <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €</td>
-                            <td></td>
-                        </tr>
+                            <td colspan="2"></td>
+                         </tr>
                     </tfoot>
                 </table>
             </div>
@@ -323,41 +371,47 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
     const linhaOriginal = document.querySelector(`tr.ecin-row[data-ecin-id="${ecinId}"]`);
     if (!linhaOriginal) return;
 
-    // Atualizar célula de mobilidade do original (mostra substituto + botão apagar)
-    const mobilidadeCell = linhaOriginal.querySelector('.mobilidade-cell');
-    mobilidadeCell.innerHTML = `
-        <span class="substituto-nome">${escapeHtml(substitutoNome)}</span>
-        <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2" data-ecin-id="${ecinId}" title="Apagar mobilidade">
-            <i class="bi bi-x-circle"></i>
-        </button>
-    `;
-
     // Atualizar valor do original
     const valorCell = linhaOriginal.querySelector('.valor-cell');
     if (valorCell) {
         valorCell.innerHTML = novoValorOriginal.toFixed(2) + ' €';
     }
 
-    // Adicionar nova linha do substituto (sem botão, apenas o nome do original)
+    // Atualizar célula de mobilidade do original (mostra que tem mobilidade)
+    const mobilidadeCell = linhaOriginal.querySelector('.mobilidade-cell');
+    mobilidadeCell.innerHTML = `
+        <div class="d-flex align-items-center">
+            <span class="text-muted">Mobilidade criada</span>
+            <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
+                    data-ecin-id="${ecinId}" title="Apagar mobilidade">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    `;
+
+    // Adicionar nova linha do substituto (com estado Mobilizado)
     const tbody = document.getElementById('ecins-tbody');
     const novaLinha = document.createElement('tr');
-    novaLinha.className = 'ecin-row';
+    novaLinha.className = 'ecin-row table-info';
     novaLinha.setAttribute('data-ecin-id', novoRegisto.id);
     novaLinha.innerHTML = `
         <td>${novoRegisto.data}</td>
         <td>${novoRegisto.turno}</td>
         <td>${novoRegisto.categoria}</td>
-        <td>${escapeHtml(novoRegisto.bombeiro)}</td>
-        <td>${novoRegisto.funcao}</td>
-        <td>${novoRegisto.estado}</td>
+        <td>${escapeHtml(novoRegisto.bombeiro)} (${novoRegisto.mecanografico || ''})</td>
+        <td>${novoRegisto.funcao || '-'}</td>
+        <td><span class="badge bg-info">Mobilizado</span></td>
         <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €</td>
+        <td><span class="badge bg-warning">Substituto</span></td>
         <td class="mobilidade-cell">
-            <span class="text-muted">${escapeHtml(originalNome)}</span>
+            <div class="d-flex align-items-center">
+                <span><i class="bi bi-arrow-left-right me-1"></i>Substitui: ${escapeHtml(originalNome)}</span>
+            </div>
         </td>
     `;
     tbody.appendChild(novaLinha);
 
-    // Reatribuir eventos aos novos botões (apenas para os originais que ainda têm botão apagar)
+    // Reatribuir eventos aos botões
     atribuirEventosMobilidade();
 
     // Atualizar total
@@ -365,6 +419,7 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
     let totalAtual = parseFloat(totalSpan.innerText.replace('€', '').trim());
     let novoTotal = totalAtual + novoRegisto.valor;
     totalSpan.innerText = novoTotal.toFixed(2) + ' €';
+}
 }
 
 // Apagar mobilidade
