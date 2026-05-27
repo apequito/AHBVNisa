@@ -8741,39 +8741,72 @@ def quadro_operacional():
         flash('Acesso restrito. Apenas Admin, Comando ou bombeiros escalados para hoje podem aceder.', 'danger')
         return redirect(url_for('dashboard'))
 
-    # ========== DETERMINAR TURNOS ==========
-    # ECIN: 07h-19h ou 19h-07h
-    if 7 <= hora_atual < 19:
+    # ========== DETERMINAR PERÍODO E TURNOS ==========
+    # Definir períodos e quais turnos considerar
+    if 7 <= hora_atual < 10:
+        periodo = "Manhã (07h-10h)"
+        # ECIN: 07h-19h
+        turno_ecin = '07h/19h'
+        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
+        # INEM: 07h-19h
+        turno_inem = '6 - 07h/19h'
+        turno_inem_desc = "Turno Diurno (07h-19h)"
+        # CENTRAL: 08h-20h (já ativo)
+        turno_central = '8 - 08h/20h' if 8 <= hora_atual < 20 else '9 - 20h/08h'
+        turno_central_desc = "Turno Diurno (08h-20h)" if 8 <= hora_atual < 20 else "Turno Noturno (20h-08h)"
+        eip_activo = False
+
+    elif 10 <= hora_atual < 18:
+        periodo = "Dia completo (10h-18h)"
         turno_ecin = '07h/19h'
         turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
         turno_inem = '6 - 07h/19h'
         turno_inem_desc = "Turno Diurno (07h-19h)"
-    else:
+        turno_central = '8 - 08h/20h' if 8 <= hora_atual < 20 else '9 - 20h/08h'
+        turno_central_desc = "Turno Diurno (08h-20h)" if 8 <= hora_atual < 20 else "Turno Noturno (20h-08h)"
+        eip_activo = True  # EIP ativa das 10h às 18h
+
+    elif 18 <= hora_atual < 19:
+        periodo = "Fim de tarde (18h-19h)"
+        turno_ecin = '07h/19h'
+        turno_ecin_desc = "ECIN - Turno Diurno (07h-19h)"
+        turno_inem = '6 - 07h/19h'
+        turno_inem_desc = "Turno Diurno (07h-19h)"
+        turno_central = '8 - 08h/20h' if 8 <= hora_atual < 20 else '9 - 20h/08h'
+        turno_central_desc = "Turno Diurno (08h-20h)" if 8 <= hora_atual < 20 else "Turno Noturno (20h-08h)"
+        eip_activo = False
+
+    elif 19 <= hora_atual < 24:
+        periodo = "Início noite (19h-00h)"
         turno_ecin = '19h/07h'
         turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
         turno_inem = '7 - 19h/07h'
         turno_inem_desc = "Turno Noturno (19h-07h)"
+        turno_central = '9 - 20h/08h'  # A partir das 20h muda
+        turno_central_desc = "Turno Noturno (20h-08h)"
+        eip_activo = False
 
-    # CENTRAL: 08h-20h ou 20h-08h
-    if 8 <= hora_atual < 20:
-        turno_central = '8 - 08h/20h'
-        turno_central_desc = "Turno Diurno (08h-20h)"
-    else:
+    else:  # 0 <= hora_atual < 7
+        periodo = "Noite/Madrugada (00h-07h)"
+        turno_ecin = '19h/07h'
+        turno_ecin_desc = "ECIN - Turno Noturno (19h-07h)"
+        turno_inem = '7 - 19h/07h'
+        turno_inem_desc = "Turno Noturno (19h-07h)"
         turno_central = '9 - 20h/08h'
         turno_central_desc = "Turno Noturno (20h-08h)"
+        eip_activo = False
 
-    # ========== EIP ATIVO? (10h-18h) ==========
-    eip_activo = (10 <= hora_atual < 18)
+    print(f"DEBUG - Período: {periodo} ({hora_atual}:{minuto_atual})", file=sys.stderr)
 
-    # ========== BUSCAR ESCALADOS DO TURNO ATUAL ==========
-    # Buscar escalas do turno atual (ECIN/INEM/Central)
+    # ========== BUSCAR ESCALADOS DO PERÍODO ATUAL ==========
+    # Buscar escalas do turno atual (ECIN, INEM, Central)
     escalados_turno = Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje,
         Escala.turno.in_([turno_ecin, turno_inem, turno_central])
     ).all()
 
-    # Adicionar EIPs se estiverem ativos (após as 10h)
+    # Adicionar EIPs se estiverem ativos (10h-18h)
     if eip_activo:
         eips_escalados = Escala.query.filter(
             func.date(Escala.data_inicio) <= hoje,
@@ -8785,17 +8818,15 @@ def quadro_operacional():
     # Filtrar bombeiros únicos escalados
     bombeiros_escalados_turno = list(set([e.bombeiro for e in escalados_turno]))
 
+    print(f"DEBUG - Bombeiros escalados no período: {len(bombeiros_escalados_turno)}", file=sys.stderr)
+
     # ========== CALCULAR CHEFE DE SERVIÇO ==========
-    # Hierarquia: Of. Bomb. 2ª, Chefe, Sub-Chefe, Bomb. 1ª, Bomb. 2ª, Bomb. 3ª
-    # Ordem específica para Sub-Chefe e Bomb. 1ª
+    # Hierarquia: Of. Bomb. 2ª, Chefe, Sub-Chefe (ordem: José Fernandes, João Mateus),
+    # Bomb. 1ª (ordem: Flávio Belo, Paulo Branquinho, João Maurício, Tiago Bizarro, José Seco),
+    # Bomb. 2ª, Bomb. 3ª
+
     ordem_subchefe = ['José Fernandes', 'João Mateus']
     ordem_bombeiro1 = ['Flávio Belo', 'Paulo Branquinho', 'João Maurício', 'Tiago Bizarro', 'José Seco']
-
-    # Ordem completa da hierarquia (para bombeiros EIP que possam ter precedência)
-    ordem_completa = [
-        'José Fernandes', 'João Mateus', 'Flávio Belo', 'Paulo Branquinho',
-        'João Maurício', 'Tiago Bizarro', 'José Seco'
-    ]
 
     chefe_servico = None
     posto_chefe = None
@@ -8861,6 +8892,9 @@ def quadro_operacional():
                 posto_chefe = 'Bomb. 3ª'
                 break
 
+    print(f"DEBUG - Chefe de Serviço: {chefe_servico.nome if chefe_servico else 'Nenhum'} ({posto_chefe})",
+          file=sys.stderr)
+
     # ========== COMANDO ==========
     comando = Bombeiro.query.filter(
         Bombeiro.resp_departamento == 'Comando',
@@ -8895,7 +8929,7 @@ def quadro_operacional():
         elif ec.funcao == 'Guarnição' and len(ecin_guarnicao) < 3:
             ecin_guarnicao.append(ec)
 
-    # ========== EIP (turno único 10h-18h) ==========
+    # ========== EIP (apenas se ativo) ==========
     if eip_activo:
         ordem_eip = ['José Fernandes', 'João Mateus', 'Tiago Bizarro', 'João Carita', 'João Silva']
         eips_query = Escala.query.filter(
@@ -8946,7 +8980,7 @@ def quadro_operacional():
         Escala.categoria == 'EIP'
     ).order_by(Bombeiro.nome).all()
 
-    # ========== LISTA DE BOMBEIROS ESCALADOS (para comboboxes) ==========
+    # ========== LISTA DE BOMBEIROS ESCALADOS ==========
     todos_escalados = list(set([e.bombeiro for e in Escala.query.filter(
         func.date(Escala.data_inicio) <= hoje,
         func.date(Escala.data_fim) >= hoje
@@ -8973,12 +9007,7 @@ def quadro_operacional():
     ).order_by(Viatura.matricula).all()
 
     # Turno atual para exibição
-    if 7 <= hora_atual < 19:
-        turno_atual = f"Turno Diurno ({hora_atual:02d}:{minuto_atual:02d})"
-        turno_detalhe = "07h00 - 19h00"
-    else:
-        turno_atual = f"Turno Noturno ({hora_atual:02d}:{minuto_atual:02d})"
-        turno_detalhe = "19h00 - 07h00"
+    turno_atual = f"{periodo} ({hora_atual:02d}:{minuto_atual:02d})"
 
     # Formatar data em português
     import locale
@@ -9002,7 +9031,7 @@ def quadro_operacional():
     return render_template('quadro_operacional.html',
                            hoje=hoje,
                            data_formatada=data_formatada,
-                           turno_atual=f"{turno_atual}",
+                           turno_atual=turno_atual,
                            turno_central=turno_central_desc,
                            turno_ecin=turno_ecin_desc,
                            turno_inem=turno_inem_desc,
