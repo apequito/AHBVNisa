@@ -2538,11 +2538,13 @@ def api_colegas_para_troca():
     tipo = request.args.get('tipo', 'assalariado')
     is_voluntario = (current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin')
 
-    # Voluntários só podem ver colegas para ECIN
-    if is_voluntario and tipo == 'assalariado':
-        tipo = 'ecin'
-
-    if tipo == 'assalariado':
+    # Voluntários: para ECIN ou ELAC, mostrar todos os colegas ativos
+    if is_voluntario and tipo in ['ecin', 'elac']:
+        colegas = Bombeiro.query.filter(
+            Bombeiro.id != current_user.id,
+            Bombeiro.ativo == True
+        ).order_by(Bombeiro.nome.asc()).all()
+    elif tipo == 'assalariado':
         # Apenas profissionais com escalas nas categorias certas
         colegas = Bombeiro.query.join(Escala, Escala.bombeiro_id == Bombeiro.id) \
             .filter(
@@ -2552,7 +2554,7 @@ def api_colegas_para_troca():
             Escala.categoria.in_(['Motorista', 'Socorrista', 'Centralista'])
         ).distinct().order_by(Bombeiro.nome.asc()).all()
     else:
-        # ECIN/ELAC: todos os bombeiros ativos (voluntários e profissionais)
+        # ECIN/ELAC: todos os bombeiros ativos
         colegas = Bombeiro.query.filter(
             Bombeiro.id != current_user.id,
             Bombeiro.ativo == True

@@ -127,113 +127,122 @@
         </div>
     </div>
 
-    <!-- ========== ABA NOVA TROCA ========== -->
-    <div class="tab-pane fade" id="nova" role="tabpanel">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Pedir Troca de Serviço</h5>
-                <form method="POST" id="formTroca">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo de Troca</label>
-                            <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required>
-                                {% if not is_voluntario %}
-                                <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
-                                {% endif %}
-                                <option value="ecin">ECIN / ELAC</option>
-                            </select>
+<!-- ========== ABA NOVA TROCA ========== -->
+<div class="tab-pane fade" id="nova" role="tabpanel">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Pedir Troca de Serviço</h5>
+            <form method="POST" id="formTroca">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de Troca</label>
+                        <select name="tipo_pedido" id="tipo_pedido_select" class="form-select mb-3" required>
+                            {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' %}
+                            <option value="assalariado">Assalariado (Motorista/Socorrista/Centralista)</option>
+                            {% endif %}
+                            <option value="ecin">ECIN</option>
+                            <option value="elac">ELAC</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Colega com quem pretende trocar</label>
+                        <select name="destino_id" id="destino_id_select" class="form-select" required>
+                            <option value="">-- Selecione primeiro o tipo de troca --</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Opções para ECIN/ELAC -->
+                <div id="opcoesEcinElac" class="row mt-3" style="display: none;">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <strong>Troca ECIN/ELAC:</strong> Pode optar por trocar um turno com o colega (marcar checkbox "Trocar turno") ou apenas ceder o seu turno sem receber nada em troca.
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Colega com quem pretende trocar</label>
-                            <select name="destino_id" id="destino_id_select" class="form-select" required>
-                                <option value="">-- Selecione primeiro o tipo de troca --</option>
-                            </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="trocarTurnoCheckbox">
+                            <label class="form-check-label" for="trocarTurnoCheckbox">
+                                Trocar turno com o colega (o colega cede um turno em troca)
+                            </label>
                         </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <label class="form-label">O meu serviço</label>
-                            <div class="border p-2" id="meuCalendario" style="min-height: 320px;">
-                                <div class="text-center p-3">Selecione o tipo de troca para carregar os seus turnos...</div>
-                            </div>
-                            <div id="meuTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
-                                <strong>Turno selecionado:</strong>
-                                <div id="meuTurnoDetalhes"></div>
-                            </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">O meu serviço</label>
+                        <div class="border p-2" id="meuCalendario" style="min-height: 320px;">
+                            <div class="text-center p-3">Selecione o tipo de troca para carregar os seus turnos...</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Serviço do colega</label>
-                            <div class="border p-2" id="colegaCalendario" style="min-height: 320px;">
-                                <div class="text-center p-3">Selecione primeiro um colega...</div>
-                            </div>
-                            <div id="colegaTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
-                                <strong>Turno selecionado:</strong>
-                                <div id="colegaTurnoDetalhes"></div>
-                            </div>
+                        <div id="meuTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
+                            <strong>Turno selecionado:</strong>
+                            <div id="meuTurnoDetalhes"></div>
                         </div>
                     </div>
-                    
-                    <!-- Opções para ECIN/ELAC -->
-                    <div id="opcoesEcin" class="row mt-3" style="display: none;">
-                        <div class="col-md-12">
-                            <div class="alert alert-info">
-                                <strong>Troca ECIN/ELAC:</strong> Pode optar por trocar um turno com o colega (marcar checkbox "Trocar turno") ou apenas ceder o seu turno sem receber nada em troca.
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="trocarTurnoCheckbox">
-                                <label class="form-check-label" for="trocarTurnoCheckbox">
-                                    Trocar turno com o colega (o colega cede um turno em troca)
-                                </label>
-                            </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Serviço do colega</label>
+                        <div class="border p-2" id="colegaCalendario" style="min-height: 320px;">
+                            <div class="text-center p-3">Selecione primeiro um colega...</div>
+                        </div>
+                        <div id="colegaTurnoInfo" class="mt-2 p-2 bg-light rounded" style="display: none;">
+                            <strong>Turno selecionado:</strong>
+                            <div id="colegaTurnoDetalhes"></div>
                         </div>
                     </div>
-                    
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <input type="hidden" name="data_origem" id="data_origem_hidden">
-                            <input type="hidden" name="turno_origem" id="turno_origem_hidden">
-                            <input type="hidden" name="categoria_origem" id="categoria_origem_hidden">
-                            <input type="hidden" name="funcao_origem" id="funcao_origem_hidden">
-                            <input type="hidden" name="data_destino" id="data_destino_hidden">
-                            <input type="hidden" name="turno_destino" id="turno_destino_hidden">
-                            <input type="hidden" name="categoria_destino" id="categoria_destino_hidden">
-                            <input type="hidden" name="funcao_destino" id="funcao_destino_hidden">
-                            <input type="hidden" name="trocar_turno" id="trocar_turno_hidden" value="1">
-                            <label class="form-label">Motivo</label>
-                            <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca (opcional)"></textarea>
-                        </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <input type="hidden" name="data_origem" id="data_origem_hidden">
+                        <input type="hidden" name="turno_origem" id="turno_origem_hidden">
+                        <input type="hidden" name="categoria_origem" id="categoria_origem_hidden">
+                        <input type="hidden" name="funcao_origem" id="funcao_origem_hidden">
+                        <input type="hidden" name="data_destino" id="data_destino_hidden">
+                        <input type="hidden" name="turno_destino" id="turno_destino_hidden">
+                        <input type="hidden" name="categoria_destino" id="categoria_destino_hidden">
+                        <input type="hidden" name="funcao_destino" id="funcao_destino_hidden">
+                        <input type="hidden" name="trocar_turno" id="trocar_turno_hidden" value="1">
+                        <label class="form-label">Motivo</label>
+                        <textarea name="motivo" class="form-control" rows="2" placeholder="Informe o motivo da troca (opcional)"></textarea>
                     </div>
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary" id="btnEnviarTroca" disabled>
-                            <i class="bi bi-send me-1"></i> Enviar Pedido
-                        </button>
-                        <small class="text-muted ms-2">Selecione o seu turno para ativar o botão.</small>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary" id="btnEnviarTroca" disabled>
+                        <i class="bi bi-send me-1"></i> Enviar Pedido
+                    </button>
+                    <small class="text-muted ms-2">Selecione o seu turno para ativar o botão.</small>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+
 <script>
-let tipoAtual = '{% if is_voluntario %}ecin{% else %}assalariado{% endif %}';
+let tipoAtual = 'assalariado';
 let meuCalendarioDados = {};
 let colegaCalendarioDados = {};
 let meuTurnoSelecionado = null;
 let colegaTurnoSelecionado = null;
 let colegaIdSelecionado = null;
 const userId = {{ current_user.id }};
-const isVoluntario = {{ 'true' if is_voluntario else 'false' }};
+const isVoluntario = {{ 'true' if current_user.tipo_bombeiro == 'Voluntário' and current_user.tipo_user != 'Admin' else 'false' }};
+const isProfissional = {{ 'true' if current_user.tipo_bombeiro == 'Profissional' else 'false' }};
 
 // ========== CARREGAR CALENDÁRIO DO UTILIZADOR ==========
 function carregarMeuCalendario() {
     const container = document.getElementById('meuCalendario');
     container.innerHTML = '<div class="text-center p-3">Carregando seus turnos...</div>';
-    
+
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
-    const tipo = tipoAtual;
-    
+    let tipo = tipoAtual;
+
+    // Voluntários: mapear tipo para o correto
+    if (isVoluntario) {
+        if (tipoAtual === 'ecin') tipo = 'ecin';
+        else if (tipoAtual === 'elac') tipo = 'ecin'; // ECIN e ELAC vêm juntos na API
+        else tipo = 'ecin';
+    }
+
     fetch(`/api/escala_usuario/${userId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
@@ -250,11 +259,17 @@ function carregarMeuCalendario() {
 function carregarColegaCalendario(colegaId) {
     const container = document.getElementById('colegaCalendario');
     container.innerHTML = '<div class="text-center p-3">Carregando turnos do colega...</div>';
-    
+
     const ano = new Date().getFullYear();
     const mes = new Date().getMonth() + 1;
-    const tipo = tipoAtual;
-    
+    let tipo = tipoAtual;
+
+    if (isVoluntario) {
+        if (tipoAtual === 'ecin') tipo = 'ecin';
+        else if (tipoAtual === 'elac') tipo = 'ecin';
+        else tipo = 'ecin';
+    }
+
     fetch(`/api/escala_usuario/${colegaId}?ano=${ano}&mes=${mes}&tipo=${tipo}`)
         .then(r => r.json())
         .then(dados => {
@@ -267,174 +282,113 @@ function carregarColegaCalendario(colegaId) {
         });
 }
 
-// ========== CRIAR CALENDÁRIO ==========
-function criarCalendario(containerId, dados, isMeu) {
-    const container = document.getElementById(containerId);
-    const ano = new Date().getFullYear();
-    const mes = new Date().getMonth() + 1;
-    
-    const primeiroDia = new Date(ano, mes - 1, 1);
-    const ultimoDia = new Date(ano, mes, 0);
-    const totalDias = ultimoDia.getDate();
-    const diaSemanaInicio = primeiroDia.getDay();
-    
-    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    
-    let html = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>${meses[mes - 1]} ${ano}</strong>
-        </div>
-        <table class="table table-bordered table-sm text-center">
-            <thead class="table-light">
-                <tr><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr>
-            </thead>
-            <tbody>`;
-    
-    let dia = 1;
-    for (let semana = 0; semana < 6; semana++) {
-        html += '<tr>';
-        for (let d = 0; d < 7; d++) {
-            if ((semana === 0 && d < diaSemanaInicio) || dia > totalDias) {
-                html += '<td class="text-muted">&nbsp;</td>';
-            } else {
-                const temEscala = dados[dia] && dados[dia].length > 0;
-                let escalasHtml = '';
-                if (temEscala) {
-                    if (tipoAtual === 'assalariado') {
-                        escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.turno}`).join('<br>');
-                    } else {
-                        escalasHtml = dados[dia].map(e => `${e.categoria} - ${e.funcao || 'Equipa'}`).join('<br>');
-                    }
-                }
-                html += `<td class="${temEscala ? 'bg-warning escala-dia' : ''}" 
-                               style="cursor:pointer;" 
-                               data-dia="${dia}" 
-                               data-is-meu="${isMeu}"
-                               title="${escalasHtml}">${dia}</td>`;
-                dia++;
-            }
-        }
-        html += '</tr>';
-        if (dia > totalDias) break;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    
-    // Adicionar eventos de clique nos dias com escala
-    container.querySelectorAll('.escala-dia').forEach(td => {
-        td.addEventListener('click', function() {
-            const dia = parseInt(this.getAttribute('data-dia'));
-            const isMeuCalendario = this.getAttribute('data-is-meu') === 'true';
-            const escalas = dados[dia] || [];
-            
-            if (escalas.length === 0) {
-                alert('Este dia não tem escala para o tipo selecionado.');
-                return;
-            }
-            
-            if (isMeuCalendario) {
-                selecionarMeuTurno(dia, escalas);
-            } else {
-                selecionarColegaTurno(dia, escalas);
-            }
-            
-            container.querySelectorAll('.escala-dia.selected').forEach(t => t.classList.remove('selected'));
-            this.classList.add('selected');
-        });
-    });
-}
-
 // ========== SELECIONAR MEU TURNO ==========
 function selecionarMeuTurno(dia, escalas) {
     if (!escalas || escalas.length === 0) return;
-    
-    const escala = escalas[0];
+
+    // Filtrar escalas por tipo (ECIN ou ELAC)
+    let escalasFiltradas = escalas;
+    if (tipoAtual === 'ecin') {
+        escalasFiltradas = escalas.filter(e => e.categoria === 'ECIN');
+    } else if (tipoAtual === 'elac') {
+        escalasFiltradas = escalas.filter(e => e.categoria === 'ELAC');
+    }
+
+    if (escalasFiltradas.length === 0) {
+        alert(`Não tem turnos de ${tipoAtual.toUpperCase()} neste dia.`);
+        return;
+    }
+
+    const escala = escalasFiltradas[0];
     const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    
+
     document.getElementById('data_origem_hidden').value = dataStr;
     document.getElementById('turno_origem_hidden').value = escala.turno;
     document.getElementById('categoria_origem_hidden').value = escala.categoria || '';
     document.getElementById('funcao_origem_hidden').value = escala.funcao || '';
-    
+
     meuTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
-    
+
     const infoDiv = document.getElementById('meuTurnoInfo');
     const detalhesDiv = document.getElementById('meuTurnoDetalhes');
-    
-    if (tipoAtual === 'assalariado') {
-        detalhesDiv.innerHTML = `
-            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
-            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
-            <strong>Turno:</strong> ${escala.turno}
-        `;
-    } else {
-        detalhesDiv.innerHTML = `
-            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
-            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
-            <strong>Função:</strong> ${escala.funcao || '-'}<br>
-            <strong>Turno:</strong> ${escala.turno}
-        `;
-    }
+
+    detalhesDiv.innerHTML = `
+        <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
+        <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
+        <strong>Função:</strong> ${escala.funcao || '-'}<br>
+        <strong>Turno:</strong> ${escala.turno}
+    `;
     infoDiv.style.display = 'block';
-    
-    if (tipoAtual === 'ecin') {
-        const checkbox = document.getElementById('trocarTurnoCheckbox');
-        if (!checkbox.checked) {
-            colegaTurnoSelecionado = null;
-            document.getElementById('data_destino_hidden').value = '';
-            document.getElementById('turno_destino_hidden').value = '';
-            document.getElementById('categoria_destino_hidden').value = '';
-            document.getElementById('funcao_destino_hidden').value = '';
-            document.getElementById('colegaTurnoInfo').style.display = 'none';
-            document.getElementById('trocar_turno_hidden').value = '0';
-        }
+
+    // Se não for para trocar turno (apenas cedência)
+    const checkbox = document.getElementById('trocarTurnoCheckbox');
+    if (!checkbox.checked) {
+        colegaTurnoSelecionado = null;
+        document.getElementById('data_destino_hidden').value = '';
+        document.getElementById('turno_destino_hidden').value = '';
+        document.getElementById('categoria_destino_hidden').value = '';
+        document.getElementById('funcao_destino_hidden').value = '';
+        document.getElementById('colegaTurnoInfo').style.display = 'none';
+        document.getElementById('trocar_turno_hidden').value = '0';
     }
-    
+
     verificarHabilitarBotao();
 }
 
-// ========== SELECIONAR TURNO DO COLEGA ==========
-function selecionarColegaTurno(dia, escalas) {
-    if (!escalas || escalas.length === 0) return;
-    
-    const escala = escalas[0];
-    const dataStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    
-    document.getElementById('data_destino_hidden').value = dataStr;
-    document.getElementById('turno_destino_hidden').value = escala.turno;
-    document.getElementById('categoria_destino_hidden').value = escala.categoria || '';
-    document.getElementById('funcao_destino_hidden').value = escala.funcao || '';
-    
-    colegaTurnoSelecionado = { data: dataStr, turno: escala.turno, categoria: escala.categoria, funcao: escala.funcao };
-    
-    const infoDiv = document.getElementById('colegaTurnoInfo');
-    const detalhesDiv = document.getElementById('colegaTurnoDetalhes');
-    
-    if (tipoAtual === 'assalariado') {
-        detalhesDiv.innerHTML = `
-            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
-            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
-            <strong>Turno:</strong> ${escala.turno}
-        `;
+// ========== ATUALIZAR LISTA DE COLEGAS ==========
+function atualizarListaColegas() {
+    const tipo = document.getElementById('tipo_pedido_select').value;
+    tipoAtual = tipo;
+    const selectDestino = document.getElementById('destino_id_select');
+
+    selectDestino.innerHTML = '<option value="">Carregando...</option>';
+
+    // Determinar o tipo para a API
+    let apiTipo = tipo;
+    if (tipo === 'elac') apiTipo = 'ecin'; // ELAC usa a mesma API que ECIN
+
+    fetch(`/api/colegas_para_troca?tipo=${apiTipo}`)
+        .then(response => response.json())
+        .then(data => {
+            selectDestino.innerHTML = '<option value="">-- Selecione um colega --</option>';
+            data.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b.id;
+                option.textContent = `${b.nome} (${b.mecanografico}) - ${b.tipo_bombeiro}`;
+                selectDestino.appendChild(option);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            selectDestino.innerHTML = '<option value="">Erro ao carregar colegas</option>';
+        });
+
+    colegaIdSelecionado = null;
+    colegaTurnoSelecionado = null;
+    meuTurnoSelecionado = null;
+    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
+    document.getElementById('colegaTurnoInfo').style.display = 'none';
+    document.getElementById('meuTurnoInfo').style.display = 'none';
+
+    // Mostrar/ocultar opções ECIN/ELAC
+    const opcoesDiv = document.getElementById('opcoesEcinElac');
+    if (tipo === 'ecin' || tipo === 'elac') {
+        opcoesDiv.style.display = 'block';
     } else {
-        detalhesDiv.innerHTML = `
-            <strong>Data:</strong> ${new Date(dataStr).toLocaleDateString('pt-PT')}<br>
-            <strong>Categoria:</strong> ${escala.categoria || '-'}<br>
-            <strong>Função:</strong> ${escala.funcao || '-'}<br>
-            <strong>Turno:</strong> ${escala.turno}
-        `;
+        opcoesDiv.style.display = 'none';
     }
-    infoDiv.style.display = 'block';
-    
-    if (tipoAtual === 'ecin') {
-        document.getElementById('trocar_turno_hidden').value = '1';
+
+    carregarMeuCalendario();
+
+    if (tipo === 'ecin' || tipo === 'elac') {
+        document.getElementById('trocarTurnoCheckbox').checked = false;
+        document.getElementById('trocar_turno_hidden').value = '0';
     }
-    
+
     verificarHabilitarBotao();
 }
 
-// Atualizar a função verificarHabilitarBotao
+// ========== VERIFICAR SE PODE ENVIAR ==========
 function verificarHabilitarBotao() {
     const btn = document.getElementById('btnEnviarTroca');
     const checkbox = document.getElementById('trocarTurnoCheckbox');
@@ -446,7 +400,7 @@ function verificarHabilitarBotao() {
             btn.disabled = true;
         }
     } else {
-        // ECIN/ELAC
+        // ECIN ou ELAC
         if (meuTurnoSelecionado && colegaIdSelecionado) {
             if (checkbox.checked) {
                 // Troca com retorno - precisa selecionar turno do colega
@@ -465,110 +419,23 @@ function verificarHabilitarBotao() {
     }
 }
 
-// Adicionar campo hidden para trocar_turno no formulário
-document.getElementById('formTroca').addEventListener('submit', function(e) {
-    const checkbox = document.getElementById('trocarTurnoCheckbox');
-    const trocarTurnoHidden = document.createElement('input');
-    trocarTurnoHidden.type = 'hidden';
-    trocarTurnoHidden.name = 'trocar_turno';
-    trocarTurnoHidden.value = checkbox.checked ? '1' : '0';
-    this.appendChild(trocarTurnoHidden);
-});
-
-// ========== CHECKBOX PARA TROCA DE TURNO (ECIN) ==========
-document.getElementById('trocarTurnoCheckbox').addEventListener('change', function() {
-    if (this.checked) {
-        if (colegaTurnoSelecionado) {
-            document.getElementById('trocar_turno_hidden').value = '1';
-        } else {
-            document.getElementById('btnEnviarTroca').disabled = true;
-            alert('Selecione um turno do colega para a troca.');
-        }
-    } else {
-        document.getElementById('trocar_turno_hidden').value = '0';
-        colegaTurnoSelecionado = null;
-        document.getElementById('data_destino_hidden').value = '';
-        document.getElementById('turno_destino_hidden').value = '';
-        document.getElementById('categoria_destino_hidden').value = '';
-        document.getElementById('funcao_destino_hidden').value = '';
-        document.getElementById('colegaTurnoInfo').style.display = 'none';
-        document.getElementById('colegaCalendario').querySelectorAll('.escala-dia.selected').forEach(td => {
-            td.classList.remove('selected');
-        });
-        verificarHabilitarBotao();
-    }
-});
-
-// ========== ATUALIZAR LISTA DE COLEGAS ==========
-function atualizarListaColegas() {
-    const tipo = document.getElementById('tipo_pedido_select').value;
-    tipoAtual = tipo;
-    const selectDestino = document.getElementById('destino_id_select');
-    
-    selectDestino.innerHTML = '<option value="">Carregando...</option>';
-    
-    fetch(`/api/colegas_para_troca?tipo=${tipo}`)
-        .then(response => response.json())
-        .then(data => {
-            selectDestino.innerHTML = '<option value="">-- Selecione um colega --</option>';
-            data.forEach(b => {
-                const option = document.createElement('option');
-                option.value = b.id;
-                option.textContent = `${b.nome} (${b.mecanografico}) - ${b.tipo_bombeiro}`;
-                selectDestino.appendChild(option);
-            });
-        })
-        .catch(err => {
-            console.error(err);
-            selectDestino.innerHTML = '<option value="">Erro ao carregar colegas</option>';
-        });
-    
-    colegaIdSelecionado = null;
-    colegaTurnoSelecionado = null;
-    meuTurnoSelecionado = null;
-    document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
-    document.getElementById('colegaTurnoInfo').style.display = 'none';
-    document.getElementById('meuTurnoInfo').style.display = 'none';
-    document.getElementById('opcoesEcin').style.display = tipo === 'ecin' ? 'block' : 'none';
-    
-    carregarMeuCalendario();
-    
-    if (tipo === 'ecin') {
-        document.getElementById('trocarTurnoCheckbox').checked = false;
-        document.getElementById('trocar_turno_hidden').value = '0';
-    }
-    
-    verificarHabilitarBotao();
-}
-
-// ========== COLEGA SELECIONADO ==========
-document.getElementById('destino_id_select').addEventListener('change', function() {
-    const colegaId = this.value;
-    if (colegaId) {
-        colegaIdSelecionado = parseInt(colegaId);
-        colegaTurnoSelecionado = null;
-        document.getElementById('colegaTurnoInfo').style.display = 'none';
-        carregarColegaCalendario(colegaId);
-    } else {
-        colegaIdSelecionado = null;
-        document.getElementById('colegaCalendario').innerHTML = '<div class="text-center p-3">Selecione primeiro um colega...</div>';
-        document.getElementById('colegaTurnoInfo').style.display = 'none';
-    }
-    verificarHabilitarBotao();
-});
-
-// ========== MUDANÇA DE TIPO ==========
-document.getElementById('tipo_pedido_select').addEventListener('change', function() {
-    atualizarListaColegas();
-    document.getElementById('btnEnviarTroca').disabled = true;
-});
-
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', function() {
-    // Se for voluntário, o tipo já está definido como 'ecin' e não pode mudar
+    // Configurar o select de tipo de troca conforme o tipo de bombeiro
+    const tipoSelect = document.getElementById('tipo_pedido_select');
+
     if (isVoluntario) {
-        document.getElementById('tipo_pedido_select').disabled = true;
+        // Voluntários: remover opção assalariado, deixar apenas ECIN e ELAC
+        const options = tipoSelect.options;
+        for (let i = options.length - 1; i >= 0; i--) {
+            if (options[i].value === 'assalariado') {
+                tipoSelect.remove(i);
+            }
+        }
+        tipoAtual = 'ecin';
+        tipoSelect.value = 'ecin';
     }
+
     carregarMeuCalendario();
     atualizarListaColegas();
 });
