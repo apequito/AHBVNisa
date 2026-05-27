@@ -195,7 +195,7 @@
 </div>
 
 <script>
-// Calendário (mantido igual, com ajustes)
+// Calendário
 let mesAtual = new Date().getMonth() + 1;
 let anoAtual = new Date().getFullYear();
 let selectedDates = new Set();
@@ -221,6 +221,8 @@ function isDiaUtil(ano, mes, dia) {
 
 function carregarCalendario() {
     const container = document.getElementById('calendarioFerias');
+    if (!container) return;
+
     const primeiroDia = new Date(anoAtual, mesAtual-1, 1);
     const ultimoDia = new Date(anoAtual, mesAtual, 0);
     const totalDias = ultimoDia.getDate();
@@ -268,7 +270,8 @@ function carregarCalendario() {
     container.innerHTML = html;
 
     document.querySelectorAll('#calendarioFerias td[data-date]').forEach(td => {
-        td.addEventListener('click', function() {
+        td.addEventListener('click', function(e) {
+            e.stopPropagation();
             const dataStr = this.getAttribute('data-date');
             const data = new Date(dataStr);
             const hoje = new Date();
@@ -309,25 +312,64 @@ function mudarMes(delta) {
 function atualizarLista() {
     const lista = document.getElementById('listaDiasSelecionados');
     const datas = Array.from(selectedDates).sort();
-    lista.innerHTML = datas.map(d => `<li>${d.split('-').reverse().join('/')}</li>`).join('');
-    document.getElementById('datasSelecionadas').value = datas.join(',');
-    document.getElementById('totalDias').textContent = datas.length;
+    if (lista) {
+        lista.innerHTML = datas.map(d => `<li>${d.split('-').reverse().join('/')}</li>`).join('');
+    }
+    const datasInput = document.getElementById('datasSelecionadas');
+    if (datasInput) {
+        datasInput.value = datas.join(',');
+    }
+    const totalDiasSpan = document.getElementById('totalDias');
+    if (totalDiasSpan) {
+        totalDiasSpan.textContent = datas.length;
+    }
 }
 
-document.getElementById('formFerias').addEventListener('submit', function(e) {
-    if (selectedDates.size === 0) {
-        e.preventDefault();
-        alert('Selecione pelo menos um dia.');
+// Modal Novo Pedido - CORRIGIDO
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar modal corretamente
+    const modalElement = document.getElementById('modalNovoPedido');
+    if (modalElement) {
+        // Remover qualquer evento anterior
+        const newModal = new bootstrap.Modal(modalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+
+        // Quando o modal for aberto, inicializar o calendário
+        modalElement.addEventListener('show.bs.modal', function() {
+            mesAtual = new Date().getMonth() + 1;
+            anoAtual = new Date().getFullYear();
+            selectedDates.clear();
+            carregarCalendario();
+            atualizarLista();
+        });
+
+        // Botão para abrir o modal
+        const btnNovo = document.querySelector('[data-bs-target="#modalNovoPedido"]');
+        if (btnNovo) {
+            // Remover evento anterior e adicionar novo
+            const newBtn = btnNovo.cloneNode(true);
+            btnNovo.parentNode.replaceChild(newBtn, btnNovo);
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                newModal.show();
+            });
+        }
     }
 });
 
-document.getElementById('modalNovoPedido').addEventListener('show.bs.modal', function() {
-    mesAtual = new Date().getMonth() + 1;
-    anoAtual = new Date().getFullYear();
-    selectedDates.clear();
-    carregarCalendario();
-    atualizarLista();
-});
+// Formulário de férias
+const formFerias = document.getElementById('formFerias');
+if (formFerias) {
+    formFerias.addEventListener('submit', function(e) {
+        if (selectedDates.size === 0) {
+            e.preventDefault();
+            alert('Selecione pelo menos um dia.');
+        }
+    });
+}
 
 // Função para abrir modal de aprovação
 function abrirAprovacao(feriasId) {
@@ -344,24 +386,33 @@ function abrirAprovacao(feriasId) {
             `;
             document.getElementById('infoFerias').innerHTML = infoHtml;
 
-            // Pré-preencher dias aprovados
             const diasAprovados = document.getElementById('dias_aprovados');
-            if (data.is_motorista) {
-                diasAprovados.value = data.dias_solicitados;
-                diasAprovados.readOnly = true;
-            } else {
-                diasAprovados.value = '';
-                diasAprovados.readOnly = false;
+            if (diasAprovados) {
+                if (data.is_motorista) {
+                    diasAprovados.value = data.dias_solicitados;
+                    diasAprovados.readOnly = true;
+                } else {
+                    diasAprovados.value = '';
+                    diasAprovados.readOnly = false;
+                }
             }
 
-            const modal = new bootstrap.Modal(document.getElementById('modalAprovarFerias'));
-            modal.show();
+            const modalAprovacao = new bootstrap.Modal(document.getElementById('modalAprovarFerias'));
+            modalAprovacao.show();
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            alert('Erro ao carregar detalhes das férias.');
         });
 }
 
-document.getElementById('formAprovarFerias').addEventListener('submit', function(e) {
-    const feriasId = document.getElementById('ferias_id').value;
-    this.action = `/ferias/aprovar/${feriasId}`;
-});
+// Formulário de aprovação
+const formAprovarFerias = document.getElementById('formAprovarFerias');
+if (formAprovarFerias) {
+    formAprovarFerias.addEventListener('submit', function(e) {
+        const feriasId = document.getElementById('ferias_id').value;
+        this.action = `/ferias/aprovar/${feriasId}`;
+    });
+}
 </script>
 {% endblock %}
