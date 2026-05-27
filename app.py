@@ -7722,16 +7722,17 @@ def administrativo():
     total_valor_desl = sum(d.valor for d in deslocacoes if d.valor)
     bombeiros_ativos = Bombeiro.query.filter_by(ativo=True).order_by(Bombeiro.nome).all()
 
-    # ---------- Filtros ECIN/ELAC ----------
+    # ---------- Filtros ECIN/ELAC (EXCLUIR Pendente e Não Escalado) ----------
     mes_ecin = request.args.get('mes_ecin', type=int, default=date.today().month)
     ano_ecin = request.args.get('ano_ecin', type=int, default=date.today().year)
     cat_ecin = request.args.get('cat_ecin', 'todas')
     bombeiro_id_ecin = request.args.get('bombeiro_id_ecin', type=int)
-    tipo_ecin = request.args.get('tipo_ecin', 'todas')
 
+    # Query base: EXCLUI Pendente e Não Escalado
     query_ecin = Ecin.query.filter(
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin
+        db.extract('year', Ecin.data) == ano_ecin,
+        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])  # ← EXCLUI
     )
 
     if cat_ecin == 'ECIN':
@@ -7742,19 +7743,14 @@ def administrativo():
     if bombeiro_id_ecin:
         query_ecin = query_ecin.filter_by(bombeiro_id=bombeiro_id_ecin)
 
-    if tipo_ecin == 'original':
-        query_ecin = query_ecin.filter(~Ecin.estado.in_(['Mobilizado']))
-    elif tipo_ecin == 'substituto':
-        query_ecin = query_ecin.filter(Ecin.estado == 'Mobilizado')
-
     ecins = query_ecin.order_by(Ecin.data.desc()).all()
     total_valor_ecin = sum(ec.valor for ec in ecins if ec.valor)
 
-    # CORRIGIDO: Calcular turnos sem usar ec.mobilidades
-    turnos_ecin = query_ecin.filter(Ecin.categoria == 'ECIN', ~Ecin.estado.in_(['Pendente', 'Não Escalado'])).count()
-    turnos_elac = query_ecin.filter(Ecin.categoria == 'ELAC', ~Ecin.estado.in_(['Pendente', 'Não Escalado'])).count()
+    # Contagem de turnos (apenas os que aparecem na lista)
+    turnos_ecin = sum(1 for ec in ecins if ec.categoria == 'ECIN')
+    turnos_elac = sum(1 for ec in ecins if ec.categoria == 'ELAC')
 
-    # CORRIGIDO: Calcular mobilidades_count usando a tabela Mobilidade diretamente
+    # Contagem de mobilidades
     from sqlalchemy import text
     result = db.session.execute(text("""
                                      SELECT COUNT(*)
@@ -7769,10 +7765,11 @@ def administrativo():
     bombeiros_ativos_ecin = Bombeiro.query.join(Ecin).filter(
         Ecin.bombeiro_id == Bombeiro.id,
         db.extract('month', Ecin.data) == mes_ecin,
-        db.extract('year', Ecin.data) == ano_ecin
+        db.extract('year', Ecin.data) == ano_ecin,
+        ~Ecin.estado.in_(['Pendente', 'Não Escalado'])
     ).distinct().order_by(Bombeiro.nome).all()
 
-    # Garantir valores
+    # Garantir valores (42€ para quem não tem)
     for ec in ecins:
         if ec.valor is None:
             ec.valor = 42.0
@@ -7795,7 +7792,6 @@ def administrativo():
                            ano_ecin=ano_ecin,
                            cat_ecin=cat_ecin,
                            bombeiro_id_ecin=bombeiro_id_ecin,
-                           tipo_ecin=tipo_ecin,
                            now=date.today())
 
 

@@ -199,14 +199,6 @@
                     </select>
                 </div>
                 <div class="col-auto">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo_ecin" class="form-select form-select-sm">
-                        <option value="todas" {% if tipo_ecin == 'todas' %}selected{% endif %}>Todos</option>
-                        <option value="original" {% if tipo_ecin == 'original' %}selected{% endif %}>Originais</option>
-                        <option value="substituto" {% if tipo_ecin == 'substituto' %}selected{% endif %}>Substitutos</option>
-                    </select>
-                </div>
-                <div class="col-auto">
                     <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
                     <a href="{{ url_for('administrativo', tab='ecins') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
                 </div>
@@ -238,62 +230,65 @@
                                 <tr>
                                     <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th>
                                     <th>Função</th><th>Estado</th><th>Valor</th>
-                                    <th>Tipo</th><th>Mobilidade</th>
+                                    <th>Mobilidade</th>
                                 </tr>
                             </thead>
                             <tbody id="ecins-tbody">
                                 {% for ec in ecins %}
-                                <tr class="ecin-row {% if ec.estado == 'Mobilizado' %}table-info{% endif %}" data-ecin-id="{{ ec.id }}">
+                                <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
                                     <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
                                     <td>{{ ec.turno }}</td>
                                     <td>{{ ec.categoria or '-' }}</td>
                                     <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})</td>
                                     <td>{{ ec.funcao or '-' }}</td>
                                     <td>
-                                        {% if ec.estado == 'Pendente' %}
-                                            <span class="badge bg-warning text-dark">Pendente</span>
-                                        {% elif ec.estado == 'Não Escalado' %}
-                                            <span class="badge bg-danger">Não Escalado</span>
-                                        {% elif ec.estado == 'Mobilizado' %}
+                                        {% if ec.estado == 'Mobilizado' %}
                                             <span class="badge bg-info">Mobilizado</span>
                                         {% else %}
                                             <span class="badge bg-success">{{ ec.estado }}</span>
                                         {% endif %}
                                     </td>
                                     <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €</td>
-                                    <td>
-                                        {% if ec.mobilidades and ec.mobilidades|length > 0 %}
-                                            <span class="badge bg-info">Substituto</span>
-                                        {% elif ec.estado == 'Mobilizado' %}
-                                            <span class="badge bg-warning">Substituto</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Original</span>
-                                        {% endif %}
-                                    </td>
                                     <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
-                                        {% set mobilidade = ec.mobilidades[0] if ec.mobilidades else None %}
-                                        {% if mobilidade %}
-                                            <div class="d-flex align-items-center">
-                                                <span>
+                                        {% if ec.estado == 'Mobilizado' %}
+                                            {# Registo do substituto - mostrar quem foi substituído #}
+                                            {% set original_encontrado = false %}
+                                            {% for m in mobilidades_lista if m.bombeiro_substituto_id == ec.bombeiro_id and m.original_data == ec.data %}
+                                                {% set original_encontrado = true %}
+                                                <span class="text-info">
                                                     <i class="bi bi-arrow-left-right me-1"></i>
-                                                    Substitui: {{ mobilidade.ecin_original.bombeiro.nome }}
-                                                    ({{ "%.2f"|format(mobilidade.valor_pago) }} €)
+                                                    Substitui: {{ m.original_nome }}
                                                 </span>
-                                                <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
-                                                        data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                            </div>
-                                        {% elif ec.estado not in ['Pendente', 'Não Escalado', 'Mobilizado'] %}
-                                            <div class="d-flex align-items-center">
+                                            {% endfor %}
+                                            {% if not original_encontrado %}
                                                 <span class="text-muted">-</span>
-                                                <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
-                                                        data-ecin-id="{{ ec.id }}" title="Criar mobilidade">
-                                                    <i class="bi bi-plus-circle"></i>
-                                                </button>
-                                            </div>
+                                            {% endif %}
                                         {% else %}
-                                            <span class="text-muted">-</span>
+                                            {# Registo original - verificar se tem mobilidade #}
+                                            {% set mobilidade_encontrada = false %}
+                                            {% for m in mobilidades_lista if m.ecin_original_id == ec.id %}
+                                                {% set mobilidade_encontrada = true %}
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-warning">
+                                                        <i class="bi bi-person-fill-down me-1"></i>
+                                                        Substituído por: {{ m.substituto_nome }}
+                                                        ({{ "%.2f"|format(m.valor_pago) }} €)
+                                                    </span>
+                                                    <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
+                                                            data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </div>
+                                            {% endfor %}
+                                            {% if not mobilidade_encontrada %}
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted">-</span>
+                                                    <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
+                                                            data-ecin-id="{{ ec.id }}" title="Criar mobilidade">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -303,7 +298,7 @@
                                 <tr class="fw-bold bg-light">
                                     <td colspan="6" class="text-end">Total:</td>
                                     <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €</td>
-                                    <td colspan="2"></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -389,7 +384,11 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
     if (mobilidadeCell) {
         mobilidadeCell.innerHTML = `
             <div class="d-flex align-items-center">
-                <span class="text-muted">Mobilidade criada</span>
+                <span class="text-warning">
+                    <i class="bi bi-person-fill-down me-1"></i>
+                    Substituído por: ${escapeHtml(substitutoNome)}
+                    (${novoRegisto.valor.toFixed(2)} €)
+                </span>
                 <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
                         data-ecin-id="${ecinId}" title="Apagar mobilidade">
                     <i class="bi bi-x-circle"></i>
@@ -402,7 +401,7 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
     const tbody = document.getElementById('ecins-tbody');
     if (tbody) {
         const novaLinha = document.createElement('tr');
-        novaLinha.className = 'ecin-row table-info';
+        novaLinha.className = 'ecin-row';
         novaLinha.setAttribute('data-ecin-id', novoRegisto.id);
         novaLinha.innerHTML = `
             <td>${novoRegisto.data}</td>
@@ -412,11 +411,11 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
             <td>${novoRegisto.funcao}</td>
             <td><span class="badge bg-info">Mobilizado</span></td>
             <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €</td>
-            <td><span class="badge bg-warning">Substituto</span></td>
-            <td>
-                <div class="d-flex align-items-center">
-                    <span><i class="bi bi-arrow-left-right me-1"></i>Substitui: ${escapeHtml(originalNome)}</span>
-                </div>
+            <td class="mobilidade-cell">
+                <span class="text-info">
+                    <i class="bi bi-arrow-left-right me-1"></i>
+                    Substitui: ${escapeHtml(originalNome)}
+                </span>
             </td>
         `;
         tbody.appendChild(novaLinha);
