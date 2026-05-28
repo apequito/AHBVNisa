@@ -11,16 +11,20 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
 
-    <!-- Nome da aplicação (aparece no ecrã inicial do smartphone) -->
+    <!-- Nome da aplicação -->
     <meta name="apple-mobile-web-app-title" content="AHBVNisa">
     <meta name="application-name" content="AHBVNisa">
     <meta name="theme-color" content="#cc0000">
 
-    <!-- Manifest para PWA (opcional, mas recomendado) -->
+    <!-- Manifest para PWA -->
     <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         :root {
             --qbvn-red: #dc3545;
@@ -120,6 +124,15 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
+        /* Card hover */
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
+        }
+
         /* Responsivo */
         @media (max-width: 991px) {
             .navbar .navbar-nav {
@@ -139,9 +152,9 @@
         <div class="container-fluid">
             <!-- Logo e nome -->
             <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-    <img src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="Logo" style="height: 30px; margin-right: 10px;">
-    Quartel de Bombeiros Voluntários de Nisa
-</a>
+                <img src="{{ url_for('static', filename='images/bvnisa.png') }}" alt="Logo" style="height: 30px; margin-right: 10px;">
+                Quartel de Bombeiros Voluntários de Nisa
+            </a>
 
             <!-- Botão hamburguer (mobile) -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -168,6 +181,19 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('perfil') }}"><i class="bi bi-person-gear"></i> Meu Perfil</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('deslocacoes') }}"><i class="bi bi-car-front"></i> Deslocações</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('correio') }}">
+                                <i class="bi bi-envelope"></i> Correio
+                                {% if msgs_naolidas > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ msgs_naolidas }}</span>
+                                {% endif %}
+                            </a></li>
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' or current_user.tipo_bombeiro == 'Profissional' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('ferias') }}"><i class="bi bi-sun"></i> Férias</a></li>
+                            {% endif %}
 
                             {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                             <li><a class="dropdown-item" href="{{ url_for('meus_creditos') }}"><i class="bi bi-clock-history"></i> Crédito Horas</a></li>
@@ -176,58 +202,79 @@
                             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('gerir_bombeiros') }}"><i class="bi bi-people-fill"></i> Gerir Bombeiros</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('listar_creditos') }}"><i class="bi bi-card-checklist"></i> Créditos (gestão)</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('listar_creditos') }}"><i class="bi bi-card-checklist"></i> Créditos (gestão)
+                                    {% if pendencias.creditos is defined and pendencias.creditos > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.creditos }}</span>
+                                    {% endif %}
+                                </a></li>
                             {% endif %}
                         </ul>
                     </li>
 
-<!-- ============ DROPDOWN VIATURAS ========== -->
-<!-- Todos os utilizadores veem o menu (inclui Voluntários) -->
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-truck me-1"></i> Viaturas
-    </a>
-    <ul class="dropdown-menu dropdown-menu-end">
-        <!-- Voluntários não podem aceder à listagem de viaturas -->
-        {% if current_user.tipo_bombeiro != 'Voluntário' or current_user.tipo_user == 'Admin' %}
-        <li><a class="dropdown-item" href="{{ url_for('listar_viaturas') }}"><i class="bi bi-truck-front"></i> Viaturas</a></li>
-        {% endif %}
-        <li><a class="dropdown-item" href="{{ url_for('avarias') }}"><i class="bi bi-exclamation-triangle"></i> Avarias</a></li>
-        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina'] %}
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="{{ url_for('oficina') }}"><i class="bi bi-tools"></i> Oficina</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('gestao_frota') }}"><i class="bi bi-speedometer2"></i> Gestão de Frota</a></li>
-        {% endif %}
-    </ul>
-</li>
+                    <!-- ============ DROPDOWN VIATURAS ========== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-truck me-1"></i> Viaturas
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if current_user.tipo_bombeiro != 'Voluntário' or current_user.tipo_user == 'Admin' %}
+                            <li><a class="dropdown-item" href="{{ url_for('listar_viaturas') }}"><i class="bi bi-truck-front"></i> Viaturas</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('avarias') }}"><i class="bi bi-exclamation-triangle"></i> Avarias
+                                {% if pendencias.avarias is defined and pendencias.avarias > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.avarias }}</span>
+                                {% endif %}
+                            </a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Oficina'] %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('oficina') }}"><i class="bi bi-tools"></i> Oficina</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('gestao_frota') }}"><i class="bi bi-speedometer2"></i> Gestão de Frota
+                                    {% if pendencias.inspecoes_proximas is defined and pendencias.inspecoes_proximas > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.inspecoes_proximas }}</span>
+                                    {% endif %}
+                                </a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
 
                     <!-- ============ DROPDOWN SERVIÇO ============ -->
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-calendar3 me-1"></i> Serviço
-        {% if current_user.resp_departamento == 'Central' and pendencias.total_pendentes is defined and pendencias.total_pendentes > 0 %}
-        <span class="badge bg-danger rounded-pill ms-1">{{ pendencias.total_pendentes }}</span>
-        {% endif %}
-    </a>
-    <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="{{ url_for('escala') }}"><i class="bi bi-calendar-week"></i> Escala</a></li>
-        {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-            <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS</a></li>
-        {% endif %}
-        <li><a class="dropdown-item" href="{{ url_for('trocas') }}">
-            <i class="bi bi-arrow-left-right"></i> Trocas
-            {% if current_user.resp_departamento == 'Central' and pendencias.trocas_pendentes is defined and pendencias.trocas_pendentes > 0 %}
-            <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.trocas_pendentes }}</span>
-            {% endif %}
-        </a></li>
-        <li><a class="dropdown-item" href="{{ url_for('dispensas') }}">
-            <i class="bi bi-calendar-x"></i> Dispensas
-            {% if current_user.resp_departamento == 'Central' and pendencias.dispensas_pendentes is defined and pendencias.dispensas_pendentes > 0 %}
-            <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.dispensas_pendentes }}</span>
-            {% endif %}
-        </a></li>
-    </ul>
-</li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-calendar3 me-1"></i> Serviço
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('escala') }}"><i class="bi bi-calendar-week"></i> Escala</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('trocas') }}">
+                                <i class="bi bi-arrow-left-right"></i> Trocas
+                                {% if current_user.resp_departamento == 'Central' and pendencias.trocas_pendentes is defined and pendencias.trocas_pendentes > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.trocas_pendentes }}</span>
+                                {% elif pendencias.trocas is defined and pendencias.trocas > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.trocas }}</span>
+                                {% endif %}
+                            </a></li>
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
+                            <li><a class="dropdown-item" href="{{ url_for('listar_ecins') }}"><i class="bi bi-clipboard-check"></i> ECINS
+                                {% if pendencias.ecins is defined and pendencias.ecins > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.ecins }}</span>
+                                {% endif %}
+                            </a></li>
+                            {% endif %}
+
+                            {% if current_user.tipo_bombeiro == 'Profissional' or current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                            <li><a class="dropdown-item" href="{{ url_for('dispensas') }}">
+                                <i class="bi bi-calendar-x"></i> Dispensas
+                                {% if current_user.resp_departamento == 'Central' and pendencias.dispensas_pendentes is defined and pendencias.dispensas_pendentes > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.dispensas_pendentes }}</span>
+                                {% elif pendencias.dispensas is defined and pendencias.dispensas > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.dispensas }}</span>
+                                {% endif %}
+                            </a></li>
+                            {% endif %}
+
+                            <li><a class="dropdown-item" href="{{ url_for('disponibilidades') }}"><i class="bi bi-person-check"></i> Disponibilidade</a></li>
+                        </ul>
+                    </li>
 
                     <!-- ============ DROPDOWN OPERAÇÕES ============ -->
                     <li class="nav-item dropdown">
@@ -236,11 +283,14 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('checklist') }}"><i class="bi bi-list-check"></i> Checklist</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('fardamento') }}"><i class="bi bi-vest"></i> Fardamento</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('fardamento') }}"><i class="bi bi-vest"></i> Fardamento
+                                {% if pendencias.fardamento is defined and pendencias.fardamento > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.fardamento }}</span>
+                                {% endif %}
+                            </a></li>
                             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Fardamento'] %}
                                 <li><a class="dropdown-item" href="{{ url_for('stock_fardamento') }}"><i class="bi bi-box-seam"></i> Stock Fardamento</a></li>
                             {% endif %}
-                            <li><a class="dropdown-item" href="{{ url_for('disponibilidades') }}"><i class="bi bi-person-check"></i> Disponibilidade</a></li>
                         </ul>
                     </li>
 
@@ -251,12 +301,55 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia'] %}
-                                <li><a class="dropdown-item" href="{{ url_for('stock_farmacia') }}"><i class="bi bi-capsule"></i> Stock Farmácia</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('stock_farmacia') }}"><i class="bi bi-capsule"></i> Stock Farmácia
+                                    {% if pendencias.stock_farmacia_minimo is defined and pendencias.stock_farmacia_minimo > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.stock_farmacia_minimo }}</span>
+                                    {% endif %}
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('listar_farmacia_central') }}"><i class="bi bi-building"></i> Farmácia Central
+                                    {% if pendencias.central_stock_minimo is defined and pendencias.central_stock_minimo > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.central_stock_minimo }}</span>
+                                    {% endif %}
+                                </a></li>
                             {% endif %}
-                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista'] %}
-                                <li><a class="dropdown-item" href="{{ url_for('stock_ambulancia') }}"><i class="bi bi-truck-flatbed"></i> Stock Ambulância</a></li>
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Farmacia', 'Socorrista', 'Central'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('stock_ambulancia') }}"><i class="bi bi-truck-flatbed"></i> Stock Ambulância
+                                    {% if pendencias.stock_ambulancia is defined and pendencias.stock_ambulancia > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-2">{{ pendencias.stock_ambulancia }}</span>
+                                    {% endif %}
+                                </a></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('checklist_ambulancia') }}"><i class="bi bi-clipboard-pulse"></i> Checklist Ambulância</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- ============ DROPDOWN GESTÃO ============ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-gear me-1"></i> Gestão
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('quadro_operacional') }}"><i class="bi bi-grid-3x3-gap-fill"></i> Quadro Operacional</a></li>
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                <li><a class="dropdown-item" href="{{ url_for('painel_comando') }}"><i class="bi bi-speedometer2"></i> Painel Comando</a></li>
+                            {% endif %}
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Central'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('central') }}"><i class="bi bi-broadcast"></i> Central</a></li>
+                            {% endif %}
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Secretaria' %}
+                                <li><a class="dropdown-item" href="{{ url_for('administrativo') }}"><i class="bi bi-building"></i> Administrativo</a></li>
+                            {% endif %}
+
+                            <li><a class="dropdown-item" href="{{ url_for('monitor') }}"><i class="bi bi-tv"></i> Monitor</a></li>
+
+                            {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('backup_exportar') }}"><i class="bi bi-download"></i> Backup</a></li>
+                                <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalImportarBackup"><i class="bi bi-upload"></i> Restaurar</button></li>
+                            {% endif %}
                         </ul>
                     </li>
 
@@ -316,7 +409,32 @@
 
     </div>
 
-    <!-- Bootstrap JS + Tooltips -->
+    <!-- Modal de confirmação para importar backup -->
+    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento == 'Comando' %}
+    <div class="modal fade" id="modalImportarBackup" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" action="{{ url_for('backup_importar') }}" enctype="multipart/form-data">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">⚠️ Restaurar Backup</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <strong>Atenção!</strong> Esta operação irá <strong>apagar todos os dados actuais</strong> e substituí‑los pelos dados do ficheiro Excel.
+                        </div>
+                        <input type="file" name="ficheiro_backup" class="form-control" accept=".xlsx" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Tem a certeza? Todos os dados atuais serão perdidos!')">Restaurar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
