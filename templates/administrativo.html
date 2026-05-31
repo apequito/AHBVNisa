@@ -38,7 +38,7 @@
                 <div class="col-md-4">
                     <div class="card text-white bg-success shadow-sm">
                         <div class="card-body text-center py-3">
-                            <h4 class="mb-0">{{ "%.2f"|format(total_valor_desl) }} €</h4>
+                            <h4 class="mb-0" id="totalValorDesl">{{ "%.2f"|format(total_valor_desl) }} €</h4>
                             <small>Valor Acumulado</small>
                         </div>
                     </div>
@@ -92,38 +92,67 @@
                 </div>
             </form>
 
-            <!-- Tabela Deslocações -->
+            <!-- Tabela Deslocações com edição inline -->
             <div class="card shadow-sm">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-bordered mb-0">
+                        <table class="table table-hover table-bordered mb-0" id="tabelaDeslocacoes">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Data</th><th>Hora</th><th>Serviço</th><th>Origem</th><th>Destino</th>
-                                    <th>Valor</th><th>Viatura</th><th>Nº Serviço</th><th>Bombeiro</th>
+                                    <th>ID</th>
+                                    <th>Data</th>
+                                    <th>Hora</th>
+                                    <th>Serviço</th>
+                                    <th>Origem</th>
+                                    <th>Destino</th>
+                                    <th>Valor (€)</th>
+                                    <th>Viatura</th>
+                                    <th>Nº Serviço</th>
+                                    <th>Bombeiro</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for d in deslocacoes %}
-                                <tr>
+                                <tr id="desl-row-{{ d.id }}" data-id="{{ d.id }}">
+                                    <td>{{ d.id }}</td>
                                     <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
                                     <td>{{ d.hora_inicio }}</td>
                                     <td>{{ d.servico }}</td>
                                     <td>{{ d.local_origem or '-' }}</td>
                                     <td>{{ d.local_destino or '-' }}</td>
-                                    <td>{{ "%.2f"|format(d.valor) if d.valor else '-' }}</td>
+                                    <td class="valor-cell" data-valor="{{ d.valor if d.valor else 0 }}">
+                                        <span class="valor-text">{{ "%.2f"|format(d.valor) if d.valor else '0.00' }}</span>
+                                        <input type="number" step="0.01" class="form-control form-control-sm valor-input"
+                                               value="{{ "%.2f"|format(d.valor) if d.valor else '0.00' }}"
+                                               style="display: none; width: 100px;">
+                                    </td>
                                     <td>{{ d.viatura.matricula if d.viatura else '-' }}</td>
                                     <td>{{ d.n_servico or '-' }}</td>
                                     <td>{{ d.bombeiro.nome if d.bombeiro else '-' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary btn-editar-valor" data-id="{{ d.id }}" title="Editar valor">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-success btn-salvar-valor" data-id="{{ d.id }}" style="display: none;" title="Salvar">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary btn-cancelar-valor" data-id="{{ d.id }}" style="display: none;" title="Cancelar">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% else %}
-                                <td><td colspan="9" class="text-center text-muted">Nenhuma deslocação encontrada.{% endfor %}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted">Nenhuma deslocação encontrada.啃
+                                </tr>
+                                {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold bg-light">
-                                    <td colspan="5" class="text-end">Total:</td>
-                                    <td>{{ "%.2f"|format(total_valor_desl) }} €</td>
-                                    <td colspan="3"></td>
+                                    <td colspan="6" class="text-end">Total:</td>
+                                    <td id="total-valor-desl">{{ "%.2f"|format(total_valor_desl) }} €啃
+                                    <td colspan="4">啃
                                 </tr>
                             </tfoot>
                         </table>
@@ -137,41 +166,40 @@
              id="ecins" role="tabpanel">
 
             <!-- Cartões resumo -->
-            <!-- Cartões resumo -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-warning shadow-sm">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ turnos_ecin }}</h4>
-                <small>Turnos ECIN</small>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning shadow-sm">
+                        <div class="card-body text-center py-3">
+                            <h4 class="mb-0">{{ turnos_ecin }}</h4>
+                            <small>Turnos ECIN</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-secondary shadow-sm">
+                        <div class="card-body text-center py-3">
+                            <h4 class="mb-0">{{ turnos_elac }}</h4>
+                            <small>Turnos ELAC</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info shadow-sm">
+                        <div class="card-body text-center py-3">
+                            <h4 class="mb-0">{{ turnos_mobilidade }}</h4>
+                            <small>Turnos Mobilidade</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success shadow-sm">
+                        <div class="card-body text-center py-3">
+                            <h5 class="mb-0">Total: {{ "%.2f"|format(total_valor_ecin + total_valor_mobilidade) }} €</h5>
+                            <small>Valor Acumulado</small>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-secondary shadow-sm">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ turnos_elac }}</h4>
-                <small>Turnos ELAC</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info shadow-sm">
-            <div class="card-body text-center py-3">
-                <h4 class="mb-0">{{ turnos_mobilidade }}</h4>
-                <small>Turnos Mobilidade</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success shadow-sm">
-            <div class="card-body text-center py-3">
-                <h5 class="mb-0">Total: {{ "%.2f"|format(total_valor_ecin + total_valor_mobilidade) }} €</h5>
-                <small>Valor Acumulado</small>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- Filtros ECINs -->
             <form method="GET" class="row g-2 align-items-end mb-3">
@@ -245,19 +273,19 @@
                             <tbody id="ecins-tbody">
                                 {% for ec in ecins %}
                                 <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
-                                    <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ ec.turno }}</td>
-                                    <td>{{ ec.categoria or '-' }}</td>
-                                    <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})</td>
-                                    <td>{{ ec.funcao or '-' }}</td>
+                                    <td>{{ ec.data.strftime('%d/%m/%Y') }}啃
+                                    <td>{{ ec.turno }}啃
+                                    <td>{{ ec.categoria or '-' }}啃
+                                    <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})啃
+                                    <td>{{ ec.funcao or '-' }}啃
                                     <td>
                                         {% if ec.estado == 'Mobilizado' %}
                                             <span class="badge bg-info">Mobilizado</span>
                                         {% else %}
                                             <span class="badge bg-success">{{ ec.estado }}</span>
                                         {% endif %}
-                                    </td>
-                                    <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €</td>
+                                    啃
+                                    <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €啃
                                     <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
                                         {% if ec.estado == 'Mobilizado' %}
                                             {# Registo do substituto - mostrar quem foi substituído #}
@@ -299,15 +327,15 @@
                                                 </div>
                                             {% endif %}
                                         {% endif %}
-                                    </td>
+                                    啃
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold bg-light">
-                                    <td colspan="6" class="text-end">Total:</td>
-                                    <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €</td>
-                                    <td></td>
+                                    <td colspan="6" class="text-end">Total:啃
+                                    <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €啃
+                                    <td>啃
                                 </tr>
                             </tfoot>
                         </table>
@@ -413,19 +441,19 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
         novaLinha.className = 'ecin-row';
         novaLinha.setAttribute('data-ecin-id', novoRegisto.id);
         novaLinha.innerHTML = `
-            <td>${novoRegisto.data}</td>
-            <td>${novoRegisto.turno}</td>
-            <td>${novoRegisto.categoria}</td>
-            <td>${escapeHtml(novoRegisto.bombeiro)} (${novoRegisto.mecanografico || ''})</td>
-            <td>${novoRegisto.funcao}</td>
-            <td><span class="badge bg-info">Mobilizado</span></td>
-            <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €</td>
+            <td>${novoRegisto.data}啃
+            <td>${novoRegisto.turno}啃
+            <td>${novoRegisto.categoria}啃
+            <td>${escapeHtml(novoRegisto.bombeiro)} (${novoRegisto.mecanografico || ''})啃
+            <td>${novoRegisto.funcao}啃
+            <td><span class="badge bg-info">Mobilizado</span>啃
+            <td class="valor-cell">${novoRegisto.valor.toFixed(2)} €啃
             <td class="mobilidade-cell">
                 <span class="text-info">
                     <i class="bi bi-arrow-left-right me-1"></i>
                     Substitui: ${escapeHtml(originalNome)}
                 </span>
-            </td>
+            啃
         `;
         tbody.appendChild(novaLinha);
     }
@@ -434,7 +462,7 @@ function atualizarLinhaAposMobilidade(ecinId, novoValorOriginal, substitutoNome,
     atribuirEventosMobilidade();
 
     // Recalcular total
-    recalcularTotal();
+    recalcularTotalECIN();
 }
 
 // Apagar mobilidade
@@ -472,7 +500,7 @@ function apagarMobilidade(ecinId) {
                 // Reatribuir eventos
                 atribuirEventosMobilidade();
                 // Recalcular total
-                recalcularTotal();
+                recalcularTotalECIN();
             } else {
                 alert('Erro: ' + (data.erro || 'Falha ao apagar'));
             }
@@ -483,10 +511,10 @@ function apagarMobilidade(ecinId) {
         });
 }
 
-// Recalcular total dos valores
-function recalcularTotal() {
+// Recalcular total dos valores ECIN
+function recalcularTotalECIN() {
     let total = 0;
-    document.querySelectorAll('.valor-cell').forEach(cell => {
+    document.querySelectorAll('#ecins-tbody .valor-cell').forEach(cell => {
         let valor = parseFloat(cell.innerText.replace('€', '').trim());
         if (!isNaN(valor)) total += valor;
     });
@@ -518,6 +546,131 @@ function handlerMobilidade(e) {
 function handlerApagar(e) {
     const ecinId = e.currentTarget.getAttribute('data-ecin-id');
     apagarMobilidade(ecinId);
+}
+
+// ========== EDIÇÃO DE VALORES DAS DESLOCAÇÕES ==========
+function initEdicaoDeslocacoes() {
+    // Botão Editar
+    document.querySelectorAll('.btn-editar-valor').forEach(btn => {
+        btn.removeEventListener('click', handleEditarClick);
+        btn.addEventListener('click', handleEditarClick);
+    });
+
+    // Botão Salvar
+    document.querySelectorAll('.btn-salvar-valor').forEach(btn => {
+        btn.removeEventListener('click', handleSalvarClick);
+        btn.addEventListener('click', handleSalvarClick);
+    });
+
+    // Botão Cancelar
+    document.querySelectorAll('.btn-cancelar-valor').forEach(btn => {
+        btn.removeEventListener('click', handleCancelarClick);
+        btn.addEventListener('click', handleCancelarClick);
+    });
+}
+
+function handleEditarClick(e) {
+    const id = this.getAttribute('data-id');
+    const row = document.getElementById(`desl-row-${id}`);
+    const valorText = row.querySelector('.valor-text');
+    const valorInput = row.querySelector('.valor-input');
+    const btnEditar = row.querySelector('.btn-editar-valor');
+    const btnSalvar = row.querySelector('.btn-salvar-valor');
+    const btnCancelar = row.querySelector('.btn-cancelar-valor');
+
+    valorText.style.display = 'none';
+    valorInput.style.display = 'inline-block';
+    btnEditar.style.display = 'none';
+    btnSalvar.style.display = 'inline-block';
+    btnCancelar.style.display = 'inline-block';
+}
+
+function handleSalvarClick(e) {
+    const id = this.getAttribute('data-id');
+    const row = document.getElementById(`desl-row-${id}`);
+    const valorInput = row.querySelector('.valor-input');
+    const novoValor = parseFloat(valorInput.value);
+
+    if (isNaN(novoValor)) {
+        alert('Valor inválido.');
+        return;
+    }
+
+    fetch('/administrativo/deslocacao/atualizar-valor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, valor: novoValor })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const valorText = row.querySelector('.valor-text');
+            valorText.textContent = novoValor.toFixed(2);
+
+            const valorInput = row.querySelector('.valor-input');
+            valorText.style.display = 'inline';
+            valorInput.style.display = 'none';
+
+            const btnEditar = row.querySelector('.btn-editar-valor');
+            const btnSalvar = row.querySelector('.btn-salvar-valor');
+            const btnCancelar = row.querySelector('.btn-cancelar-valor');
+            btnEditar.style.display = 'inline-block';
+            btnSalvar.style.display = 'none';
+            btnCancelar.style.display = 'none';
+
+            atualizarTotalDeslocacoes();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Valor atualizado!',
+                text: `Novo valor: ${novoValor.toFixed(2)} €`,
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            alert('Erro: ' + (data.error || 'Falha ao atualizar valor'));
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('Erro de comunicação com o servidor.');
+    });
+}
+
+function handleCancelarClick(e) {
+    const id = this.getAttribute('data-id');
+    const row = document.getElementById(`desl-row-${id}`);
+    const valorText = row.querySelector('.valor-text');
+    const valorInput = row.querySelector('.valor-input');
+    const valorOriginal = valorText.textContent;
+
+    valorInput.value = valorOriginal;
+    valorText.style.display = 'inline';
+    valorInput.style.display = 'none';
+
+    const btnEditar = row.querySelector('.btn-editar-valor');
+    const btnSalvar = row.querySelector('.btn-salvar-valor');
+    const btnCancelar = row.querySelector('.btn-cancelar-valor');
+    btnEditar.style.display = 'inline-block';
+    btnSalvar.style.display = 'none';
+    btnCancelar.style.display = 'none';
+}
+
+// Atualizar total das deslocações
+function atualizarTotalDeslocacoes() {
+    let total = 0;
+    document.querySelectorAll('#tabelaDeslocacoes .valor-text').forEach(el => {
+        let valor = parseFloat(el.textContent);
+        if (!isNaN(valor)) total += valor;
+    });
+    const totalSpan = document.getElementById('total-valor-desl');
+    if (totalSpan) {
+        totalSpan.textContent = total.toFixed(2) + ' €';
+    }
+    const totalCard = document.getElementById('totalValorDesl');
+    if (totalCard) {
+        totalCard.textContent = total.toFixed(2) + ' €';
+    }
 }
 
 // Função auxiliar para escapar HTML
@@ -575,6 +728,20 @@ document.getElementById('btnGravarMobilidade').addEventListener('click', functio
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', function() {
     atribuirEventosMobilidade();
+
+    // Inicializar edição de deslocações se a aba estiver ativa
+    if (document.getElementById('deslocacoes').classList.contains('show')) {
+        initEdicaoDeslocacoes();
+    }
+});
+
+// Quando a aba for alterada, inicializar edição
+document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(e) {
+        if (e.target.getAttribute('href') === '#deslocacoes') {
+            initEdicaoDeslocacoes();
+        }
+    });
 });
 
 // ========== ESTILOS DE IMPRESSÃO ==========
@@ -629,6 +796,10 @@ document.head.appendChild(style);
         padding: 0.2rem 0.4rem;
         font-size: 0.7rem;
     }
+    .valor-input {
+        width: 100px;
+        display: inline-block;
+    }
     @media (max-width: 768px) {
         .table td, .table th {
             font-size: 12px;
@@ -636,6 +807,9 @@ document.head.appendChild(style);
         }
         .btn-sm {
             font-size: 0.65rem;
+        }
+        .valor-input {
+            width: 70px;
         }
     }
 </style>

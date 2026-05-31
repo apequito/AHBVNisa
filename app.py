@@ -7830,6 +7830,27 @@ def deslocacoes():
                            now=date.today())
 
 
+@app.route('/administrativo/deslocacao/atualizar-valor', methods=['POST'])
+@login_required
+def atualizar_valor_deslocacao():
+    # Verificar permissões (apenas Admin, Comando, Secretaria)
+    if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria']:
+        return jsonify({'error': 'Acesso restrito'}), 403
+
+    data = request.get_json()
+    deslocacao_id = data.get('id')
+    novo_valor = data.get('valor')
+
+    if not deslocacao_id or novo_valor is None:
+        return jsonify({'error': 'Parâmetros inválidos'}), 400
+
+    deslocacao = Deslocacao.query.get_or_404(deslocacao_id)
+    deslocacao.valor = float(novo_valor)
+    db.session.commit()
+
+    return jsonify({'success': True, 'novo_valor': float(novo_valor)})
+
+
 @app.route('/administrativo')
 @login_required
 def administrativo():
