@@ -18,18 +18,24 @@
             <input type="number" name="ano" class="form-control form-control-sm" value="{{ agora.year }}" min="2020" max="2030">
         </div>
         <div class="col-auto">
-            <button type="submit" class="btn btn-sm btn-secondary">🖨️ Imprimir Disponibilidade</button>
+            <button type="submit" class="btn btn-sm btn-secondary">
+                <i class="bi bi-printer"></i> Imprimir Disponibilidade
+            </button>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaECIN()">🖨️ Imprimir Escala ECIN</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaECIN()">
+                <i class="bi bi-printer"></i> Imprimir Escala ECIN
+            </button>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaELAC()">🖨️ Imprimir Escala ELAC</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaReforco()">
+                <i class="bi bi-printer"></i> Imprimir Escala Reforco
+            </button>
         </div>
         {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN', 'Central'] %}
             <div class="col-auto">
                 <button type="button" class="btn btn-sm btn-outline-info" onclick="imprimirTurnoDiario()">
-                    <i class="bi bi-calendar-day me-1"></i> Turno ECIN
+                    <i class="bi bi-calendar-day"></i> Turno ECIN
                 </button>
             </div>
         {% endif %}
@@ -73,13 +79,12 @@
                     <option value="19h/07h" {% if turno_filtro == '19h/07h' %}selected{% endif %}>19h/07h</option>
                 </select>
             </div>
-            <!-- Filtro por Mês para disponibilidades (mostra TODAS) -->
             <div class="col-auto">
-                <label class="form-label">Mês (Disponibilidades)</label>
+                <label class="form-label">Mes (Disponibilidades)</label>
                 <select name="mes_disponibilidade" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for i in range(1,13) %}
-                    <option value="{{ i }}" {% if mes_disponibilidade_filtro == i %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
+                    <option value="{{ i }}" {% if mes_disponibilidade_filtro == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -109,7 +114,7 @@
                 <th>Turno</th>
                 <th>Categoria</th>
                 <th>Estado</th>
-                <th>Ações</th>
+                <th>Acoes</th>
             </tr>
         </thead>
         <tbody>
@@ -123,8 +128,8 @@
                 <td class="estado-cell">
                     {% if r.estado == 'Pendente' %}
                         <span class="badge bg-warning text-dark">Pendente</span>
-                    {% elif r.estado == 'Não Escalado' %}
-                        <span class="badge bg-danger">Não Escalado</span>
+                    {% elif r.estado == 'Nao Escalado' %}
+                        <span class="badge bg-danger">Nao Escalado</span>
                     {% else %}
                         <span class="badge bg-success">{{ r.estado }}</span>
                     {% endif %}
@@ -134,10 +139,11 @@
                     <div class="btn-group action-buttons" role="group">
                         <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="M" title="Motorista ECIN">M</button>
                         <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="C" title="Chefe ECIN">C</button>
-                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnição">G</button>
-                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista ELAC">Me</button>
-                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe ELAC">Ce</button>
-                        <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
+                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnicao ECIN">G</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista Reforco">Me</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe Reforco">Ce</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ge" title="Guarnicao Reforco">Ge</button>
+                        <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Nao Escalar">X</button>
                     </div>
                     {% else %}
                     <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
@@ -146,7 +152,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="text-center text-muted">Nenhum registo encontrado.</td>
+                <td colspan="7" class="text-center text-muted">Nenhum registo encontrado.啃
             </tr>
             {% endfor %}
         </tbody>
@@ -193,17 +199,17 @@
 </div>
 
 <script>
-// Funções de impressão
+// Funcoes de impressao
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
 }
 
-function imprimirEscalaELAC() {
+function imprimirEscalaReforco() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
-    window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
+    window.open('/ecins/imprimir-escala-reforco?mes=' + mes + '&ano=' + ano, '_blank');
 }
 
 function imprimirTurnoDiario() {
@@ -221,14 +227,13 @@ function atualizarBotaoAtualizar() {
         btn = document.createElement('button');
         btn.id = 'btnAtualizarPagina';
         btn.className = 'btn btn-sm btn-warning ms-2';
-        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Atualizar Página';
+        btn.innerHTML = 'Atualizar Pagina';
         btn.onclick = function() { location.reload(); };
         container.appendChild(btn);
     }
     btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
 
-// Função para recarregar a tabela de ECINs
 function recarregarECINs() {
     const params = new URLSearchParams(window.location.search);
     fetch(window.location.pathname + '?' + params.toString())
@@ -241,13 +246,11 @@ function recarregarECINs() {
             if (novaTabela && tabelaAtual) {
                 tabelaAtual.innerHTML = novaTabela.innerHTML;
             }
-            // Reatribuir eventos aos botões
             atribuirEventosECINs();
         })
         .catch(err => console.error('Erro ao recarregar ECINs:', err));
 }
 
-// Verificar se houve trocas pendentes e recarregar
 function verificarAtualizacaoECINs() {
     fetch('/api/verificar-trocas-ecin')
         .then(response => response.json())
@@ -259,7 +262,6 @@ function verificarAtualizacaoECINs() {
         .catch(err => console.error('Erro ao verificar:', err));
 }
 
-// Atribuir eventos aos botões da tabela ECINs
 function atribuirEventosECINs() {
     document.querySelectorAll('.action-btn').forEach(btn => {
         btn.removeEventListener('click', handlerAction);
@@ -274,9 +276,7 @@ function handlerAction(e) {
     executarAcao(id, funcao, this);
 }
 
-// Verificar a cada 30 segundos se houve alterações
 setInterval(verificarAtualizacaoECINs, 30000);
-
 
 async function executarAcao(id, funcao, btnElement) {
     const row = document.getElementById(`ecin-row-${id}`);
@@ -304,13 +304,13 @@ async function executarAcao(id, funcao, btnElement) {
             alteracoesPendentes++;
             atualizarBotaoAtualizar();
         } else {
-            alert('Erro: ' + (data.error || 'Falha na operação'));
+            alert('Erro: ' + (data.error || 'Falha na operacao'));
             btnElement.disabled = false;
             btnElement.innerHTML = originalText;
         }
     } catch (err) {
         console.error(err);
-        alert('Erro de comunicação com o servidor.');
+        alert('Erro de comunicacao com o servidor.');
         btnElement.disabled = false;
         btnElement.innerHTML = originalText;
     }
