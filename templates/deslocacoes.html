@@ -47,7 +47,7 @@
             <td>{{ d.local_origem or '-' }}</td>
             <td>{{ d.local_destino or '-' }}</td>
             {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-            <td>{{ d.valor if d.valor is not none else '-' }}</td>
+            <td>{{ "%.2f"|format(d.valor) if d.valor else '0.00' }} €</td>
             {% endif %}
             <td>{{ d.viatura.matricula if d.viatura else '-' }}</td>
             <td>{{ d.n_servico or '-' }}</td>
@@ -60,9 +60,12 @@
 <!-- Modal Nova Deslocação -->
 <div class="modal fade" id="modalNovaDeslocacao" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST">
+        <form method="POST" id="formDeslocacao">
             <div class="modal-content">
-                <div class="modal-header"><h5>Nova Deslocação</h5></div>
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova Deslocação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <label class="form-label">Data Início</label>
                     <input type="date" name="data" class="form-control mb-2" required>
@@ -79,24 +82,29 @@
                     <label class="form-label">Serviço</label>
                     <select name="servico" id="servicoSelect" class="form-select mb-2" required>
                         <option value="">-- Serviço --</option>
-                        <option>C. Doentes</option>
-                        <option>Evacuação</option>
-                        <option>Retorno</option>
-                        <option>Urgência</option>
+                        <option value="C. Doentes">C. Doentes</option>
+                        <option value="Evacuação">Evacuação</option>
+                        <option value="Retorno">Retorno</option>
+                        <option value="Urgência">Urgência</option>
                     </select>
 
                     <label class="form-label">Local Origem</label>
-                    <input type="text" name="local_origem" class="form-control mb-2" placeholder="Local Origem">
+                    <input type="text" name="local_origem" id="localOrigem" class="form-control mb-2" placeholder="Local Origem">
 
                     <label class="form-label">Local Destino</label>
                     <input type="text" name="local_destino" id="localDestino" class="form-control mb-2" placeholder="Local Destino">
 
-                    {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] %}
-                    <label class="form-label">Valor (€)</label>
-                    <input type="number" step="0.01" name="valor" id="valorDeslocacao" class="form-control mb-2" value="0.00">
-                    {% else %}
-                    <input type="hidden" name="valor" id="valorDeslocacao" value="0.00">
-                    {% endif %}
+                    <div id="divValorManual" style="display: none;">
+                        <label class="form-label">Valor (€)</label>
+                        <input type="number" step="0.01" name="valor" id="valorDeslocacao" class="form-control mb-2" value="0.00">
+                        <small class="text-muted">Pode editar o valor manualmente</small>
+                    </div>
+                    <div id="divValorAuto">
+                        <label class="form-label">Valor calculado (€)</label>
+                        <input type="text" id="valorAuto" class="form-control mb-2" readonly style="background-color: #e9ecef;">
+                        <small class="text-muted">Valor calculado automaticamente com base no serviço e destino</small>
+                    </div>
+                    <input type="hidden" name="valor" id="valorHidden" value="0.00">
 
                     <label class="form-label">Viatura</label>
                     <select name="viatura_id" class="form-select mb-2">
@@ -109,31 +117,98 @@
                     <label class="form-label">Nº Serviço</label>
                     <input type="text" name="n_servico" class="form-control mb-2" placeholder="Nº Serviço">
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn btn-success">Registar</button></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registar</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+// Tabela de preços
 const precos = {
-    'C. Doentes': {'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Coimbra': 35.00, 'Elvas': 20.00},
-    'Evacuação': {'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Coimbra': 35.00, 'Elvas': 20.00},
-    'Retorno': {'Nisa': 10.00, 'Alpalhão': 10.00, 'Tolosa': 10.00, 'Arez': 10.00, 'Santana': 10.00, 'Pé da Serra': 10.00, 'São Matias': 10.00, 'Amieira Tejo': 10.00}
+    'C. Doentes': {
+        'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00,
+        'Coimbra': 35.00, 'Elvas': 20.00, 'Castelo Branco': 10.00,
+        'Abrantes': 20.00, 'Ponte de Sor': 15.00, 'Crato': 10.00,
+        'Alter do Chão': 10.00, 'Monforte': 10.00
+    },
+    'Evacuação': {
+        'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00,
+        'Coimbra': 35.00, 'Elvas': 20.00, 'Castelo Branco': 20.00
+    },
+    'Retorno': {
+        'Nisa': 10.00, 'Alpalhão': 10.00, 'Tolosa': 10.00,
+        'Arez': 10.00, 'Santana': 10.00, 'Pé da Serra': 10.00,
+        'São Matias': 10.00, 'Amieira Tejo': 10.00, 'Gáfete': 10.00,
+        'Montalvão': 10.00, 'Portagem': 10.00
+    },
+    'Urgência': {
+        'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Elvas': 20.00
+    }
 };
+
+// Verificar se o utilizador pode editar valor manualmente
+const podeEditarValor = {{ 'true' if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria'] else 'false' }};
+
+if (podeEditarValor) {
+    document.getElementById('divValorManual').style.display = 'block';
+    document.getElementById('divValorAuto').style.display = 'none';
+} else {
+    document.getElementById('divValorManual').style.display = 'none';
+    document.getElementById('divValorAuto').style.display = 'block';
+}
 
 function atualizarValor() {
     const servico = document.getElementById('servicoSelect').value;
     const destino = document.getElementById('localDestino').value.trim();
-    const campoValor = document.getElementById('valorDeslocacao');
+    const campoValorManual = document.getElementById('valorDeslocacao');
+    const campoValorAuto = document.getElementById('valorAuto');
+    const campoValorHidden = document.getElementById('valorHidden');
+
     let novoValor = 0.00;
+
     if (servico && destino && precos[servico] && precos[servico][destino] !== undefined) {
         novoValor = precos[servico][destino];
     }
-    campoValor.value = novoValor.toFixed(2);
+
+    if (podeEditarValor) {
+        // Para quem pode editar, mostra o valor no campo manual
+        if (campoValorManual && campoValorManual.value === '0.00') {
+            campoValorManual.value = novoValor.toFixed(2);
+        }
+        campoValorHidden.value = campoValorManual.value;
+    } else {
+        // Para quem não pode editar, mostra o valor calculado
+        if (campoValorAuto) {
+            campoValorAuto.value = novoValor.toFixed(2) + ' €';
+        }
+        campoValorHidden.value = novoValor.toFixed(2);
+    }
 }
 
+function atualizarValorManual() {
+    const campoValorManual = document.getElementById('valorDeslocacao');
+    const campoValorHidden = document.getElementById('valorHidden');
+    if (campoValorManual) {
+        campoValorHidden.value = campoValorManual.value;
+    }
+}
+
+// Event listeners
 document.getElementById('servicoSelect').addEventListener('change', atualizarValor);
 document.getElementById('localDestino').addEventListener('input', atualizarValor);
+
+if (podeEditarValor) {
+    document.getElementById('valorDeslocacao').addEventListener('input', atualizarValorManual);
+}
+
+// Inicializar valores ao abrir o modal
+document.getElementById('modalNovaDeslocacao').addEventListener('show.bs.modal', function() {
+    document.getElementById('formDeslocacao').reset();
+    atualizarValor();
+});
 </script>
 {% endblock %}

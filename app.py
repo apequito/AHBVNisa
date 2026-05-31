@@ -7697,10 +7697,6 @@ def inject_pendencias():
 
 
 #---------------------------Deslocações----------------
-from datetime import date
-
-from datetime import date, datetime
-
 @app.route('/deslocacoes', methods=['GET', 'POST'])
 @login_required
 def deslocacoes():
@@ -7711,7 +7707,6 @@ def deslocacoes():
         servico = request.form['servico']
         local_origem = request.form.get('local_origem', '')
         local_destino = request.form.get('local_destino', '')
-        valor_str = request.form.get('valor', '')
         viatura_id = request.form.get('viatura_id', type=int)
         n_servico = request.form.get('n_servico', '')
 
@@ -7756,14 +7751,52 @@ def deslocacoes():
             flash('Hora fim deve estar no formato HH:MM.', 'danger')
             return redirect(url_for('deslocacoes'))
 
-        # Valor (apenas para perfis autorizados)
+        # Processar valor
         valor = None
-        if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'Secretaria']:
+        valor_str = request.form.get('valor', '')
+
+        # Verificar se o utilizador tem permissão para definir valor
+        pode_definir_valor = (current_user.tipo_user == 'Admin' or
+                              current_user.resp_departamento in ['Comando', 'Secretaria'])
+
+        if pode_definir_valor:
+            # Responsável pode definir valor manualmente
             if valor_str:
                 try:
+                    # Substituir vírgula por ponto se necessário
+                    valor_str = valor_str.replace(',', '.')
                     valor = float(valor_str)
                 except ValueError:
-                    pass
+                    valor = None
+        else:
+            # Utilizador normal: calcular valor automaticamente
+            # Tabela de preços (mesma do JavaScript)
+            precos = {
+                'C. Doentes': {
+                    'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00,
+                    'Coimbra': 35.00, 'Elvas': 20.00, 'Castelo Branco': 10.00,
+                    'Abrantes': 20.00, 'Ponte de Sor': 10.00, 'Crato': 10.00,
+                    'Alter do Chão': 10.00, 'Monforte': 10.00
+                },
+                'Evacuação': {
+                    'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00,
+                    'Coimbra': 35.00, 'Elvas': 20.00, 'Castelo Branco': 20.00
+                },
+                'Retorno': {
+                    'Nisa': 10.00, 'Alpalhão': 10.00, 'Tolosa': 10.00,
+                    'Arez': 10.00, 'Santana': 10.00, 'Pé da Serra': 10.00,
+                    'São Matias': 10.00, 'Amieira Tejo': 10.00, 'Gáfete': 10.00,
+                    'Montalvão': 10.00, 'Portagem': 10.00
+                },
+                'Urgência': {
+                    'Portalegre': 10.00, 'Évora': 35.00, 'Lisboa': 35.00, 'Elvas': 20.00
+                }
+            }
+
+            if servico and local_destino and precos.get(servico) and precos[servico].get(local_destino):
+                valor = precos[servico][local_destino]
+            else:
+                valor = 0.00
 
         nova = Deslocacao(
             bombeiro_id=current_user.id,
