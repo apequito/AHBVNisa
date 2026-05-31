@@ -3949,6 +3949,7 @@ def escalar_ecin(id):
     flash(f'{ecin.bombeiro.nome} escalado como {dados["estado"]}.', 'success')
     return redirect(url_for('listar_ecins'))
 
+
 @app.route('/ecins/escalar_ajax/<int:id>', methods=['GET'])
 @login_required
 def escalar_ecin_ajax(id):
@@ -3959,21 +3960,21 @@ def escalar_ecin_ajax(id):
     funcao_cod = request.args.get('funcao', 'X')
 
     mapeamento = {
-        'M':  {'funcao': 'Motorista', 'categoria': 'ECIN', 'estado': 'Motorista ECIN'},
-        'C':  {'funcao': 'Chefe',     'categoria': 'ECIN', 'estado': 'Chefe ECIN'},
-        'G':  {'funcao': 'Guarnição', 'categoria': 'ECIN', 'estado': 'Guarnição ECIN'},
-        'Me': {'funcao': 'Motorista', 'categoria': 'ELAC', 'estado': 'Motorista ELAC'},
-        'Ce': {'funcao': 'Chefe',     'categoria': 'ELAC', 'estado': 'Chefe ELAC'},
-        'X':  {'estado': 'Não Escalado'}
+        'M': {'funcao': 'Motorista', 'categoria': 'ECIN', 'estado': 'Motorista ECIN'},
+        'C': {'funcao': 'Chefe', 'categoria': 'ECIN', 'estado': 'Chefe ECIN'},
+        'G': {'funcao': 'Guarnicao', 'categoria': 'ECIN', 'estado': 'Guarnicao ECIN'},
+        'Me': {'funcao': 'Motorista', 'categoria': 'ELAC', 'estado': 'Motorista Reforco'},
+        'Ce': {'funcao': 'Chefe', 'categoria': 'ELAC', 'estado': 'Chefe Reforco'},
+        'Ge': {'funcao': 'Guarnicao', 'categoria': 'ELAC', 'estado': 'Guarnicao Reforco'},
+        'X': {'estado': 'Nao Escalado'}
     }
 
     if funcao_cod not in mapeamento:
-        return jsonify({'error': 'Opção inválida'}), 400
+        return jsonify({'error': 'Opcao invalida'}), 400
 
     dados = mapeamento[funcao_cod]
 
     # Remover escala antiga se existir
-    from sqlalchemy import func
     if ecin.categoria and ecin.funcao:
         escalas = Escala.query.filter(
             Escala.bombeiro_id == ecin.bombeiro_id,
@@ -3992,9 +3993,15 @@ def escalar_ecin_ajax(id):
     else:
         # Criar nova escala
         try:
-            partes = ecin.turno.split('-')[1].strip().split('/')
-            inicio_str = partes[0].replace('h', ':00')
-            fim_str = partes[1].replace('h', ':00')
+            if ' - ' in ecin.turno:
+                partes = ecin.turno.split('-')[1].strip().split('/')
+            else:
+                partes = ecin.turno.split('/')
+            if len(partes) == 2:
+                inicio_str = partes[0].replace('h', ':00')
+                fim_str = partes[1].replace('h', ':00')
+            else:
+                inicio_str, fim_str = '08:00', '20:00'
         except Exception:
             inicio_str, fim_str = '08:00', '20:00'
 
@@ -4020,9 +4027,11 @@ def escalar_ecin_ajax(id):
         ecin.categoria = dados['categoria']
         ecin.estado = dados['estado']
 
+        if ecin.valor is None:
+            ecin.valor = 42.0
+
     db.session.commit()
 
-    # Preparar resposta com o novo estado
     return jsonify({
         'success': True,
         'novo_estado': ecin.estado,
@@ -4030,18 +4039,6 @@ def escalar_ecin_ajax(id):
         'estado_texto': get_estado_texto(ecin.estado),
         'mostrar_botoes': ecin.estado == 'Pendente'
     })
-
-def get_estado_class(estado):
-    if estado == 'Pendente':
-        return 'bg-warning text-dark'
-    elif estado == 'Não Escalado':
-        return 'bg-danger'
-    else:
-        return 'bg-success'
-
-def get_estado_texto(estado):
-    return estado
-
 
 
 #----------Imprimir Disponibilidade ECINS----------------
