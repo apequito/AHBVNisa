@@ -153,7 +153,7 @@
                         <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
                     </div>
                     {% else %}
-                    <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
+                    <button class="btn btn-sm btn-secondary btn-modificar-registo" data-id="{{ r.id }}">Modificar</button>
                     {% endif %}
                 </td>
             </tr>
@@ -205,7 +205,7 @@
     </div>
 </div>
 
-<script>
+
 <script>
 // Funções de impressão
 function imprimirEscalaECIN() {
@@ -408,6 +408,7 @@ async function executarAcao(id, funcao, btnElement) {
 atribuirEventosECINs();
 atualizarBotaoAtualizar();
 </script>
+
 <style>
     .action-buttons .btn {
         padding: 0.25rem 0.5rem;
