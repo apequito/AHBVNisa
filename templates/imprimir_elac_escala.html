@@ -20,7 +20,6 @@ body {
     .no-print { display: none; }
     header, footer, .page-break, .page-number, .print-date, .print-url { display: none; }
     body { margin: 0; padding: 0; }
-    /* Forçar impressão de cores de fundo */
     tr.weekend, td, th {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -105,7 +104,6 @@ tr.weekend {
 .mecanografico { font-size: 9px; color: #333; }
 hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
 
-/* Estilo especial para o texto ELAC na coluna Guarnição */
 .texto-elac {
     font-size: 16px;
     font-weight: bold;
@@ -136,8 +134,6 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
     text-align: center;
     min-width: 260px;
 }
-
-/* Ajuste para celulas vazias */
 td.col-guarnicao {
     vertical-align: middle;
 }
@@ -203,7 +199,8 @@ td.col-guarnicao {
                     <span class="nome-bombeiro">{{ b.nome }}</span>
                     <span class="mecanografico">({{ b.mecanografico }})</span>
                 </div>
-                {% if not loop.last %}<hr>{% endfor %}
+                {% if not loop.last %}<hr>{% endif %}
+                {% endfor %}
             {% else %}
                 -
             {% endif %}
@@ -215,19 +212,17 @@ td.col-guarnicao {
             {% set guarnicoes = escala[dia_num].get(turno, {}).get('Guarnição', []) %}
 
             {% if guarnicoes %}
-                {# Se existe guarnição escalada, mostra normalmente #}
                 {% for b in guarnicoes %}
                 <div class="bombeiro-linha">
                     <span class="posto-abrev">{{ abrev.get(b.posto, b.posto) }}</span>
                     <span class="nome-bombeiro">{{ b.nome }}</span>
                     <span class="mecanografico">({{ b.mecanografico }})</span>
                 </div>
-                {% if not loop.last %}<hr>{% endfor %}
+                {% if not loop.last %}<hr>{% endif %}
+                {% endfor %}
             {% elif motoristas and chefes %}
-                {# Se tem motorista E chefe, mas não tem guarnição, mostra ELAC #}
                 <span class="texto-elac">ELAC</span>
             {% else %}
-                {# Sem qualquer registo, fica em branco #}
                 -
             {% endif %}
         {% endmacro %}
