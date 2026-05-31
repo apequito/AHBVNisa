@@ -206,6 +206,7 @@
 </div>
 
 <script>
+<script>
 // Funções de impressão
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;
@@ -241,6 +242,63 @@ function atualizarBotaoAtualizar() {
     btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
 
+// Função para modificar um registo (voltar ao estado Pendente sem recarregar)
+async function modificarRegisto(id, btnModificar) {
+    const row = document.getElementById(`ecin-row-${id}`);
+    if (!row) return;
+
+    const acoesDiv = row.querySelector('.acoes-ecin');
+    const estadoSpan = row.querySelector('.estado-cell .badge');
+
+    // Mostrar loading no botão
+    const originalText = btnModificar.innerHTML;
+    btnModificar.disabled = true;
+    btnModificar.innerHTML = '...';
+
+    try {
+        const response = await fetch(`/ecins/modificar_ajax/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            // Atualizar o badge para Pendente
+            estadoSpan.className = 'badge bg-warning text-dark';
+            estadoSpan.textContent = 'Pendente';
+
+            // Recriar os botões de seleção
+            acoesDiv.innerHTML = `
+                <div class="btn-group action-buttons" role="group">
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="${id}" data-funcao="M" title="Motorista ECIN">M</button>
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="${id}" data-funcao="C" title="Chefe ECIN">C</button>
+                    <button class="btn btn-sm btn-outline-primary action-btn" data-id="${id}" data-funcao="G" title="Guarnição ECIN">G</button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="${id}" data-funcao="Me" title="Motorista Reforço">Me</button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="${id}" data-funcao="Ce" title="Chefe Reforço">Ce</button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" data-id="${id}" data-funcao="Gr" title="Guarnição Reforço">Gr</button>
+                    <button class="btn btn-sm btn-outline-danger action-btn" data-id="${id}" data-funcao="X" title="Não Escalar">✕</button>
+                </div>
+            `;
+
+            // Reatribuir eventos aos novos botões
+            atribuirEventosECINs();
+
+            alteracoesPendentes++;
+            atualizarBotaoAtualizar();
+        } else {
+            alert('Erro: ' + (data.error || 'Falha ao modificar registo'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro de comunicação com o servidor.');
+    } finally {
+        btnModificar.disabled = false;
+        btnModificar.innerHTML = originalText;
+    }
+}
+
 // Função para recarregar a tabela de ECINs
 function recarregarECINs() {
     const params = new URLSearchParams(window.location.search);
@@ -274,9 +332,16 @@ function verificarAtualizacaoECINs() {
 
 // Atribuir eventos aos botões da tabela ECINs
 function atribuirEventosECINs() {
+    // Botões de ação (M, C, G, Me, Ce, Gr, X)
     document.querySelectorAll('.action-btn').forEach(btn => {
         btn.removeEventListener('click', handlerAction);
         btn.addEventListener('click', handlerAction);
+    });
+
+    // Botões de modificar
+    document.querySelectorAll('.btn-modificar-registo').forEach(btn => {
+        btn.removeEventListener('click', handlerModificar);
+        btn.addEventListener('click', handlerModificar);
     });
 }
 
@@ -285,6 +350,12 @@ function handlerAction(e) {
     const id = this.getAttribute('data-id');
     const funcao = this.getAttribute('data-funcao');
     executarAcao(id, funcao, this);
+}
+
+function handlerModificar(e) {
+    e.preventDefault();
+    const id = this.getAttribute('data-id');
+    modificarRegisto(id, this);
 }
 
 // Verificar a cada 30 segundos se houve alterações
@@ -310,7 +381,13 @@ async function executarAcao(id, funcao, btnElement) {
             estadoSpan.textContent = data.estado_texto;
 
             if (!data.mostrar_botoes) {
-                acoesDiv.innerHTML = `<a href="/ecins/modificar/${id}" class="btn btn-sm btn-secondary">Modificar</a>`;
+                // Substituir botões por botão "Modificar"
+                acoesDiv.innerHTML = `<button class="btn btn-sm btn-secondary btn-modificar-registo" data-id="${id}">Modificar</button>`;
+                // Reatribuir evento ao novo botão modificar
+                const novoBtnModificar = acoesDiv.querySelector('.btn-modificar-registo');
+                if (novoBtnModificar) {
+                    novoBtnModificar.addEventListener('click', handlerModificar);
+                }
             }
             alteracoesPendentes++;
             atualizarBotaoAtualizar();
@@ -331,7 +408,6 @@ async function executarAcao(id, funcao, btnElement) {
 atribuirEventosECINs();
 atualizarBotaoAtualizar();
 </script>
-
 <style>
     .action-buttons .btn {
         padding: 0.25rem 0.5rem;
