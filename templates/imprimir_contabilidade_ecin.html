@@ -5,8 +5,8 @@
     <title>Registo de Pagamentos - ECIN - {{ mes }}/{{ ano }}</title>
     <style>
         @page {
-            size: A4 portrait;
-            margin: 20mm 15mm;
+            size: A4 landscape;
+            margin: 15mm 12mm;
         }
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -20,23 +20,35 @@
         }
         .cabecalho {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+        }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        .logo-bombeiros {
+            width: 70px;
+            height: auto;
         }
         .logo-anepc {
-            display: block;
-            margin: 0 auto 10px auto;
-            width: 80px;
+            width: 70px;
             height: auto;
+        }
+        .header-text {
+            text-align: center;
         }
         h1 {
             font-size: 14px;
-            margin: 5px 0;
+            margin: 3px 0;
             font-weight: bold;
             text-transform: uppercase;
         }
         h2 {
             font-size: 16px;
-            margin: 10px 0;
+            margin: 8px 0;
             font-weight: bold;
             text-decoration: underline;
         }
@@ -47,7 +59,7 @@
         }
         .info-periodo {
             text-align: center;
-            margin: 15px 0;
+            margin: 10px 0;
             font-size: 11px;
             font-weight: normal;
         }
@@ -75,7 +87,7 @@
             text-align: center;
         }
         .assinaturas {
-            margin-top: 50px;
+            margin-top: 40px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -120,8 +132,14 @@
     {% for pagina in paginas %}
     <div class="page-content">
         <div class="cabecalho">
-            <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC.png') }}" alt="ANEPC" onerror="this.style.display='none'">
-            <h1>REGISTO DE PAGAMENTOS</h1>
+            <div class="logo-container">
+                <img class="logo-bombeiros" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="Bombeiros Voluntários de Nisa" onerror="this.style.display='none'">
+                <div class="header-text">
+                    <h1>CORPO DE BOMBEIROS VOLUNTÁRIOS DE NISA</h1>
+                    <h2>REGISTO DE PAGAMENTOS</h2>
+                </div>
+                <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC.png') }}" alt="ANEPC" onerror="this.style.display='none'">
+            </div>
             <div class="info-decir">Dispositivo Especial Combate Incêndios Rurais (DECIR {{ ano }})</div>
             <div class="info-periodo">
                 Período: {{ data_inicio }} a {{ data_fim }}

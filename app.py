@@ -8528,8 +8528,9 @@ def imprimir_contabilidade_ecin():
         data_inicio = registos_datas[0].data.strftime('%d/%m/%Y')
         data_fim = registos_datas[-1].data.strftime('%d/%m/%Y')
     else:
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
         data_inicio = f"01/{mes:02d}/{ano}"
-        data_fim = f"{calendar.monthrange(ano, mes)[1]}/{mes:02d}/{ano}"
+        data_fim = f"{ultimo_dia:02d}/{mes:02d}/{ano}"
 
     registos = Ecin.query.filter(
         Ecin.categoria == 'ECIN',
@@ -8556,28 +8557,27 @@ def imprimir_contabilidade_ecin():
         info['turnos_int'] = turnos_int
         info['horas_rest'] = horas_rest
 
-    # Paginação - 20 registos por página (como no documento original)
+    # Paginação - 20 registos por página
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
     POR_PAGINA = 20
     paginas = []
     pagina_atual = []
-    total_geral_turnos_int = 0
-    total_geral_horas_rest = 0
-    total_geral_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        total_geral_turnos_int += info['turnos_int']
-        total_geral_horas_rest += info['horas_rest']
-        if total_geral_horas_rest >= 12:
-            extra_geral = int(total_geral_horas_rest // 12)
-            total_geral_turnos_int += extra_geral
-            total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
-        total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
             paginas.append({'bombeiros': pagina_atual.copy()})
             pagina_atual = []
+
+    # Calcular totais gerais
+    total_geral_turnos_int = sum(info['turnos_int'] for _, info in dados.items())
+    total_geral_horas_rest = sum(info['horas_rest'] for _, info in dados.items())
+    if total_geral_horas_rest >= 12:
+        extra = int(total_geral_horas_rest // 12)
+        total_geral_turnos_int += extra
+        total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
+    total_geral_valor = sum(info['valor'] for _, info in dados.items())
 
     return render_template('imprimir_contabilidade_ecin.html',
                            mes=mes, ano=ano,
@@ -8611,8 +8611,9 @@ def imprimir_contabilidade_elac():
         data_inicio = registos_datas[0].data.strftime('%d/%m/%Y')
         data_fim = registos_datas[-1].data.strftime('%d/%m/%Y')
     else:
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
         data_inicio = f"01/{mes:02d}/{ano}"
-        data_fim = f"{calendar.monthrange(ano, mes)[1]}/{mes:02d}/{ano}"
+        data_fim = f"{ultimo_dia:02d}/{mes:02d}/{ano}"
 
     registos = Ecin.query.filter(
         Ecin.categoria == 'ELAC',
@@ -8644,23 +8645,22 @@ def imprimir_contabilidade_elac():
     POR_PAGINA = 20
     paginas = []
     pagina_atual = []
-    total_geral_turnos_int = 0
-    total_geral_horas_rest = 0
-    total_geral_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        total_geral_turnos_int += info['turnos_int']
-        total_geral_horas_rest += info['horas_rest']
-        if total_geral_horas_rest >= 12:
-            extra_geral = int(total_geral_horas_rest // 12)
-            total_geral_turnos_int += extra_geral
-            total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
-        total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
             paginas.append({'bombeiros': pagina_atual.copy()})
             pagina_atual = []
+
+    # Calcular totais gerais
+    total_geral_turnos_int = sum(info['turnos_int'] for _, info in dados.items())
+    total_geral_horas_rest = sum(info['horas_rest'] for _, info in dados.items())
+    if total_geral_horas_rest >= 12:
+        extra = int(total_geral_horas_rest // 12)
+        total_geral_turnos_int += extra
+        total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
+    total_geral_valor = sum(info['valor'] for _, info in dados.items())
 
     return render_template('imprimir_contabilidade_elac.html',
                            mes=mes, ano=ano,
