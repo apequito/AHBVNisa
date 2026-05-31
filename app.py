@@ -4090,23 +4090,23 @@ def imprimir_ecins():
                            ano=ano,
                            meses=meses_nomes)
 
-@app.route('/ecins/modificar/<int:id>')
+@app.route('/ecins/modificar_ajax/<int:id>', methods=['POST'])
 @login_required
-def modificar_ecin(id):
+def modificar_ecin_ajax(id):
     if current_user.tipo_user != 'Admin' and current_user.resp_departamento not in ['Comando', 'Secretaria', 'ECIN']:
-        flash('Acesso restrito.', 'danger')
-        return redirect(url_for('listar_ecins'))
+        return jsonify({'error': 'Acesso restrito'}), 403
 
     ecin = Ecin.query.get_or_404(id)
 
     # Remove a escala associada (se existir)
     if ecin.categoria and ecin.funcao:
-        escalas = Escala.query.filter_by(
-            bombeiro_id=ecin.bombeiro_id,
-            turno=ecin.turno,
-            categoria=ecin.categoria,
-            funcao=ecin.funcao
-        ).filter(func.date(Escala.data_inicio) == ecin.data).all()
+        escalas = Escala.query.filter(
+            Escala.bombeiro_id == ecin.bombeiro_id,
+            func.date(Escala.data_inicio) == ecin.data,
+            Escala.turno == ecin.turno,
+            Escala.categoria == ecin.categoria,
+            Escala.funcao == ecin.funcao
+        ).all()
         for escala in escalas:
             db.session.delete(escala)
 
@@ -4116,8 +4116,10 @@ def modificar_ecin(id):
     ecin.categoria = None
     db.session.commit()
 
-    flash('Registo modificado. O bombeiro voltou a ficar Pendente.', 'info')
-    return redirect(url_for('listar_ecins'))
+    return jsonify({
+        'success': True,
+        'mensagem': 'Registo modificado com sucesso'
+    })
 
 # ---------- Imprimir Escala ECin----------
 
