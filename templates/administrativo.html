@@ -259,89 +259,95 @@
             </form>
 
             <!-- Tabela ECINs / ELACs -->
-            <div class="card shadow-sm">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Data</th><th>Turno</th><th>Categoria</th><th>Bombeiro</th>
-                                    <th>Função</th><th>Estado</th><th>Valor</th>
-                                    <th>Mobilidade</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ecins-tbody">
-                                {% for ec in ecins %}
-                                <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
-                                    <td>{{ ec.data.strftime('%d/%m/%Y') }}啃
-                                    <td>{{ ec.turno }}啃
-                                    <td>{{ ec.categoria or '-' }}啃
-                                    <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})啃
-                                    <td>{{ ec.funcao or '-' }}啃
-                                    <td>
-                                        {% if ec.estado == 'Mobilizado' %}
-                                            <span class="badge bg-info">Mobilizado</span>
-                                        {% else %}
-                                            <span class="badge bg-success">{{ ec.estado }}</span>
-                                        {% endif %}
-                                    啃
-                                    <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €啃
-                                    <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
-                                        {% if ec.estado == 'Mobilizado' %}
-                                            {# Registo do substituto - mostrar quem foi substituído #}
-                                            {% set original_encontrado = false %}
-                                            {% for m in mobilidades_lista if m.bombeiro_substituto_id == ec.bombeiro_id and m.original_data == ec.data %}
-                                                {% set original_encontrado = true %}
-                                                <span class="text-info">
-                                                    <i class="bi bi-arrow-left-right me-1"></i>
-                                                    Substitui: {{ m.original_nome }}
-                                                </span>
-                                            {% endfor %}
-                                            {% if not original_encontrado %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        {% else %}
-                                            {# Registo original - verificar se tem mobilidade #}
-                                            {% set mobilidade_encontrada = false %}
-                                            {% for m in mobilidades_lista if m.ecin_original_id == ec.id %}
-                                                {% set mobilidade_encontrada = true %}
-                                                <div class="d-flex align-items-center">
-                                                    <span class="text-warning">
-                                                        <i class="bi bi-person-fill-down me-1"></i>
-                                                        Substituído por: {{ m.substituto_nome }}
-                                                        ({{ "%.2f"|format(m.valor_pago) }} €)
-                                                    </span>
-                                                    <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
-                                                            data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
-                                                        <i class="bi bi-x-circle"></i>
-                                                    </button>
-                                                </div>
-                                            {% endfor %}
-                                            {% if not mobilidade_encontrada %}
-                                                <div class="d-flex align-items-center">
-                                                    <span class="text-muted">-</span>
-                                                    <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
-                                                            data-ecin-id="{{ ec.id }}" title="Criar mobilidade">
-                                                        <i class="bi bi-plus-circle"></i>
-                                                    </button>
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                    啃
-                                </tr>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data</th>
+                        <th>Turno</th>
+                        <th>Categoria</th>
+                        <th>Bombeiro</th>
+                        <th>Função</th>
+                        <th>Estado</th>
+                        <th>Valor</th>
+                        <th>Mobilidade</th>
+                    </tr>
+                </thead>
+                <tbody id="ecins-tbody">
+                    {% for ec in ecins %}
+                    <tr class="ecin-row" data-ecin-id="{{ ec.id }}">
+                        <td>{{ ec.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ ec.turno }}</td>
+                        <td>{{ ec.categoria or '-' }}</td>
+                        <td>{{ ec.bombeiro.nome }} ({{ ec.bombeiro.mecanografico }})</td>
+                        <td>{{ ec.funcao or '-' }}</td>
+                        <td>
+                            {% if ec.estado == 'Mobilizado' %}
+                                <span class="badge bg-info">Mobilizado</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ ec.estado }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="valor-cell">{{ "%.2f"|format(ec.valor) if ec.valor else '0.00' }} €</td>
+                        <td class="mobilidade-cell" data-ecin-id="{{ ec.id }}">
+                            {% if ec.estado == 'Mobilizado' %}
+                                {# Registo do substituto - mostrar quem foi substituído #}
+                                {% set original_encontrado = false %}
+                                {% for m in mobilidades_lista if m.bombeiro_substituto_id == ec.bombeiro_id and m.original_data == ec.data %}
+                                    {% set original_encontrado = true %}
+                                    <span class="text-info">
+                                        <i class="bi bi-arrow-left-right me-1"></i>
+                                        Substitui: {{ m.original_nome }}
+                                    </span>
                                 {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr class="fw-bold bg-light">
-                                    <td colspan="6" class="text-end">Total:啃
-                                    <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €啃
-                                    <td>啃
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                                {% if not original_encontrado %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% else %}
+                                {# Registo original - verificar se tem mobilidade #}
+                                {% set mobilidade_encontrada = false %}
+                                {% for m in mobilidades_lista if m.ecin_original_id == ec.id %}
+                                    {% set mobilidade_encontrada = true %}
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="text-warning me-2">
+                                            <i class="bi bi-person-fill-down me-1"></i>
+                                            Substituto: {{ m.substituto_nome }}
+                                            ({{ "%.2f"|format(m.valor_pago) }} €)
+                                        </span>
+                                        <button class="btn btn-sm btn-outline-danger btn-apagar-mobilidade ms-2"
+                                                data-ecin-id="{{ ec.id }}" title="Apagar mobilidade">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                                {% if not mobilidade_encontrada %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-muted me-2">-</span>
+                                        <button class="btn btn-sm btn-outline-success btn-mobilidade ms-2"
+                                                data-ecin-id="{{ ec.id }}" title="Criar mobilidade">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold bg-light">
+                        <td colspan="6" class="text-end">Total:</td>
+                        <td id="total-valor-ecin">{{ "%.2f"|format(total_valor_ecin) }} €</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 </div>
