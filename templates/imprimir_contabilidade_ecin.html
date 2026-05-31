@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 10mm 10mm;
+            margin: 8mm 10mm;
         }
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -20,54 +20,58 @@
         }
         .cabecalho {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .logo-container {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 15px;
             margin-bottom: 5px;
         }
-        .logo-anepc {
-            width: 60px;
+        .logo-esquerda {
+            width: 55px;
+            height: auto;
+        }
+        .logo-direita {
+            width: 55px;
             height: auto;
         }
         .header-text {
             text-align: center;
+            flex: 1;
         }
         h1 {
-            font-size: 14px;
+            font-size: 13px;
             margin: 2px 0;
             font-weight: bold;
             text-transform: uppercase;
         }
         h2 {
-            font-size: 15px;
-            margin: 5px 0;
+            font-size: 14px;
+            margin: 4px 0;
             font-weight: bold;
             text-decoration: underline;
         }
         .info-decir {
-            font-size: 11px;
-            margin: 3px 0;
+            font-size: 10px;
+            margin: 2px 0;
             font-weight: normal;
         }
         .info-periodo {
             text-align: center;
-            margin: 8px 0;
-            font-size: 10px;
+            margin: 6px 0;
+            font-size: 9px;
             font-weight: normal;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            margin-top: 6px;
             font-size: 9px;
         }
         th, td {
             border: 1px solid #000;
-            padding: 4px 3px;
+            padding: 3px 2px;
             vertical-align: top;
         }
         th {
@@ -83,7 +87,7 @@
             text-align: center;
         }
         .assinaturas {
-            margin-top: 25px;
+            margin-top: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -94,12 +98,20 @@
         }
         .linha-assinatura {
             border-top: 1px solid #000;
-            margin-top: 25px;
+            margin-top: 20px;
             padding-top: 3px;
             width: 100%;
         }
         .quebra {
             page-break-after: always;
+        }
+        .total-pagina {
+            margin-top: 8px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 9px;
+            border-top: 1px solid #ccc;
+            padding-top: 4px;
         }
         @media print {
             body {
@@ -110,11 +122,11 @@
         }
         .no-print {
             text-align: right;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         button {
-            padding: 6px 15px;
-            font-size: 12px;
+            padding: 5px 12px;
+            font-size: 11px;
             cursor: pointer;
         }
     </style>
@@ -129,12 +141,12 @@
     <div class="page-content">
         <div class="cabecalho">
             <div class="logo-container">
-                <img class="logo-anepc" src="{{ url_for('static', filename='images/anepc.jpg') }}" alt="ANEPC" onerror="this.style.display='none'">
+                <img class="logo-esquerda" src="{{ url_for('static', filename='images/outros.png') }}" alt="Bombeiros Voluntários de Nisa" onerror="this.style.display='none'">
                 <div class="header-text">
                     <h1>CORPO DE BOMBEIROS DE NISA</h1>
                     <h2>REGISTO DE PAGAMENTOS</h2>
                 </div>
-                <div style="width: 60px;"></div>
+                <img class="logo-direita" src="{{ url_for('static', filename='images/anepc.jpg') }}" alt="ANEPC" onerror="this.style.display='none'">
             </div>
             <div class="info-decir">Dispositivo Especial Combate Incêndios Rurais (DECIR {{ ano }})</div>
             <div class="info-periodo">
@@ -145,9 +157,9 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 10%;">Nº Mec</th>
+                    <th style="width: 9%;">Nº Mec</th>
                     <th style="width: 12%;">Função/Categoria</th>
-                    <th style="width: 38%;">Nome</th>
+                    <th style="width: 39%;">Nome</th>
                     <th style="width: 13%;">N.º de Turnos</th>
                     <th style="width: 12%;">Montante Pago (€)</th>
                     <th style="width: 15%;">Assinatura</th>
@@ -176,6 +188,22 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        <!-- Total da página -->
+        <div class="total-pagina">
+            Total desta página:
+            {% if pagina.total_turnos_int > 0 and pagina.total_horas_rest > 0 %}
+                {{ pagina.total_turnos_int }} Turnos + {{ pagina.total_horas_rest }} Horas
+            {% elif pagina.total_turnos_int > 0 %}
+                {{ pagina.total_turnos_int }} Turnos
+            {% elif pagina.total_horas_rest > 0 %}
+                {{ pagina.total_horas_rest }} Horas
+            {% else %}
+                0
+            {% endif %}
+            | Valor: {{ "%.2f"|format(pagina.total_valor) }} €
+            | Total de Linhas: {{ pagina.total_linhas }}
+        </div>
 
         <div class="assinaturas">
             <div class="assinatura">

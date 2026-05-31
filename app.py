@@ -8562,31 +8562,38 @@ def imprimir_contabilidade_ecin():
     POR_PAGINA = 20
     paginas = []
     pagina_atual = []
+    pagina_total_turnos = 0
+    pagina_total_horas = 0
+    pagina_total_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
+        pagina_total_turnos += info['turnos_int']
+        pagina_total_horas += info['horas_rest']
+        if pagina_total_horas >= 12:
+            extra = int(pagina_total_horas // 12)
+            pagina_total_turnos += extra
+            pagina_total_horas = round(pagina_total_horas % 12, 1)
+        pagina_total_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
-            paginas.append({'bombeiros': pagina_atual.copy()})
+            paginas.append({
+                'bombeiros': pagina_atual.copy(),
+                'total_turnos_int': pagina_total_turnos,
+                'total_horas_rest': pagina_total_horas,
+                'total_valor': pagina_total_valor,
+                'total_linhas': len(pagina_atual)
+            })
             pagina_atual = []
-
-    # Calcular totais gerais
-    total_geral_turnos_int = sum(info['turnos_int'] for _, info in dados.items())
-    total_geral_horas_rest = sum(info['horas_rest'] for _, info in dados.items())
-    if total_geral_horas_rest >= 12:
-        extra = int(total_geral_horas_rest // 12)
-        total_geral_turnos_int += extra
-        total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
-    total_geral_valor = sum(info['valor'] for _, info in dados.items())
+            pagina_total_turnos = 0
+            pagina_total_horas = 0
+            pagina_total_valor = 0.0
 
     return render_template('imprimir_contabilidade_ecin.html',
                            mes=mes, ano=ano,
                            data_inicio=data_inicio,
                            data_fim=data_fim,
-                           paginas=paginas,
-                           total_geral_turnos_int=total_geral_turnos_int,
-                           total_geral_horas_rest=total_geral_horas_rest,
-                           total_geral_valor=total_geral_valor)
+                           paginas=paginas)
 
 
 @app.route('/administrativo/imprimir-contabilidade-elac')
@@ -8645,31 +8652,38 @@ def imprimir_contabilidade_elac():
     POR_PAGINA = 20
     paginas = []
     pagina_atual = []
+    pagina_total_turnos = 0
+    pagina_total_horas = 0
+    pagina_total_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
+        pagina_total_turnos += info['turnos_int']
+        pagina_total_horas += info['horas_rest']
+        if pagina_total_horas >= 12:
+            extra = int(pagina_total_horas // 12)
+            pagina_total_turnos += extra
+            pagina_total_horas = round(pagina_total_horas % 12, 1)
+        pagina_total_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
-            paginas.append({'bombeiros': pagina_atual.copy()})
+            paginas.append({
+                'bombeiros': pagina_atual.copy(),
+                'total_turnos_int': pagina_total_turnos,
+                'total_horas_rest': pagina_total_horas,
+                'total_valor': pagina_total_valor,
+                'total_linhas': len(pagina_atual)
+            })
             pagina_atual = []
-
-    # Calcular totais gerais
-    total_geral_turnos_int = sum(info['turnos_int'] for _, info in dados.items())
-    total_geral_horas_rest = sum(info['horas_rest'] for _, info in dados.items())
-    if total_geral_horas_rest >= 12:
-        extra = int(total_geral_horas_rest // 12)
-        total_geral_turnos_int += extra
-        total_geral_horas_rest = round(total_geral_horas_rest % 12, 1)
-    total_geral_valor = sum(info['valor'] for _, info in dados.items())
+            pagina_total_turnos = 0
+            pagina_total_horas = 0
+            pagina_total_valor = 0.0
 
     return render_template('imprimir_contabilidade_elac.html',
                            mes=mes, ano=ano,
                            data_inicio=data_inicio,
                            data_fim=data_fim,
-                           paginas=paginas,
-                           total_geral_turnos_int=total_geral_turnos_int,
-                           total_geral_horas_rest=total_geral_horas_rest,
-                           total_geral_valor=total_geral_valor)
+                           paginas=paginas)
 
 
 
