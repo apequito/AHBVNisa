@@ -9,7 +9,7 @@
             <label class="form-label">Mês</label>
             <select name="mes" class="form-select form-select-sm">
                 {% for i in range(1,13) %}
-                <option value="{{ i }}" {% if i == agora.month %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
+                <option value="{{ i }}" {% if i == agora.month %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -18,24 +18,18 @@
             <input type="number" name="ano" class="form-control form-control-sm" value="{{ agora.year }}" min="2020" max="2030">
         </div>
         <div class="col-auto">
-            <button type="submit" class="btn btn-sm btn-secondary">
-                <i class="bi bi-printer"></i> Imprimir Disponibilidade
-            </button>
+            <button type="submit" class="btn btn-sm btn-secondary">🖨️ Imprimir Disponibilidade</button>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaECIN()">
-                <i class="bi bi-printer"></i> Imprimir Escala ECIN
-            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaECIN()">🖨️ Imprimir Escala ECIN</button>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaReforco()">
-                <i class="bi bi-printer"></i> Imprimir Escala Reforco
-            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirEscalaELAC()">🖨️ Imprimir Escala Reforço</button>
         </div>
         {% if current_user.tipo_user == 'Admin' or current_user.resp_departamento in ['Comando', 'ECIN', 'Central'] %}
             <div class="col-auto">
                 <button type="button" class="btn btn-sm btn-outline-info" onclick="imprimirTurnoDiario()">
-                    <i class="bi bi-calendar-day"></i> Turno ECIN
+                    <i class="bi bi-calendar-day me-1"></i> Turno ECIN
                 </button>
             </div>
         {% endif %}
@@ -79,12 +73,13 @@
                     <option value="19h/07h" {% if turno_filtro == '19h/07h' %}selected{% endif %}>19h/07h</option>
                 </select>
             </div>
+            <!-- Filtro por Mês para disponibilidades (mostra TODAS) -->
             <div class="col-auto">
-                <label class="form-label">Mes (Disponibilidades)</label>
+                <label class="form-label">Mês (Disponibilidades)</label>
                 <select name="mes_disponibilidade" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for i in range(1,13) %}
-                    <option value="{{ i }}" {% if mes_disponibilidade_filtro == i %}selected{% endif %}>{{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i-1] }}</option>
+                    <option value="{{ i }}" {% if mes_disponibilidade_filtro == i %}selected{% endif %}>{{ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][i-1] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -114,7 +109,7 @@
                 <th>Turno</th>
                 <th>Categoria</th>
                 <th>Estado</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -128,10 +123,20 @@
                 <td class="estado-cell">
                     {% if r.estado == 'Pendente' %}
                         <span class="badge bg-warning text-dark">Pendente</span>
-                    {% elif r.estado == 'Nao Escalado' %}
-                        <span class="badge bg-danger">Nao Escalado</span>
-                    {% elif 'Reforco' in r.estado %}
-                        <span class="badge bg-info">{{ r.estado }}</span>
+                    {% elif r.estado == 'Não Escalado' or r.estado == 'Nao Escalado' %}
+                        <span class="badge bg-danger">Não Escalado</span>
+                    {% elif r.estado == 'Motorista ECIN' %}
+                        <span class="badge bg-success">Motorista ECIN</span>
+                    {% elif r.estado == 'Chefe ECIN' %}
+                        <span class="badge bg-success">Chefe ECIN</span>
+                    {% elif r.estado == 'Guarnição ECIN' or r.estado == 'Guarnicao ECIN' %}
+                        <span class="badge bg-success">Guarnição ECIN</span>
+                    {% elif r.estado == 'Motorista Reforço' or r.estado == 'Motorista Reforco' %}
+                        <span class="badge bg-info text-dark">Motorista Reforço</span>
+                    {% elif r.estado == 'Chefe Reforço' or r.estado == 'Chefe Reforco' %}
+                        <span class="badge bg-info text-dark">Chefe Reforço</span>
+                    {% elif r.estado == 'Guarnição Reforço' or r.estado == 'Guarnicao Reforco' %}
+                        <span class="badge bg-info text-dark">Guarnição Reforço</span>
                     {% else %}
                         <span class="badge bg-success">{{ r.estado }}</span>
                     {% endif %}
@@ -141,11 +146,11 @@
                     <div class="btn-group action-buttons" role="group">
                         <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="M" title="Motorista ECIN">M</button>
                         <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="C" title="Chefe ECIN">C</button>
-                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnicao ECIN">G</button>
-                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista Reforco">Me</button>
-                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe Reforco">Ce</button>
-                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ge" title="Guarnicao Reforco">Ge</button>
-                        <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Nao Escalar">X</button>
+                        <button class="btn btn-sm btn-outline-primary action-btn" data-id="{{ r.id }}" data-funcao="G" title="Guarnição ECIN">G</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Me" title="Motorista Reforço">Me</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Ce" title="Chefe Reforço">Ce</button>
+                        <button class="btn btn-sm btn-outline-warning action-btn" data-id="{{ r.id }}" data-funcao="Gr" title="Guarnição Reforço">Gr</button>
+                        <button class="btn btn-sm btn-outline-danger action-btn" data-id="{{ r.id }}" data-funcao="X" title="Não Escalar">✕</button>
                     </div>
                     {% else %}
                     <a href="{{ url_for('modificar_ecin', id=r.id) }}" class="btn btn-sm btn-secondary">Modificar</a>
@@ -154,7 +159,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="text-center text-muted">Nenhum registo encontrado.啃
+                <td colspan="7" class="text-center text-muted">Nenhum registo encontrado.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -201,14 +206,14 @@
 </div>
 
 <script>
-// Funcoes de impressao
+// Funções de impressão
 function imprimirEscalaECIN() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-ecin?mes=' + mes + '&ano=' + ano, '_blank');
 }
 
-function imprimirEscalaReforco() {
+function imprimirEscalaELAC() {
     const mes = document.querySelector('select[name="mes"]').value;
     const ano = document.querySelector('input[name="ano"]').value;
     window.open('/ecins/imprimir-escala-elac?mes=' + mes + '&ano=' + ano, '_blank');
@@ -229,13 +234,14 @@ function atualizarBotaoAtualizar() {
         btn = document.createElement('button');
         btn.id = 'btnAtualizarPagina';
         btn.className = 'btn btn-sm btn-warning ms-2';
-        btn.innerHTML = 'Atualizar Pagina';
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Atualizar Página';
         btn.onclick = function() { location.reload(); };
         container.appendChild(btn);
     }
     btn.style.display = alteracoesPendentes > 0 ? 'inline-block' : 'none';
 }
 
+// Função para recarregar a tabela de ECINs
 function recarregarECINs() {
     const params = new URLSearchParams(window.location.search);
     fetch(window.location.pathname + '?' + params.toString())
@@ -248,11 +254,13 @@ function recarregarECINs() {
             if (novaTabela && tabelaAtual) {
                 tabelaAtual.innerHTML = novaTabela.innerHTML;
             }
+            // Reatribuir eventos aos botões
             atribuirEventosECINs();
         })
         .catch(err => console.error('Erro ao recarregar ECINs:', err));
 }
 
+// Verificar se houve trocas pendentes e recarregar
 function verificarAtualizacaoECINs() {
     fetch('/api/verificar-trocas-ecin')
         .then(response => response.json())
@@ -264,6 +272,7 @@ function verificarAtualizacaoECINs() {
         .catch(err => console.error('Erro ao verificar:', err));
 }
 
+// Atribuir eventos aos botões da tabela ECINs
 function atribuirEventosECINs() {
     document.querySelectorAll('.action-btn').forEach(btn => {
         btn.removeEventListener('click', handlerAction);
@@ -278,6 +287,7 @@ function handlerAction(e) {
     executarAcao(id, funcao, this);
 }
 
+// Verificar a cada 30 segundos se houve alterações
 setInterval(verificarAtualizacaoECINs, 30000);
 
 async function executarAcao(id, funcao, btnElement) {
@@ -295,38 +305,30 @@ async function executarAcao(id, funcao, btnElement) {
         const data = await response.json();
 
         if (data.success) {
+            // Atualizar o badge do estado
             estadoSpan.className = `badge ${data.estado_class}`;
             estadoSpan.textContent = data.estado_texto;
 
             if (!data.mostrar_botoes) {
                 acoesDiv.innerHTML = `<a href="/ecins/modificar/${id}" class="btn btn-sm btn-secondary">Modificar</a>`;
-            } else {
-                location.reload();
             }
             alteracoesPendentes++;
             atualizarBotaoAtualizar();
         } else {
-            alert('Erro: ' + (data.error || 'Falha na operacao'));
+            alert('Erro: ' + (data.error || 'Falha na operação'));
             btnElement.disabled = false;
             btnElement.innerHTML = originalText;
         }
     } catch (err) {
         console.error(err);
-        alert('Erro de comunicacao com o servidor.');
+        alert('Erro de comunicação com o servidor.');
         btnElement.disabled = false;
         btnElement.innerHTML = originalText;
     }
 }
 
-document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        const id = this.getAttribute('data-id');
-        const funcao = this.getAttribute('data-funcao');
-        executarAcao(id, funcao, this);
-    });
-});
-
+// Inicializar eventos
+atribuirEventosECINs();
 atualizarBotaoAtualizar();
 </script>
 
@@ -340,6 +342,9 @@ atualizarBotaoAtualizar();
     }
     .badge {
         font-size: 0.8rem;
+    }
+    .btn-group {
+        gap: 2px;
     }
 </style>
 {% endblock %}

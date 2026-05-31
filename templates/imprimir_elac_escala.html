@@ -2,9 +2,8 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Escala ELAC - {{ meses[mes-1] }} {{ ano }}</title>
+<title>Escala Reforço - {{ meses[mes-1] }} {{ ano }}</title>
 <style>
-/* Regras gerais (igual ao ECIN) */
 @page {
     size: A3;
     margin: 12mm;
@@ -21,10 +20,13 @@ body {
     .no-print { display: none; }
     header, footer, .page-break, .page-number, .print-date, .print-url { display: none; }
     body { margin: 0; padding: 0; }
+    /* Forçar impressão de cores de fundo */
+    tr.weekend, td, th {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }
 .no-print { margin: 15px; text-align: right; }
-
-/* Cabeçalho com imagem à esquerda e texto centralizado */
 .header {
     display: flex;
     align-items: center;
@@ -61,8 +63,6 @@ body {
     font-weight: bold;
     margin-top: 3px;
 }
-
-/* Tabela */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -87,16 +87,13 @@ th {
     text-align: center;
     font-weight: bold;
 }
-.col-motorista, .col-chefe {
-    width: 23.25%;
+.col-motorista, .col-chefe, .col-guarnicao {
+    width: 15.5%;
     text-align: center;
 }
-
-/* Estilo para fins de semana */
 tr.weekend {
     background-color: #f0f0f0 !important;
 }
-
 .bombeiro-linha {
     white-space: nowrap;
     overflow: hidden;
@@ -107,8 +104,6 @@ tr.weekend {
 .nome-bombeiro { font-weight: bold; margin: 0 2px; }
 .mecanografico { font-size: 9px; color: #333; }
 hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
-
-/* Rodapé */
 .footer {
     margin-top: 28px;
     font-size: 11px;
@@ -144,7 +139,7 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
         <div class="titulo-principal">
             Dispositivo Especial Combate Incêndios Rurais – DECIR {{ ano }} – Mês de {{ meses[mes-1] }} / {{ ano }}
         </div>
-        <div class="subtitulo">ESCALA ELAC</div>
+        <div class="subtitulo">ESCALA REFORÇO</div>
     </div>
     <div style="width: 95px;"></div>
 </div>
@@ -153,14 +148,16 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
     <thead>
         <tr>
             <th rowspan="2" class="col-dia">Dia</th>
-            <th colspan="2" class="subcol">07h/19h</th>
-            <th colspan="2" class="subcol">19h/07h</th>
+            <th colspan="3" class="subcol">07h/19h</th>
+            <th colspan="3" class="subcol">19h/07h</th>
         </tr>
         <tr>
             <th class="subcol col-motorista">Motorista</th>
             <th class="subcol col-chefe">Chefe</th>
+            <th class="subcol col-guarnicao">Guarnição</th>
             <th class="subcol col-motorista">Motorista</th>
             <th class="subcol col-chefe">Chefe</th>
+            <th class="subcol col-guarnicao">Guarnição</th>
         </tr>
     </thead>
     <tbody>
@@ -174,7 +171,7 @@ hr { margin: 2px 0; border: none; border-top: 1px solid #ccc; }
         <tr{% if dia in weekend_days %} class="weekend"{% endif %}>
             <td class="col-dia">{{ dia }}</td>
             {% for turno in ['07h/19h', '19h/07h'] %}
-                {% for funcao in ['Motorista', 'Chefe'] %}
+                {% for funcao in ['Motorista', 'Chefe', 'Guarnição'] %}
                 <td class="col-{{ funcao|lower }}">
                     {% set bombeiros = escala[dia].get(turno, {}).get(funcao, []) %}
                     {% if bombeiros %}

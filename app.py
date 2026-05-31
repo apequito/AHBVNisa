@@ -3965,7 +3965,7 @@ def escalar_ecin_ajax(id):
         'G': {'funcao': 'Guarnicao', 'categoria': 'ECIN', 'estado': 'Guarnicao ECIN'},
         'Me': {'funcao': 'Motorista', 'categoria': 'ELAC', 'estado': 'Motorista Reforco'},
         'Ce': {'funcao': 'Chefe', 'categoria': 'ELAC', 'estado': 'Chefe Reforco'},
-        'Ge': {'funcao': 'Guarnicao', 'categoria': 'ELAC', 'estado': 'Guarnicao Reforco'},
+        'Gr': {'funcao': 'Guarnicao', 'categoria': 'ELAC', 'estado': 'Guarnicao Reforco'},  # NOVO
         'X': {'estado': 'Nao Escalado'}
     }
 
@@ -4039,6 +4039,8 @@ def escalar_ecin_ajax(id):
         'estado_texto': get_estado_texto(ecin.estado),
         'mostrar_botoes': ecin.estado == 'Pendente'
     })
+
+
 
 
 #----------Imprimir Disponibilidade ECINS----------------
@@ -4200,13 +4202,13 @@ def imprimir_escala_elac():
             Escala.categoria == 'ELAC'
         ).first()
         if not escala_user:
-            flash('Acesso restrito: não está escalado para ELAC neste mês.', 'danger')
+            flash('Acesso restrito: não está escalado para Reforço neste mês.', 'danger')
             return redirect(url_for('escala'))
 
-    # Buscar ELACs do mês/ano na tabela Ecin
+    # Buscar ELACs do mês/ano na tabela Ecin (apenas os escalados - com estado terminado em 'Reforco')
     elacs = Ecin.query.filter(
         Ecin.categoria == 'ELAC',
-        Ecin.estado.in_(['Motorista ELAC', 'Chefe ELAC']),
+        Ecin.estado.in_(['Motorista Reforco', 'Chefe Reforco', 'Guarnicao Reforco']),
         db.extract('month', Ecin.data) == mes,
         db.extract('year', Ecin.data) == ano
     ).order_by(Ecin.data, Ecin.turno, Ecin.funcao).all()
@@ -4215,7 +4217,16 @@ def imprimir_escala_elac():
     escala = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     for ec in elacs:
-        escala[ec.data.day][ec.turno][ec.funcao].append({
+        # Mapear funções para o nome correto na tabela
+        funcao_mapeada = ec.funcao
+        if funcao_mapeada == 'Motorista':
+            funcao_mapeada = 'Motorista'
+        elif funcao_mapeada == 'Chefe':
+            funcao_mapeada = 'Chefe'
+        elif funcao_mapeada == 'Guarnicao':
+            funcao_mapeada = 'Guarnição'
+
+        escala[ec.data.day][ec.turno][funcao_mapeada].append({
             'nome': ec.bombeiro.nome,
             'mecanografico': ec.bombeiro.mecanografico,
             'posto': ec.bombeiro.posto
@@ -9493,6 +9504,36 @@ def get_quadro_operacional_config():
             'eip_reserva_2_mec': quadro.eip_reserva_2_mec
         })
     return jsonify({})
+
+def get_estado_class(estado):
+    """Retorna a classe CSS para o badge do estado"""
+    classes = {
+        'Pendente': 'bg-warning text-dark',
+        'Motorista ECIN': 'bg-success',
+        'Chefe ECIN': 'bg-success',
+        'Guarnicao ECIN': 'bg-success',
+        'Motorista Reforco': 'bg-info text-dark',
+        'Chefe Reforco': 'bg-info text-dark',
+        'Guarnicao Reforco': 'bg-info text-dark',
+        'Nao Escalado': 'bg-danger'
+    }
+    return classes.get(estado, 'bg-secondary')
+
+
+def get_estado_texto(estado):
+    """Retorna o texto amigável do estado"""
+    textos = {
+        'Pendente': 'Pendente',
+        'Motorista ECIN': 'Motorista ECIN',
+        'Chefe ECIN': 'Chefe ECIN',
+        'Guarnicao ECIN': 'Guarnição ECIN',
+        'Motorista Reforco': 'Motorista Reforço',
+        'Chefe Reforco': 'Chefe Reforço',
+        'Guarnicao Reforco': 'Guarnição Reforço',
+        'Nao Escalado': 'Não Escalado'
+    }
+    return textos.get(estado, estado)
+
 
 
 if __name__ == '__main__':
