@@ -8516,10 +8516,26 @@ def imprimir_contabilidade_ecin():
     mes = request.args.get('mes', type=int, default=date.today().month)
     ano = request.args.get('ano', type=int, default=date.today().year)
 
+    # Calcular primeira e última data do mês com registos ECIN
+    registos_datas = Ecin.query.filter(
+        Ecin.categoria == 'ECIN',
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano,
+        ~Ecin.estado.in_(['Pendente', 'Nao Escalado', 'Não Escalado'])
+    ).order_by(Ecin.data.asc()).all()
+
+    if registos_datas:
+        data_inicio = registos_datas[0].data.strftime('%d/%m/%Y')
+        data_fim = registos_datas[-1].data.strftime('%d/%m/%Y')
+    else:
+        data_inicio = f"01/{mes:02d}/{ano}"
+        data_fim = f"{calendar.monthrange(ano, mes)[1]}/{mes:02d}/{ano}"
+
     registos = Ecin.query.filter(
         Ecin.categoria == 'ECIN',
         db.extract('month', Ecin.data) == mes,
-        db.extract('year', Ecin.data) == ano
+        db.extract('year', Ecin.data) == ano,
+        ~Ecin.estado.in_(['Pendente', 'Nao Escalado', 'Não Escalado'])
     ).order_by(Ecin.bombeiro_id, Ecin.data).all()
 
     from collections import defaultdict
@@ -8540,28 +8556,17 @@ def imprimir_contabilidade_ecin():
         info['turnos_int'] = turnos_int
         info['horas_rest'] = horas_rest
 
-    # Paginação
+    # Paginação - 20 registos por página (como no documento original)
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
-    POR_PAGINA = 25
+    POR_PAGINA = 20
     paginas = []
     pagina_atual = []
-    subtotal_turnos_int = 0
-    subtotal_horas_rest = 0
-    subtotal_valor = 0.0
     total_geral_turnos_int = 0
     total_geral_horas_rest = 0
     total_geral_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        subtotal_turnos_int += info['turnos_int']
-        subtotal_horas_rest += info['horas_rest']
-        if subtotal_horas_rest >= 12:
-            extra = int(subtotal_horas_rest // 12)
-            subtotal_turnos_int += extra
-            subtotal_horas_rest = round(subtotal_horas_rest % 12, 1)
-        subtotal_valor += info['valor']
-
         total_geral_turnos_int += info['turnos_int']
         total_geral_horas_rest += info['horas_rest']
         if total_geral_horas_rest >= 12:
@@ -8571,24 +8576,17 @@ def imprimir_contabilidade_ecin():
         total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
-            paginas.append({
-                'bombeiros': pagina_atual,
-                'subtotal_turnos_int': subtotal_turnos_int,
-                'subtotal_horas_rest': subtotal_horas_rest,
-                'subtotal_valor': subtotal_valor
-            })
+            paginas.append({'bombeiros': pagina_atual.copy()})
             pagina_atual = []
-            subtotal_turnos_int = 0
-            subtotal_horas_rest = 0
-            subtotal_valor = 0.0
 
     return render_template('imprimir_contabilidade_ecin.html',
                            mes=mes, ano=ano,
+                           data_inicio=data_inicio,
+                           data_fim=data_fim,
                            paginas=paginas,
                            total_geral_turnos_int=total_geral_turnos_int,
                            total_geral_horas_rest=total_geral_horas_rest,
                            total_geral_valor=total_geral_valor)
-
 
 
 @app.route('/administrativo/imprimir-contabilidade-elac')
@@ -8601,13 +8599,28 @@ def imprimir_contabilidade_elac():
     mes = request.args.get('mes', type=int, default=date.today().month)
     ano = request.args.get('ano', type=int, default=date.today().year)
 
-    registos = Ecin.query.filter(
-        Ecin.categoria == 'ELAC',   # ← única diferença
+    # Calcular primeira e última data do mês com registos ELAC
+    registos_datas = Ecin.query.filter(
+        Ecin.categoria == 'ELAC',
         db.extract('month', Ecin.data) == mes,
-        db.extract('year', Ecin.data) == ano
+        db.extract('year', Ecin.data) == ano,
+        ~Ecin.estado.in_(['Pendente', 'Nao Escalado', 'Não Escalado'])
+    ).order_by(Ecin.data.asc()).all()
+
+    if registos_datas:
+        data_inicio = registos_datas[0].data.strftime('%d/%m/%Y')
+        data_fim = registos_datas[-1].data.strftime('%d/%m/%Y')
+    else:
+        data_inicio = f"01/{mes:02d}/{ano}"
+        data_fim = f"{calendar.monthrange(ano, mes)[1]}/{mes:02d}/{ano}"
+
+    registos = Ecin.query.filter(
+        Ecin.categoria == 'ELAC',
+        db.extract('month', Ecin.data) == mes,
+        db.extract('year', Ecin.data) == ano,
+        ~Ecin.estado.in_(['Pendente', 'Nao Escalado', 'Não Escalado'])
     ).order_by(Ecin.bombeiro_id, Ecin.data).all()
 
-    # ... (mesmo código da função anterior, igual)
     from collections import defaultdict
     dados = defaultdict(lambda: {'valor': 0.0})
 
@@ -8615,6 +8628,7 @@ def imprimir_contabilidade_elac():
         if ec.bombeiro and ec.valor:
             dados[ec.bombeiro]['valor'] += ec.valor
 
+    # Converter valor em horas (3.50 €/h) e depois em turnos completos (12h) + horas restantes
     for bombeiro, info in dados.items():
         horas_totais = info['valor'] / 3.5
         turnos_int = int(horas_totais // 12)
@@ -8625,27 +8639,17 @@ def imprimir_contabilidade_elac():
         info['turnos_int'] = turnos_int
         info['horas_rest'] = horas_rest
 
+    # Paginação - 20 registos por página
     bombeiros_ordenados = sorted(dados.items(), key=lambda item: item[0].nome)
-    POR_PAGINA = 25
+    POR_PAGINA = 20
     paginas = []
     pagina_atual = []
-    subtotal_turnos_int = 0
-    subtotal_horas_rest = 0
-    subtotal_valor = 0.0
     total_geral_turnos_int = 0
     total_geral_horas_rest = 0
     total_geral_valor = 0.0
 
     for i, (bombeiro, info) in enumerate(bombeiros_ordenados):
         pagina_atual.append((bombeiro, info))
-        subtotal_turnos_int += info['turnos_int']
-        subtotal_horas_rest += info['horas_rest']
-        if subtotal_horas_rest >= 12:
-            extra = int(subtotal_horas_rest // 12)
-            subtotal_turnos_int += extra
-            subtotal_horas_rest = round(subtotal_horas_rest % 12, 1)
-        subtotal_valor += info['valor']
-
         total_geral_turnos_int += info['turnos_int']
         total_geral_horas_rest += info['horas_rest']
         if total_geral_horas_rest >= 12:
@@ -8655,19 +8659,13 @@ def imprimir_contabilidade_elac():
         total_geral_valor += info['valor']
 
         if len(pagina_atual) == POR_PAGINA or i == len(bombeiros_ordenados) - 1:
-            paginas.append({
-                'bombeiros': pagina_atual,
-                'subtotal_turnos_int': subtotal_turnos_int,
-                'subtotal_horas_rest': subtotal_horas_rest,
-                'subtotal_valor': subtotal_valor
-            })
+            paginas.append({'bombeiros': pagina_atual.copy()})
             pagina_atual = []
-            subtotal_turnos_int = 0
-            subtotal_horas_rest = 0
-            subtotal_valor = 0.0
 
     return render_template('imprimir_contabilidade_elac.html',
                            mes=mes, ano=ano,
+                           data_inicio=data_inicio,
+                           data_fim=data_fim,
                            paginas=paginas,
                            total_geral_turnos_int=total_geral_turnos_int,
                            total_geral_horas_rest=total_geral_horas_rest,

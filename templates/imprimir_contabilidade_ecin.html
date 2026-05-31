@@ -5,11 +5,11 @@
     <title>Registo de Pagamentos - ECIN - {{ mes }}/{{ ano }}</title>
     <style>
         @page {
-            size: A4 landscape;
-            margin: 15mm 12mm;
+            size: A4 portrait;
+            margin: 20mm 15mm;
         }
         body {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 11px;
             margin: 0;
             padding: 0;
@@ -20,46 +20,35 @@
         }
         .cabecalho {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
-        .logo-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .logo-left {
-            width: 100px;
-            height: auto;
-        }
-        .logo-right {
+        .logo-anepc {
+            display: block;
+            margin: 0 auto 10px auto;
             width: 80px;
             height: auto;
         }
-        .header-text {
-            flex: 1;
-            text-align: center;
-        }
         h1 {
             font-size: 14px;
-            margin: 3px 0;
+            margin: 5px 0;
             font-weight: bold;
+            text-transform: uppercase;
         }
         h2 {
             font-size: 16px;
-            margin: 5px 0;
+            margin: 10px 0;
             font-weight: bold;
             text-decoration: underline;
         }
         .info-decir {
             font-size: 12px;
             margin: 5px 0;
-            font-weight: bold;
+            font-weight: normal;
         }
         .info-periodo {
             text-align: center;
-            margin: 10px 0;
-            font-size: 12px;
+            margin: 15px 0;
+            font-size: 11px;
             font-weight: normal;
         }
         table {
@@ -86,7 +75,7 @@
             text-align: center;
         }
         .assinaturas {
-            margin-top: 40px;
+            margin-top: 50px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -113,22 +102,12 @@
         }
         .no-print {
             text-align: right;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         button {
             padding: 8px 20px;
             font-size: 14px;
             cursor: pointer;
-        }
-        .footer-info {
-            margin-top: 10px;
-            font-size: 10px;
-            text-align: center;
-        }
-        .page-number {
-            text-align: center;
-            font-size: 9px;
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -141,15 +120,9 @@
     {% for pagina in paginas %}
     <div class="page-content">
         <div class="cabecalho">
-            <div class="logo-container">
-                <img class="logo-left" src="{{ url_for('static', filename='images/BVN.COMP.jpg') }}" alt="Bombeiros Voluntários de Nisa" onerror="this.style.display='none'">
-                <div class="header-text">
-                    <h1>ASSOCIAÇÃO HUMANITÁRIA DOS BOMBEIROS VOLUNTÁRIOS DE NISA</h1>
-                    <h2>REGISTO DE PAGAMENTOS</h2>
-                    <div class="info-decir">Dispositivo Especial Combate Incêndios Rurais (DECIR {{ ano }})</div>
-                </div>
-                <img class="logo-right" src="{{ url_for('static', filename='images/ANEPC.png') }}" alt="ANEPC" onerror="this.style.display='none'">
-            </div>
+            <img class="logo-anepc" src="{{ url_for('static', filename='images/ANEPC.png') }}" alt="ANEPC" onerror="this.style.display='none'">
+            <h1>REGISTO DE PAGAMENTOS</h1>
+            <div class="info-decir">Dispositivo Especial Combate Incêndios Rurais (DECIR {{ ano }})</div>
             <div class="info-periodo">
                 Período: {{ data_inicio }} a {{ data_fim }}
             </div>
@@ -160,10 +133,10 @@
                 <tr>
                     <th style="width: 10%;">Nº Mec</th>
                     <th style="width: 15%;">Função/Categoria</th>
-                    <th style="width: 30%;">Nome</th>
+                    <th style="width: 35%;">Nome</th>
                     <th style="width: 15%;">N.º de Turnos</th>
                     <th style="width: 15%;">Montante Pago (€)</th>
-                    <th style="width: 15%;">Assinatura</th>
+                    <th style="width: 10%;">Assinatura</th>
                 </tr>
             </thead>
             <tbody>
@@ -187,28 +160,6 @@
                     <td style="text-align: center;">&nbsp;</td>
                 </tr>
                 {% endfor %}
-
-                <!-- Linha de Total desta página (se necessário) -->
-                {% if pagina.subtotal_valor > 0 %}
-                <tr style="font-weight: bold; background-color: #f9f9f9;">
-                    <td colspan="3" style="text-align: right;"><strong>Subtotal</strong></td>
-                    <td class="center">
-                        <strong>
-                        {% if pagina.subtotal_turnos_int > 0 and pagina.subtotal_horas_rest > 0 %}
-                            {{ pagina.subtotal_turnos_int }} T + {{ pagina.subtotal_horas_rest }} H
-                        {% elif pagina.subtotal_turnos_int > 0 %}
-                            {{ pagina.subtotal_turnos_int }} T
-                        {% elif pagina.subtotal_horas_rest > 0 %}
-                            {{ pagina.subtotal_horas_rest }} H
-                        {% else %}
-                            0
-                        {% endif %}
-                        </strong>
-                    </td>
-                    <td class="center"><strong>{{ "%.2f"|format(pagina.subtotal_valor) }}</strong></td>
-                    <td style="text-align: center;">&nbsp;</td>
-                </tr>
-                {% endif %}
             </tbody>
         </table>
 
@@ -222,44 +173,12 @@
                 <div>O Comandante do CB</div>
             </div>
         </div>
-
-        <div class="footer-info">
-            <p>Nisa, ___ de __________________ de _______</p>
-        </div>
-
-        <div class="page-number">
-            Página {{ loop.index }} de {{ paginas|length }}
-        </div>
     </div>
 
     {% if not loop.last %}
     <div class="quebra"></div>
     {% endif %}
     {% endfor %}
-
-    <!-- Total Geral na última página -->
-    <div style="margin-top: 20px;">
-        <table style="width: 60%; margin-left: auto;">
-            <tr style="font-weight: bold; background-color: #e0e0e0;">
-                <td style="text-align: right;"><strong>TOTAL GERAL</strong></td>
-                <td class="center">
-                    <strong>
-                    {% if total_geral_turnos_int > 0 and total_geral_horas_rest > 0 %}
-                        {{ total_geral_turnos_int }} T + {{ total_geral_horas_rest }} H
-                    {% elif total_geral_turnos_int > 0 %}
-                        {{ total_geral_turnos_int }} T
-                    {% elif total_geral_horas_rest > 0 %}
-                        {{ total_geral_horas_rest }} H
-                    {% else %}
-                        0
-                    {% endif %}
-                    </strong>
-                </td>
-                <td class="center"><strong>{{ "%.2f"|format(total_geral_valor) }} €</strong></td>
-                <td style="text-align: center;">&nbsp;</td>
-            </tr>
-        </table>
-    </div>
 </div>
 
 <script>
